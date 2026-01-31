@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} antialiased min-h-screen flex flex-col`}>
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-TT20M1DEQB"
+          src="https://www.googletagmanager.com/gtag/js?id=G-Q9PSXCHY32"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -31,7 +31,7 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            gtag('config', 'G-TT20M1DEQB');
+            gtag('config', 'G-Q9PSXCHY32');
           `}
         </Script>
         <Navbar />
