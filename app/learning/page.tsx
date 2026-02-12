@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function LearningPage() {
     return (
-        <div className="bg-background-dark min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center">
             <Section className="py-32 text-center">
                 <div className="relative inline-flex items-center justify-center p-8 border-2 border-accent-electric/30 rounded-2xl bg-black/20 backdrop-blur-md">
                     <div className="absolute inset-0 bg-accent-electric/5blur-xl rounded-2xl -z-10"></div>

@@ -43,8 +43,15 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
+        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden">
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[150px] animate-pulse"></div>
+          <div className="absolute top-[30%] right-[-20%] w-[50%] h-[70%] rounded-full bg-blue-900/10 blur-[180px] animate-pulse delay-1000"></div>
+          <div className="absolute bottom-[-20%] left-[10%] w-[60%] h-[50%] rounded-full bg-primary/5 blur-[160px] animate-pulse delay-2000"></div>
+          {/* Vignette */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
+        </div>
         <Navbar />
-        <main className="flex-grow pt-16">
+        <main className="flex-grow relative z-10">
           {children}
         </main>
         <Footer />

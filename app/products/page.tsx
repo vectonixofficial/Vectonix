@@ -1,6 +1,8 @@
 import { Section } from "@/components/ui/Section";
 import { ProductCard } from "@/components/ProductCard";
 import { Metadata } from 'next';
+import { HeroBackground } from "@/components/ui/HeroBackground";
+import { MotionWrapper } from "@/components/ui/MotionWrapper";
 
 export const metadata: Metadata = {
     title: 'Our Products | Vectonix',
@@ -36,24 +38,32 @@ export default function ProductsPage() {
     ];
 
     return (
-        <div className="bg-background-dark min-h-screen">
-            <Section className="pt-32 pb-16">
-                <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">Our Products</h1>
-                    <p className="text-xl text-gray-400">
-                        Innovative solutions built for a smarter future. Explore what we've built.
-                    </p>
-                </div>
+        <div className="min-h-screen">
+            <div className="relative pt-40 pb-20 overflow-hidden">
+                <HeroBackground />
+                <Section className="relative z-10 text-center">
+                    <MotionWrapper delay={0.1}>
+                        <h1 className="text-4xl md:text-7xl font-bold text-white mb-6">Our Products</h1>
+                    </MotionWrapper>
+                    <MotionWrapper delay={0.3}>
+                        <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 drop-shadow-md">
+                            Innovative solutions built for a smarter future. Explore what we've built.
+                        </p>
+                    </MotionWrapper>
+                </Section>
+            </div>
 
+            <Section className="py-16">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     {products.map((product, index) => (
-                        <ProductCard
-                            key={index}
-                            title={product.title}
-                            description={product.description}
-                            features={product.features}
-                            comingSoon={product.comingSoon}
-                        />
+                        <MotionWrapper key={index} delay={0.1 * index} className="h-full">
+                            <ProductCard
+                                title={product.title}
+                                description={product.description}
+                                features={product.features}
+                                comingSoon={product.comingSoon}
+                            />
+                        </MotionWrapper>
                     ))}
                 </div>
             </Section>
