@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "Vectonix | Smart Digital Solutions",
   description: "Vectonix is a technology startup focused on building impactful digital products, smart automation tools, and AI-driven applications.",
+  other: {
+    "google-adsense-account": "ca-pub-8546769161538607",
+  },
 };
 
 import Navbar from "@/components/Navbar";
