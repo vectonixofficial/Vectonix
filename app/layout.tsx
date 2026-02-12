@@ -34,6 +34,12 @@ export default function RootLayout({
             gtag('config', 'G-Q9PSXCHY32');
           `}
         </Script>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8546769161538607"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <Navbar />
         <main className="flex-grow pt-16">
           {children}
