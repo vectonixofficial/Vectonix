@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SplashScreen } from "@/components/SplashScreen";
 
 export default function RootLayout({
   children,
@@ -54,6 +55,7 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
         </div>
         <Navbar />
+        <SplashScreen />
         <main className="flex-grow relative z-10">
           {children}
         </main>
