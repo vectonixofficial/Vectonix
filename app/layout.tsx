@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   other: {
     "google-adsense-account": "ca-pub-8546769161538607",
   },
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 import Navbar from "@/components/Navbar";

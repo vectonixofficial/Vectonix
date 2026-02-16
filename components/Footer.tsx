@@ -14,11 +14,11 @@ const Footer = () => {
                             <div className="col-span-1 md:col-span-1">
                                 <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tighter text-white mb-4">
                                     <Image
-                                        src="/logo.jpg"
+                                        src="/logo.png"
                                         alt="Vectonix Logo"
-                                        width={32}
-                                        height={32}
-                                        className="h-8 w-8 object-contain rounded-full"
+                                        width={100}
+                                        height={100}
+                                        className="h-[100px] w-[100px] object-contain rounded-full"
                                     />
                                     <span>VECTONIX<span className="text-accent-electric">.</span></span>
                                 </Link>

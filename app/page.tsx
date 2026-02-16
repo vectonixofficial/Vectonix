@@ -7,6 +7,8 @@ import Image from "next/image";
 import { HeroBackground } from "@/components/ui/HeroBackground";
 import { MotionWrapper } from "@/components/ui/MotionWrapper";
 
+import { AnnouncementBox } from "@/components/AnnouncementBox";
+
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
@@ -205,6 +207,7 @@ export default function Home() {
           </MotionWrapper>
         </Section>
       </div>
+      <AnnouncementBox />
     </div>
   );
 }

@@ -44,18 +44,18 @@ const Navbar = () => {
                 }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
+                <div className="flex items-center justify-between h-28">
                     {/* Logo */}
                     <div className="flex-shrink-0 flex items-center gap-2">
-                        <Link href="/" className="flex items-center gap-2">
+                        <Link href="/" className="flex items-center gap-0">
                             <Image
-                                src="/logo.jpg"
+                                src="/logo.png"
                                 alt="Vectonix Logo"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain rounded-full"
+                                width={100}
+                                height={100}
+                                className="h-[100px] w-[100px] object-contain rounded-full"
                             />
-                            <span className="font-bold text-2xl tracking-tighter text-white">
+                            <span className="font-bold text-3xl tracking-tighter text-white">
                                 Vectonix
                             </span>
                         </Link>
