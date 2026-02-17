@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
 import { ProductCard } from "@/components/ProductCard";
-import { ArrowRight, Code, Cpu, Globe, Zap, Settings, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Code, Cpu, Globe, Zap, Settings, ShieldCheck, TrendingUp, Users, BookOpen } from "lucide-react";
 import Image from "next/image";
 import { HeroBackground } from "@/components/ui/HeroBackground";
 import { MotionWrapper } from "@/components/ui/MotionWrapper";
@@ -184,6 +184,63 @@ export default function Home() {
             <Link href="/products" className="inline-flex items-center text-accent-electric hover:text-white transition-colors font-medium text-lg">
               View All Products <ArrowRight size={20} className="ml-2" />
             </Link>
+          </div>
+        </Section>
+
+        {/* LEARNING HUB SECTION */}
+        <Section className="relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-accent-electric/5 to-transparent pointer-events-none" />
+
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <MotionWrapper className="flex-1">
+              <div className="relative">
+                <div className="absolute -top-10 -left-10 w-20 h-20 bg-accent-electric/20 rounded-full blur-xl animate-pulse" />
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                  Master the Future at <br />
+                  <span className="text-accent-electric">Vectonix Learning Hub</span>
+                </h2>
+                <p className="text-gray-300 text-lg mb-8 leading-relaxed max-w-xl">
+                  Dive into our curated library of tutorials, deep-dives into AI architecture, and best practices for modern software engineering. Whether you're a beginner or an expert, there's always something new to discover.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/learning">
+                    <Button size="lg" variant="neon" className="px-8 py-6 text-lg rounded-xl flex items-center gap-2 group">
+                      Start Learning <BookOpen className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    </Button>
+                  </Link>
+                  <Link href="/contact">
+                    <Button size="lg" variant="ghost" className="px-8 py-6 text-lg rounded-xl text-gray-300 hover:text-white hover:bg-white/5">
+                      Contribute an Article
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </MotionWrapper>
+
+            <MotionWrapper direction="left" delay={0.2} className="flex-1 w-full max-w-lg">
+              <div className="relative aspect-square glass-panel p-8 rounded-3xl flex items-center justify-center border border-white/10 shadow-2xl group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-accent-electric/10 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                {/* Decorative elements representing knowledge/code */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] border border-accent-electric/20 rounded-full animate-[spin_20s_linear_infinite]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border border-dashed border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+
+                <div className="relative z-10 text-center space-y-4">
+                  <div className="inline-flex p-6 rounded-2xl bg-gradient-to-br from-accent-electric/20 to-transparent border border-accent-electric/30 backdrop-blur-md mb-2 shadow-[0_0_30px_rgba(125,249,255,0.2)]">
+                    <BookOpen size={64} className="text-accent-electric drop-shadow-[0_0_10px_rgba(125,249,255,0.8)]" />
+                  </div>
+                  <div className="bg-black/40 backdrop-blur-sm p-4 rounded-xl border border-white/5 mx-auto max-w-[200px]">
+                    <p className="text-xs text-accent-electric font-mono tracking-widest mb-1">RESOURCES</p>
+                    <p className="text-2xl font-bold text-white">500+</p>
+                  </div>
+                  <div className="bg-black/40 backdrop-blur-sm p-4 rounded-xl border border-white/5 mx-auto max-w-[200px]">
+                    <p className="text-xs text-gray-400 font-mono tracking-widest mb-1">COMMUNITY</p>
+                    <p className="text-2xl font-bold text-white">Active</p>
+                  </div>
+                </div>
+              </div>
+            </MotionWrapper>
           </div>
         </Section>
 
