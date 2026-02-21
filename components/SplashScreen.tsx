@@ -45,7 +45,7 @@ export const SplashScreen = () => {
                             src="/logo.png"
                             alt="Vectonix Logo"
                             fill
-                            className="object-contain drop-shadow-[0_0_25px_rgba(125,249,255,0.5)]"
+                            className="object-contain drop-shadow-[0_0_25px_rgba(255,215,0,0.5)]"
                             priority
                         />
                     </motion.div>

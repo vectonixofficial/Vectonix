@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #001F3F;
-  /* Dark Blue */
-  --color-primary-light: #003366;
-  --color-accent: #00FFFF;
-  /* Cyan */
-  --color-accent-electric: #7DF9FF;
-  /* Electric Blue */
+  --color-primary: #EFBF04;
+  /* Gold */
+  --color-primary-light: #FFD700;
+  --color-accent: #FFD700;
+  /* Gold */
+  --color-accent-electric: #FFE55C;
+  /* Bright Yellow */
   --color-background-dark: #0a0a0a;
   /* Deep Black */
 
@@ -20,18 +20,30 @@
 }
 
 body {
-  background: radial-gradient(circle at top center, #2e1065 0%, #000000 100%);
+  background: radial-gradient(circle at top center, #292000 0%, #000000 100%);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
+  cursor: none;
+  /* Hide default cursor */
+}
+
+a,
+button,
+[role="button"],
+input,
+textarea,
+select {
+  cursor: none !important;
+  /* Force hide cursor on interactive elements */
 }
 
 /* Custom Utilities */
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 10px rgba(125, 249, 255, 0.5);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
   }
 
   .glass-panel {
@@ -54,7 +66,7 @@ body {
     box-shadow:
       0 12px 40px 0 rgba(0, 0, 0, 0.4),
       inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 0 20px rgba(125, 249, 255, 0.1);
+      0 0 20px rgba(255, 215, 0, 0.1);
     transform: translateY(-4px);
   }
 }

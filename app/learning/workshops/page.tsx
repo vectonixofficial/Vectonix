@@ -20,7 +20,7 @@ export default function WorkshopsPage() {
         <div className="min-h-screen pt-24 pb-20">
             <Section className="relative overflow-hidden">
                 {/* Subtle, Professional Background Glow */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] -z-10" />
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-600/5 rounded-full blur-[120px] -z-10" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px] -z-10" />
 
                 <div className="text-center max-w-4xl mx-auto mb-16">
@@ -145,14 +145,24 @@ export default function WorkshopsPage() {
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-                                        <Link href="https://forms.gle/JYzdpUNph7VdNYeq7" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto flex-1">
-                                            <Button className="w-full bg-white text-black hover:bg-gray-200 font-bold py-6 rounded-xl flex items-center justify-center gap-2 transition-all group">
-                                                Reserve Your Spot <ExternalLink size={18} className="group-hover:translate-x-1 transition-transform" />
-                                            </Button>
-                                        </Link>
-                                        <div className="flex items-center gap-2 px-6 py-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium whitespace-nowrap">
-                                            <span>Free Registration</span>
-                                        </div>
+                                        {isCompleted ? (
+                                            <div className="w-full sm:w-auto flex-1">
+                                                <Button disabled className="w-full bg-gray-600 text-white/50 cursor-not-allowed font-bold py-6 rounded-xl flex items-center justify-center gap-2">
+                                                    Registration Closed <X size={18} />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Link href="https://forms.gle/JYzdpUNph7VdNYeq7" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto flex-1">
+                                                    <Button className="w-full bg-white text-black hover:bg-gray-200 font-bold py-6 rounded-xl flex items-center justify-center gap-2 transition-all group">
+                                                        Reserve Your Spot <ExternalLink size={18} className="group-hover:translate-x-1 transition-transform" />
+                                                    </Button>
+                                                </Link>
+                                                <div className="flex items-center gap-2 px-6 py-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-medium whitespace-nowrap">
+                                                    <span>Free Registration</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

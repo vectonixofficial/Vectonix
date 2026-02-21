@@ -17,7 +17,7 @@ export default function LearningPage() {
             description: "Join hands-on, interactive sessions led by industry experts.",
             icon: <Users size={24} className="text-accent-electric" />,
             href: "/learning/workshops",
-            color: "from-blue-500/20 to-cyan-500/20",
+            color: "from-amber-500/20 to-yellow-500/20",
             action: "View Schedule"
         },
         {
@@ -68,7 +68,7 @@ export default function LearningPage() {
                                     </div>
 
                                     {/* Main Folder Body */}
-                                    <div className={`h-full pt-10 pb-8 px-8 glass-panel rounded-b-3xl rounded-tr-3xl rounded-tl-none border-t-0 relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(125,249,255,0.1)]`}>
+                                    <div className={`h-full pt-10 pb-8 px-8 glass-panel rounded-b-3xl rounded-tr-3xl rounded-tl-none border-t-0 relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(255,215,0,0.1)]`}>
                                         {/* Seamless Connection Line for Tab */}
                                         <div className="absolute top-0 left-0 w-[30%] h-[1px] bg-transparent" />
                                         <div className="absolute top-0 right-0 w-[70%] h-[1px] bg-white/10 group-hover:bg-white/20 transition-colors" />

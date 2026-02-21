@@ -108,7 +108,7 @@ export const AnnouncementBox = () => {
 
                         {/* Centered Title */}
                         <div className="absolute left-1/2 top-8 -translate-x-1/2 flex items-center gap-3 w-full justify-center pointer-events-none z-20">
-                            <div className="p-2.5 rounded-lg bg-accent-electric/10 text-accent-electric shadow-[0_0_10px_rgba(125,249,255,0.2)]">
+                            <div className="p-2.5 rounded-lg bg-accent-electric/10 text-accent-electric shadow-[0_0_10px_rgba(255,215,0,0.2)]">
                                 <Bell size={24} />
                             </div>
                             <h3 className="font-bold text-white text-xl md:text-3xl tracking-wide whitespace-nowrap">Announcement</h3>

@@ -99,7 +99,7 @@ export default function ServicesPage() {
                     <div className="text-center relative z-10">
                         <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">Ready to upgrade your business?</h2>
                         <Link href="/contact">
-                            <Button size="lg" variant="neon" className="px-12 py-8 text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(125,249,255,0.3)]">
+                            <Button size="lg" variant="neon" className="px-12 py-8 text-xl font-bold rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.3)]">
                                 Get a Quote
                             </Button>
                         </Link>

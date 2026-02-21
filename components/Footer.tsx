@@ -10,15 +10,15 @@ const Footer = () => {
             <div className="relative z-10">
                 <MotionWrapper viewportAmount={0.2}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                            <div className="col-span-1 md:col-span-1">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
+                            <div className="col-span-1 md:col-span-2">
                                 <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tighter text-white mb-4">
                                     <Image
                                         src="/logo.png"
                                         alt="Vectonix Logo"
-                                        width={100}
-                                        height={100}
-                                        className="h-[100px] w-[100px] object-contain rounded-full"
+                                        width={60}
+                                        height={60}
+                                        className="h-[60px] w-[60px] object-contain rounded-full"
                                     />
                                     <span>VECTONIX<span className="text-accent-electric">.</span></span>
                                 </Link>

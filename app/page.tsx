@@ -18,7 +18,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
           <MotionWrapper delay={0.2} direction="down">
-            <div className="inline-block mb-6 px-6 py-2 rounded-full border border-accent-electric/30 bg-accent-electric/10 backdrop-blur-md text-accent-electric text-sm font-medium tracking-wide shadow-[0_0_15px_rgba(125,249,255,0.3)]">
+            <div className="inline-block mb-6 px-6 py-2 rounded-full border border-accent-electric/30 bg-accent-electric/10 backdrop-blur-md text-accent-electric text-sm font-medium tracking-wide shadow-[0_0_15px_rgba(255,215,0,0.3)]">
               INNOVATING TOMORROW, TODAY
             </div>
           </MotionWrapper>
@@ -227,8 +227,8 @@ export default function Home() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border border-dashed border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
 
                 <div className="relative z-10 text-center space-y-4">
-                  <div className="inline-flex p-6 rounded-2xl bg-gradient-to-br from-accent-electric/20 to-transparent border border-accent-electric/30 backdrop-blur-md mb-2 shadow-[0_0_30px_rgba(125,249,255,0.2)]">
-                    <BookOpen size={64} className="text-accent-electric drop-shadow-[0_0_10px_rgba(125,249,255,0.8)]" />
+                  <div className="inline-flex p-6 rounded-2xl bg-gradient-to-br from-accent-electric/20 to-transparent border border-accent-electric/30 backdrop-blur-md mb-2 shadow-[0_0_30px_rgba(255,215,0,0.2)]">
+                    <BookOpen size={64} className="text-accent-electric drop-shadow-[0_0_10px_rgba(255,215,0,0.8)]" />
                   </div>
                   <div className="bg-black/40 backdrop-blur-sm p-4 rounded-xl border border-white/5 mx-auto max-w-[200px]">
                     <p className="text-xs text-accent-electric font-mono tracking-widest mb-1">RESOURCES</p>
@@ -256,7 +256,7 @@ export default function Home() {
                 Ready to transform your ideas into reality? Get in touch with our team today.
               </p>
               <Link href="/contact">
-                <Button size="lg" className="bg-white text-black hover:bg-accent-electric hover:text-black font-bold px-12 py-8 text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(125,249,255,0.6)]">
+                <Button size="lg" className="bg-white text-black hover:bg-accent-electric hover:text-black font-bold px-12 py-8 text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,215,0,0.6)]">
                   Start a Project
                 </Button>
               </Link>

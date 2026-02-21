@@ -11,7 +11,7 @@ export const HeroBackground = () => {
 
             {/* Animated gradient orbs */}
             <motion.div
-                className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/30 rounded-full blur-[100px]"
+                className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-orange-600/30 rounded-full blur-[100px]"
                 animate={{
                     x: [0, 100, 0],
                     y: [0, 50, 0],
@@ -25,7 +25,7 @@ export const HeroBackground = () => {
             />
 
             <motion.div
-                className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[120px]"
+                className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] bg-amber-500/20 rounded-full blur-[120px]"
                 animate={{
                     x: [0, -70, 0],
                     y: [0, -100, 0],
@@ -40,7 +40,7 @@ export const HeroBackground = () => {
             />
 
             <motion.div
-                className="absolute top-[40%] left-[60%] w-[300px] h-[300px] bg-cyan-500/20 rounded-full blur-[80px]"
+                className="absolute top-[40%] left-[60%] w-[300px] h-[300px] bg-yellow-500/20 rounded-full blur-[80px]"
                 animate={{
                     x: [0, -50, 0],
                     opacity: [0.3, 0.6, 0.3],
