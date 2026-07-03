@@ -40,6 +40,8 @@ export default function CertificatesPage() {
     const [activeTab, setActiveTab] = useState<"all" | "completion" | "offer_letter">("all");
     const [showModal, setShowModal] = useState(false);
     const [previewModal, setPreviewModal] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importJsonText, setImportJsonText] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
@@ -230,6 +232,13 @@ export default function CertificatesPage() {
                         className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold transition-all shadow-md cursor-pointer text-sm"
                     >
                         <RefreshCw className="h-4 w-4" /> Sync to Supabase ({certificates.length})
+                    </button>
+                    <button
+                        id="import-json-btn"
+                        onClick={() => setShowImportModal(true)}
+                        className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-semibold transition-all shadow-md cursor-pointer text-sm"
+                    >
+                        <Upload className="h-4 w-4" /> Import Batch JSON
                     </button>
                     <button
                         id="add-offer-letter-btn"
@@ -708,6 +717,92 @@ export default function CertificatesPage() {
                                     data={previewData}
                                     scale={0.62}
                                 />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Batch Import JSON Modal */}
+            <AnimatePresence>
+                {showImportModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <Upload className="h-5 w-5 text-indigo-600" /> Seed & Import Certificates JSON
+                                </h2>
+                                <button onClick={() => setShowImportModal(false)} className="cursor-pointer p-1">
+                                    <X className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-slate-500">
+                                Paste a JSON array containing all 59 certificates or select a `.json` file from your device to seed them into Supabase immediately.
+                            </p>
+
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const r = new FileReader();
+                                            r.onload = (ev) => setImportJsonText(ev.target?.result as string || "");
+                                            r.readAsText(file);
+                                        }
+                                    }}
+                                    className="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
+                                />
+                            </div>
+
+                            <textarea
+                                rows={8}
+                                placeholder='Paste JSON array here... e.g. [{"certificateId": "VT/INT/FS/2026/0001", "studentName": "...", ...}]'
+                                value={importJsonText}
+                                onChange={(e) => setImportJsonText(e.target.value)}
+                                className="w-full font-mono text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-900"
+                            />
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowImportModal(false)}
+                                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const parsed = JSON.parse(importJsonText);
+                                            if (!Array.isArray(parsed)) return alert("JSON must be an array of certificate objects.");
+                                            setLoading(true);
+                                            const count = await syncAllCertificates(parsed);
+                                            alert(`Successfully imported & seeded ${count} certificates to Supabase!`);
+                                            setShowImportModal(false);
+                                            setImportJsonText("");
+                                            await load();
+                                        } catch (e: any) {
+                                            alert("Import error: " + e.message);
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer"
+                                >
+                                    Seed to Supabase
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
