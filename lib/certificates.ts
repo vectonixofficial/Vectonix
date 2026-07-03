@@ -308,19 +308,5 @@ export const DEFAULT_CERTIFICATES: Omit<Certificate, "id" | "createdAt">[] = [
         signatureImage: "",
         verificationStatus: "verified",
         type: "completion"
-    },
-    {
-        certificateId: "VTX-OFF-2026-001",
-        studentName: "Kavitha R",
-        collegeName: "Government College of Technology, Coimbatore",
-        domain: "Full Stack Web Development",
-        designation: "Software Engineering Intern",
-        startDate: "2026-08-01",
-        endDate: "2026-09-01",
-        issueDate: "2026-07-25",
-        stipend: "Performance-Based Stipend",
-        signatureImage: "",
-        verificationStatus: "verified",
-        type: "offer_letter"
     }
 ];

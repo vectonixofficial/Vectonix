@@ -63,8 +63,9 @@ function Cover({ z, children }: { z: typeof ZONES[keyof typeof ZONES] & { right?
 function QROverlay({ id, size = 184, border = true }: { id: string; size?: number; border?: boolean }) {
     const ref = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
-        if (!ref.current) return;
-        QRCode.toCanvas(ref.current, `https://vectonix.netlify.app/verify/${id}`, {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://vectonix.in";
+        const verifyUrl = baseUrl.includes("localhost") ? "https://vectonix.in" : baseUrl;
+        QRCode.toCanvas(ref.current, `${verifyUrl}/verify/${id}`, {
             width: size, margin: 1,
             color: { dark: "#1e3a8a", light: "#ffffff" },
         }).catch(console.error);
@@ -253,7 +254,7 @@ const CertificateCanvas = forwardRef<CertificateCanvasRef, { data: CertificateDa
                                             <QROverlay id={data.certificateId} size={110} border={false} />
                                         </div>
                                         <p style={{ margin: "6px 0 0", fontSize: 10, fontWeight: 700, color: "#1e3a8a" }}>VERIFY ONLINE</p>
-                                        <p style={{ margin: "1px 0 0", fontSize: 9, color: "#64748b" }}>vectonix.netlify.app/verify</p>
+                                        <p style={{ margin: "1px 0 0", fontSize: 9, color: "#64748b" }}>vectonix.in/verify</p>
                                     </div>
                                 </div>
                             </div>
