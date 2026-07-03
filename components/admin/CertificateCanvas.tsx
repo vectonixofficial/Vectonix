@@ -34,13 +34,13 @@ function fmt(iso: string) {
 // Scientifically measured pixel positions from PowerShell pixel analysis for Completion Certificate
 const ZONES = {
     issueDate: { top: 244, left: 476, width: 240, height: 32 },
-    name:      { top: 557, left: 185, width: 684, height: 80 },
+    name: { top: 557, left: 185, width: 684, height: 80 },
     underline: { top: 639, left: 260, width: 534 },
-    college:   { top: 713, left: 270, width: 514, height: 34 },
-    domain:    { top: 817, left: 215, width: 624, height: 48 },
-    dateLine:  { top: 882, left: 180, width: 694, height: 32 },
+    college: { top: 713, left: 270, width: 514, height: 34 },
+    domain: { top: 817, left: 215, width: 624, height: 48 },
+    dateLine: { top: 882, left: 180, width: 694, height: 32 },
     signature: { top: 1098, left: 50, width: 292, height: 112 },
-    qr:        { top: 1096, right: 50, width: 196, height: 196 },
+    qr: { top: 1096, right: 50, width: 196, height: 196 },
 };
 
 function Cover({ z, children }: { z: typeof ZONES[keyof typeof ZONES] & { right?: number }, children: React.ReactNode }) {
