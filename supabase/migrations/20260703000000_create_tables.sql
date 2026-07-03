@@ -110,13 +110,17 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Certificates Policies: Public SELECT, Admin INSERT/UPDATE/DELETE
+-- Certificates Policies: Public SELECT, INSERT, UPDATE, DELETE
 CREATE POLICY "Allow public select for certificates" ON public.certificates FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full access for certificates" ON public.certificates FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow public insert for certificates" ON public.certificates FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update for certificates" ON public.certificates FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete for certificates" ON public.certificates FOR DELETE USING (true);
 
--- Events Policies: Public SELECT, Admin INSERT/UPDATE/DELETE
+-- Events Policies: Public SELECT, INSERT, UPDATE, DELETE
 CREATE POLICY "Allow public select for events" ON public.events FOR SELECT USING (true);
-CREATE POLICY "Allow authenticated full access for events" ON public.events FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow public insert for events" ON public.events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update for events" ON public.events FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete for events" ON public.events FOR DELETE USING (true);
 
 -- Registrations Policies: Public INSERT, Admin SELECT/UPDATE/DELETE
 CREATE POLICY "Allow public insert for registrations" ON public.registrations FOR INSERT WITH CHECK (true);
