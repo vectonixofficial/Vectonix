@@ -1,0 +1,184 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Bell, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+
+const updates = [
+    {
+        id: 1,
+        text: "SmartBus TN Beta is now live! Track your bus in real-time.",
+        link: "/products"
+    },
+    {
+        id: 2,
+        text: "VectoGuard AI wins innovation award at TechSummit 2026.",
+        link: "/about"
+    }
+];
+
+export const AnnouncementBox = () => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [timeLeft, setTimeLeft] = useState({
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0
+    });
+
+    useEffect(() => {
+        // Target date: Feb 18, 2026 8:30 PM IST
+        const targetDate = new Date('2026-02-18T20:30:00+05:30').getTime();
+
+        const calculateTimeLeft = () => {
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            if (difference > 0) {
+                setTimeLeft({
+                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                    minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+                    seconds: Math.floor((difference % (1000 * 60)) / 1000)
+                });
+            } else {
+                // Time is up
+                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                setIsVisible(false);
+            }
+        };
+
+        // Initial calculation
+        const now = new Date().getTime();
+        if (targetDate - now <= 0) {
+            // Already expired, do nothing (don't show)
+            return;
+        }
+
+        calculateTimeLeft();
+
+        // Update every second
+        const timer = setInterval(() => {
+            const currentNow = new Date().getTime();
+            if (targetDate - currentNow <= 0) {
+                clearInterval(timer);
+                setIsVisible(false);
+            } else {
+                calculateTimeLeft();
+            }
+        }, 1000);
+
+        // Show modal after delay ONLY if not expired
+        const showTimer = setTimeout(() => {
+            const currentNow = new Date().getTime();
+            if (targetDate - currentNow > 0) {
+                setIsVisible(true);
+            }
+        }, 1500);
+
+        return () => {
+            clearInterval(timer);
+            clearTimeout(showTimer);
+        };
+    }, []);
+
+    const handleClose = () => {
+        setIsVisible(false);
+    };
+
+    return (
+        <AnimatePresence>
+            {isVisible && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto p-4 cursor-pointer bg-black/20 backdrop-blur-sm"
+                    onClick={handleClose}
+                >
+                    <div
+                        className="relative w-[75vw] h-[75vh] pointer-events-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl p-8 flex flex-col cursor-default"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Glowing background effect */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-100/50 rounded-full blur-3xl" />
+
+                        {/* Centered Title */}
+                        <div className="absolute left-1/2 top-8 -translate-x-1/2 flex items-center gap-3 w-full justify-center pointer-events-none z-20">
+                            <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600">
+                                <Bell size={24} />
+                            </div>
+                            <h3 className="font-bold text-slate-900 text-xl md:text-3xl tracking-wide whitespace-nowrap">Announcement</h3>
+                        </div>
+
+                        {/* Close Button (Right) */}
+                        <div className="absolute top-6 right-6 z-50">
+                            <button
+                                onClick={handleClose}
+                                className="text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all p-2 rounded-full active:scale-95"
+                                aria-label="Close Announcement"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="flex-grow flex flex-col md:flex-row items-center w-full overflow-hidden gap-6 md:gap-8 pt-20">
+                            {/* Image Container (Left on Desktop) */}
+                            <div className="relative w-full md:w-1/2 h-[60%] md:h-full flex-shrink-0 order-2 md:order-1 flex items-center justify-center">
+                                <Image
+                                    src="/workshop.png"
+                                    alt="Workshop Poster"
+                                    fill
+                                    className="object-contain drop-shadow-2xl scale-105 md:scale-110 transition-transform"
+                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                    priority
+                                />
+                            </div>
+
+                            {/* Text Container (Right on Desktop) */}
+                            <div className="flex flex-col justify-center items-center md:items-start text-center md:text-left w-full md:w-1/2 h-auto md:h-full order-1 md:order-2 px-4">
+                                <h4 className="text-2xl md:text-4xl font-bold text-slate-900 leading-tight mb-6">
+                                    Ready for the <br />
+                                    Workshop? <br />
+                                    <Link
+                                        href="https://forms.gle/JYzdpUNph7VdNYeq7"
+                                        target="_blank"
+                                        className="text-indigo-600 hover:text-indigo-700 hover:underline transition-all cursor-pointer"
+                                    >
+                                        Register Now
+                                    </Link>
+                                </h4>
+
+                                {/* Countdown Timer */}
+                                <div className="grid grid-cols-4 gap-2 md:gap-4 text-center">
+                                    {[
+                                        { label: 'Days', value: timeLeft.days },
+                                        { label: 'Hours', value: timeLeft.hours },
+                                        { label: 'Mins', value: timeLeft.minutes },
+                                        { label: 'Secs', value: timeLeft.seconds }
+                                    ].map((item, index) => (
+                                        <div key={index} className="flex flex-col items-center p-2 rounded-lg bg-indigo-50 border border-indigo-100 min-w-[60px] md:min-w-[70px]">
+                                            <span className="text-xl md:text-2xl font-bold text-indigo-600 font-mono">
+                                                {String(item.value).padStart(2, '0')}
+                                            </span>
+                                            <span className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">
+                                                {item.label}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-4 text-xs text-slate-400">
+                                    Starts Feb 18, 2026 • 8:30 PM IST
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+};

@@ -1,0 +1,36 @@
+
+> vectonix@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\Rahman\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.7s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/21) ...
+Error occurred prerendering page "/admin/events/create". Read more: https://nextjs.org/docs/messages/prerender-error
+Error [FirebaseError]: Firebase: Error (auth/invalid-api-key).
+    at p (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:33286)
+    at q (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:33334)
+    at _.instanceFactory (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:84838)
+    at ab.getOrInitializeService (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:13298)
+    at ab.initialize (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:12706)
+    at aJ (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:71179)
+    at bt (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:1:85570)
+    at module evaluation (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[root-of-the-server]__9d3dc911._.js:15:21443)
+    at instantiateModule (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[turbopack]_runtime.js:740:9)
+    at getOrInstantiateModuleFromParent (C:\Users\Rahman\Downloads\Vectonix-main\Vectonix-main\.next\server\chunks\ssr\[turbopack]_runtime.js:763:12) {
+  code: 'auth/invalid-api-key',
+  customData: [Object],
+  digest: '1972579240'
+}
+Export encountered an error on /admin/events/create/page: /admin/events/create, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

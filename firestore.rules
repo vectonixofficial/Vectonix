@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow anyone to read events
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'rahman.habibur2007@gmail.com';
+    }
+
+    // Allow anyone to create registrations (internal forms)
+    match /registrations/{registrationId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'rahman.habibur2007@gmail.com';
+    }
+
+    // Certificates — public read (for QR verification), admin-only write
+    match /certificates/{certificateId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.token.email == 'rahman.habibur2007@gmail.com';
+    }
+  }
+}
