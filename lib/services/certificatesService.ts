@@ -1,5 +1,7 @@
 import { supabase, isSupabaseConfigured, DatabaseCertificate } from "@/lib/supabase";
 import { Certificate, DEFAULT_CERTIFICATES } from "@/lib/certificates";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query as fsQuery, where as fsWhere } from "firebase/firestore";
 
 // Helper to convert DB snake_case to app camelCase
 function mapToCertificate(item: DatabaseCertificate): Certificate {
@@ -41,30 +43,73 @@ function mapToDatabaseFormat(cert: Partial<Certificate>): Partial<DatabaseCertif
 
 export const certificatesService = {
     async getAll(): Promise<Certificate[]> {
-        if (!isSupabaseConfigured) {
-            return DEFAULT_CERTIFICATES.map(c => ({ ...c, id: c.certificateId })) as Certificate[];
+        let supabaseCerts: Certificate[] = [];
+        let firestoreCerts: Certificate[] = [];
+
+        // 1. Fetch from Supabase if configured
+        if (isSupabaseConfigured) {
+            const { data, error } = await supabase
+                .from("certificates")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            if (!error && data) {
+                supabaseCerts = data.map(mapToCertificate);
+            }
         }
 
-        const { data, error } = await supabase
-            .from("certificates")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-        if (error) {
-            console.warn("Supabase fetch error, using defaults:", error.message);
-            return DEFAULT_CERTIFICATES.map(c => ({ ...c, id: c.certificateId })) as Certificate[];
+        // 2. Fetch from Firestore (where live generated certificates exist)
+        if (db) {
+            try {
+                const snapshot = await getDocs(collection(db, "certificates"));
+                firestoreCerts = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Certificate));
+            } catch (e) {
+                console.warn("Firestore fetch warning:", e);
+            }
         }
 
-        if (!data || data.length === 0) {
-            return DEFAULT_CERTIFICATES.map(c => ({ ...c, id: c.certificateId })) as Certificate[];
+        // 3. Merge all sources: Supabase, Firestore, and DEFAULT_CERTIFICATES
+        const allCombinedMap = new Map<string, Certificate>();
+
+        // Default certs first
+        DEFAULT_CERTIFICATES.forEach(c => {
+            allCombinedMap.set(c.certificateId.toUpperCase(), { id: c.certificateId, ...c } as Certificate);
+        });
+
+        // Firestore certs next (overrides defaults)
+        firestoreCerts.forEach(c => {
+            if (c.certificateId) {
+                allCombinedMap.set(c.certificateId.toUpperCase(), c);
+            }
+        });
+
+        // Supabase certs (highest priority)
+        supabaseCerts.forEach(c => {
+            if (c.certificateId) {
+                allCombinedMap.set(c.certificateId.toUpperCase(), c);
+            }
+        });
+
+        const mergedList = Array.from(allCombinedMap.values());
+
+        // 4. Auto-seed any missing Firestore/Default certificates into Supabase in the background
+        if (isSupabaseConfigured && mergedList.length > supabaseCerts.length) {
+            const missingInSupabase = mergedList.filter(
+                m => !supabaseCerts.some(s => s.certificateId.toUpperCase() === m.certificateId.toUpperCase())
+            );
+            if (missingInSupabase.length > 0) {
+                console.log(`Auto-seeding ${missingInSupabase.length} missing certificates from Firestore into Supabase...`);
+                this.syncAll(missingInSupabase).catch(err => console.error("Auto-sync error:", err));
+            }
         }
 
-        return data.map(mapToCertificate);
+        return mergedList;
     },
 
     async getByCode(certificateId: string): Promise<Certificate | null> {
         const decodedId = decodeURIComponent(certificateId).trim();
 
+        // 1. Check Supabase
         if (isSupabaseConfigured) {
             const { data, error } = await supabase
                 .from("certificates")
@@ -77,13 +122,36 @@ export const certificatesService = {
             }
         }
 
-        // Fallback search
+        // 2. Check Firestore if not found in Supabase
+        if (db) {
+            try {
+                const q = fsQuery(collection(db, "certificates"), fsWhere("certificateId", "==", decodedId));
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    const docData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Certificate;
+                    // Auto-sync into Supabase
+                    if (isSupabaseConfigured) {
+                        this.create(docData).catch(console.error);
+                    }
+                    return docData;
+                }
+            } catch (e) {
+                console.warn("Firestore lookup failed:", e);
+            }
+        }
+
+        // 3. Fallback search in defaults
         const fallback = DEFAULT_CERTIFICATES.find(
             (c) => c.certificateId.toUpperCase() === decodedId.toUpperCase()
         );
         if (fallback) {
-            return { id: fallback.certificateId, ...fallback } as Certificate;
+            const certObj = { id: fallback.certificateId, ...fallback } as Certificate;
+            if (isSupabaseConfigured) {
+                this.create(certObj).catch(console.error);
+            }
+            return certObj;
         }
+
         return null;
     },
 
