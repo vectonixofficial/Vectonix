@@ -10,7 +10,7 @@ const sidebarLinks = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },
     { name: "Create Event", href: "/admin/events/create", icon: CalendarPlus },
     { name: "View Responses", href: "/admin/responses", icon: FileText },
-    { name: "Certificates", href: "/admin/certificates", icon: Award },
+    { name: "Certificates & Offers", href: "/admin/certificates", icon: Award },
 ];
 
 export const Sidebar = () => {
@@ -25,7 +25,7 @@ export const Sidebar = () => {
     };
 
     return (
-        <div className="h-full w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200 flex flex-col justify-between p-4 pt-24">
+        <div className="h-full w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200 flex flex-col justify-between p-4 pt-20">
             <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-4">
                     Admin Menu

@@ -135,10 +135,12 @@ export default function VerifyPage() {
                                         }`}
                                 >
                                     <Shield className="h-4 w-4" />
-                                    {cert.verificationStatus === "verified" ? "VERIFIED CERTIFICATE" : "REVOKED CERTIFICATE"}
+                                    {cert.verificationStatus === "verified"
+                                        ? (cert.type === "offer_letter" || cert.certificateId.includes("OFF") ? "VERIFIED INTERNSHIP OFFER LETTER" : "VERIFIED CERTIFICATE")
+                                        : "REVOKED DOCUMENT"}
                                 </div>
                                 <p className="text-slate-500 text-xs">
-                                    This certificate has been officially issued by Vectonix Technologies
+                                    This official document has been issued by Vectonix Technologies
                                 </p>
                             </div>
 
@@ -148,10 +150,11 @@ export default function VerifyPage() {
                             {/* Details grid */}
                             <div className="space-y-4">
                                 {[
-                                    { icon: Hash, label: "Certificate ID", value: cert.certificateId, mono: true, color: "text-indigo-600 font-bold" },
-                                    { icon: User, label: "Student Name", value: cert.studentName, mono: false, color: "text-slate-900 font-semibold" },
+                                    { icon: Hash, label: "Document ID", value: cert.certificateId, mono: true, color: "text-indigo-600 font-bold" },
+                                    { icon: User, label: "Candidate Name", value: cert.studentName, mono: false, color: "text-slate-900 font-semibold" },
                                     { icon: GraduationCap, label: "College / University", value: cert.collegeName, mono: false, color: "text-slate-700" },
-                                    { icon: BookOpen, label: "Domain", value: cert.domain, mono: false, color: "text-indigo-600" },
+                                    { icon: BookOpen, label: "Domain / Field", value: cert.domain, mono: false, color: "text-indigo-600 font-medium" },
+                                    ...(cert.designation ? [{ icon: BookOpen, label: "Designation / Role", value: cert.designation, mono: false, color: "text-purple-600 font-semibold" }] : []),
                                     {
                                         icon: Calendar,
                                         label: "Internship Duration",
@@ -159,6 +162,7 @@ export default function VerifyPage() {
                                         mono: false,
                                         color: "text-slate-700",
                                     },
+                                    ...(cert.stipend ? [{ icon: Calendar, label: "Stipend / Terms", value: cert.stipend, mono: false, color: "text-emerald-600 font-medium" }] : []),
                                     { icon: Calendar, label: "Issue Date", value: formatDate(cert.issueDate), mono: false, color: "text-slate-500 text-xs" },
                                 ].map((item) => {
                                     const Icon = item.icon;

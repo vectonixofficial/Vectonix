@@ -23,16 +23,30 @@ export interface Certificate {
     issueDate: string;
     signatureImage?: string; // base64 data URL
     verificationStatus: "verified" | "revoked";
+    type?: "completion" | "offer_letter";
+    designation?: string;
+    stipend?: string;
     createdAt?: any;
 }
 
 const COLLECTION = "certificates";
 
-export async function generateCertificateId(): Promise<string> {
+export async function generateCertificateId(type: "completion" | "offer_letter" = "completion"): Promise<string> {
     const year = new Date().getFullYear();
-    const snapshot = await getDocs(collection(db, COLLECTION));
-    const count = snapshot.size + 1;
-    return `VTX${year}-${String(count).padStart(3, "0")}`;
+    try {
+        const snapshot = await getDocs(collection(db, COLLECTION));
+        const count = snapshot.size + 1;
+        if (type === "offer_letter") {
+            return `VTX-OFF-${year}-${String(count).padStart(3, "0")}`;
+        }
+        return `VTX${year}-${String(count).padStart(3, "0")}`;
+    } catch {
+        const count = Math.floor(Math.random() * 899) + 100;
+        if (type === "offer_letter") {
+            return `VTX-OFF-${year}-${count}`;
+        }
+        return `VTX${year}-${count}`;
+    }
 }
 
 export async function addCertificate(
@@ -292,6 +306,21 @@ export const DEFAULT_CERTIFICATES: Omit<Certificate, "id" | "createdAt">[] = [
         endDate: "2026-07-01",
         issueDate: "2026-07-01",
         signatureImage: "",
-        verificationStatus: "verified"
+        verificationStatus: "verified",
+        type: "completion"
+    },
+    {
+        certificateId: "VTX-OFF-2026-001",
+        studentName: "Kavitha R",
+        collegeName: "Government College of Technology, Coimbatore",
+        domain: "Full Stack Web Development",
+        designation: "Software Engineering Intern",
+        startDate: "2026-08-01",
+        endDate: "2026-09-01",
+        issueDate: "2026-07-25",
+        stipend: "Performance-Based Stipend",
+        signatureImage: "",
+        verificationStatus: "verified",
+        type: "offer_letter"
     }
 ];
