@@ -1,15 +1,40 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Users, FileText, CheckCircle } from "lucide-react";
+import { eventsService } from "@/lib/services/eventsService";
+import { responsesService } from "@/lib/services/responsesService";
+import { certificatesService } from "@/lib/services/certificatesService";
 
 export default function AdminDashboardPage() {
-    const stats = [
+    const [stats, setStats] = useState([
         { name: "Total Events", value: "0", icon: Calendar, color: "text-indigo-600" },
         { name: "Total Registrations", value: "0", icon: Users, color: "text-emerald-600" },
-        { name: "Form Templates", value: "0", icon: FileText, color: "text-purple-600" },
-        { name: "Completed Events", value: "0", icon: CheckCircle, color: "text-sky-600" },
-    ];
+        { name: "Certificates Issued", value: "0", icon: FileText, color: "text-purple-600" },
+        { name: "Verified Records", value: "0", icon: CheckCircle, color: "text-sky-600" },
+    ]);
+
+    useEffect(() => {
+        async function loadStats() {
+            try {
+                const events = await eventsService.getAll();
+                const responses = await responsesService.getAll();
+                const certs = await certificatesService.getAll();
+                const verified = certs.filter(c => c.verificationStatus === "verified");
+
+                setStats([
+                    { name: "Total Events", value: String(events.length), icon: Calendar, color: "text-indigo-600" },
+                    { name: "Total Registrations", value: String(responses.length), icon: Users, color: "text-emerald-600" },
+                    { name: "Certificates Issued", value: String(certs.length), icon: FileText, color: "text-purple-600" },
+                    { name: "Verified Records", value: String(verified.length), icon: CheckCircle, color: "text-sky-600" },
+                ]);
+            } catch (e) {
+                console.error("Dashboard stats error:", e);
+            }
+        }
+        loadStats();
+    }, []);
 
     return (
         <div className="space-y-8">

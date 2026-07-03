@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { eventsService } from "@/lib/services/eventsService";
+import { storageService } from "@/lib/services/storageService";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
@@ -64,29 +63,25 @@ export default function CreateEventPage() {
         try {
             let imageUrl = "";
             if (imageFile) {
-                const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
-                const snapshot = await uploadBytes(storageRef, imageFile);
-                imageUrl = await getDownloadURL(snapshot.ref);
+                try {
+                    imageUrl = await storageService.uploadFile("events", `${Date.now()}_${imageFile.name}`, imageFile);
+                } catch {
+                    imageUrl = imagePreview;
+                }
             }
 
             const eventData = {
                 title,
-                subtitle,
                 description,
-                category,
-                status,
                 date,
                 time,
-                duration,
-                certification,
-                regLink: useInternalForm ? "" : regLink,
-                useInternalForm,
-                imageUrl,
-                customFields: useInternalForm ? customFields : [],
-                createdAt: serverTimestamp(),
+                category,
+                image_url: imageUrl,
+                registration_link: useInternalForm ? "" : regLink,
+                custom_fields: useInternalForm ? customFields : [],
             };
 
-            await addDoc(collection(db, "events"), eventData);
+            await eventsService.create(eventData);
             setSuccess(true);
             setTimeout(() => router.push("/admin"), 1500);
         } catch (err: any) {

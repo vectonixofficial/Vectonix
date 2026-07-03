@@ -14,6 +14,7 @@ import {
     updateCertificate,
     deleteCertificate,
     generateCertificateId,
+    syncAllCertificates,
     DEFAULT_CERTIFICATES,
 } from "@/lib/certificates";
 
@@ -211,6 +212,25 @@ export default function CertificatesPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        id="sync-supabase-btn"
+                        onClick={async () => {
+                            if (certificates.length === 0) return alert("No certificates loaded to sync.");
+                            setLoading(true);
+                            try {
+                                const syncedCount = await syncAllCertificates(certificates);
+                                alert(`Successfully synced ${syncedCount} certificates to Supabase!`);
+                                await load();
+                            } catch (err: any) {
+                                alert(`Sync failed: ${err.message}`);
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold transition-all shadow-md cursor-pointer text-sm"
+                    >
+                        <RefreshCw className="h-4 w-4" /> Sync to Supabase ({certificates.length})
+                    </button>
                     <button
                         id="add-offer-letter-btn"
                         onClick={() => openNew("offer_letter")}

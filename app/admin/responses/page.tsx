@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, getDocs, where, orderBy } from "firebase/firestore";
+import { eventsService } from "@/lib/services/eventsService";
+import { responsesService } from "@/lib/services/responsesService";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
 import { Download, FileSpreadsheet, Eye } from "lucide-react";
@@ -18,9 +18,7 @@ export default function ResponsesPage() {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const q = query(collection(db, "events"), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                const eventsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const eventsData = await eventsService.getAll();
                 setEvents(eventsData);
             } catch (error) {
                 console.error("Error fetching events:", error);
@@ -35,9 +33,7 @@ export default function ResponsesPage() {
         setSelectedEvent(event);
         setLoadingResponses(true);
         try {
-            const q = query(collection(db, "registrations"), where("eventId", "==", event.id));
-            const querySnapshot = await getDocs(q);
-            const responsesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const responsesData = await responsesService.getByEventId(event.id);
             setResponses(responsesData);
         } catch (error) {
             console.error("Error fetching responses:", error);

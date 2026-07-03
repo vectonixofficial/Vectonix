@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { eventsService } from "@/lib/services/eventsService";
+import { responsesService } from "@/lib/services/responsesService";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
@@ -36,11 +36,9 @@ export default function RegistrationPage() {
     useEffect(() => {
         const fetchEvent = async () => {
             try {
-                const docRef = doc(db, "events", eventId);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    setEvent({ id: docSnap.id, ...docSnap.data() });
+                const eventData = await eventsService.getById(eventId);
+                if (eventData) {
+                    setEvent(eventData);
                 } else {
                     setError("Event not found");
                 }
@@ -64,10 +62,13 @@ export default function RegistrationPage() {
         setError("");
 
         try {
-            await addDoc(collection(db, "registrations"), {
-                eventId,
+            await responsesService.createRegistration({
+                event_id: eventId,
+                full_name: formData.fullName || formData.name || "Participant",
+                email: formData.email || "",
+                phone: formData.phone || "",
                 answers: formData,
-                timestamp: serverTimestamp()
+                status: "registered",
             });
             setSuccess(true);
         } catch (err: any) {

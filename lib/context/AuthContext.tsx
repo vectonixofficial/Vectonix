@@ -3,9 +3,17 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+
+interface AuthUser {
+    uid?: string;
+    id?: string;
+    email: string | null;
+    displayName?: string | null;
+}
 
 interface AuthContextType {
-    user: User | null;
+    user: AuthUser | null;
     isAdmin: boolean;
     loading: boolean;
     signInWithGoogle: () => Promise<any>;
@@ -19,37 +27,76 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<AuthUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const ADMIN_EMAILS = ["rahman.habibur2007@gmail.com", "vectonixofficial@gmail.com"];
 
     const signInWithGoogle = async () => {
+        if (isSupabaseConfigured) {
+            return supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo: window.location.origin },
+            });
+        }
         if (!auth) {
-            throw new Error("Firebase authentication is not configured. Please check your .env.local file.");
+            throw new Error("Authentication is not configured. Please check environment variables.");
         }
         const provider = new GoogleAuthProvider();
         return signInWithPopup(auth, provider);
     };
 
     useEffect(() => {
-        if (!auth) {
-            setLoading(false);
-            return;
+        let isMounted = true;
+
+        if (isSupabaseConfigured) {
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (!isMounted) return;
+                const sbUser = session?.user;
+                if (sbUser) {
+                    setUser({ id: sbUser.id, email: sbUser.email ?? null, displayName: sbUser.user_metadata?.full_name });
+                    setIsAdmin(Boolean(sbUser.email && ADMIN_EMAILS.includes(sbUser.email)));
+                } else if (!auth) {
+                    setUser(null);
+                    setIsAdmin(false);
+                }
+                setLoading(false);
+            });
+
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                const sbUser = session?.user;
+                if (sbUser) {
+                    setUser({ id: sbUser.id, email: sbUser.email ?? null, displayName: sbUser.user_metadata?.full_name });
+                    setIsAdmin(Boolean(sbUser.email && ADMIN_EMAILS.includes(sbUser.email)));
+                } else if (!auth) {
+                    setUser(null);
+                    setIsAdmin(false);
+                }
+                setLoading(false);
+            });
+
+            return () => {
+                isMounted = false;
+                subscription.unsubscribe();
+            };
         }
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            if (currentUser && currentUser.email && ADMIN_EMAILS.includes(currentUser.email)) {
-                setIsAdmin(true);
-            } else {
-                setIsAdmin(false);
-            }
-            setLoading(false);
-        });
+        if (auth) {
+            const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                if (currentUser) {
+                    setUser({ uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName });
+                    setIsAdmin(Boolean(currentUser.email && ADMIN_EMAILS.includes(currentUser.email)));
+                } else {
+                    setUser(null);
+                    setIsAdmin(false);
+                }
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        }
 
-        return () => unsubscribe();
+        setLoading(false);
     }, []);
 
     return (

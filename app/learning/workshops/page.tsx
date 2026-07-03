@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { Section } from "@/components/ui/Section";
 import { MotionWrapper } from "@/components/ui/MotionWrapper";
 import { motion } from "framer-motion";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { eventsService } from "@/lib/services/eventsService";
 import { EventCard } from "@/components/EventCard";
 import Link from "next/link";
 
@@ -22,21 +21,9 @@ export default function WorkshopsPage() {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const q = query(
-                    collection(db, "events"),
-                    where("category", "==", "Workshop")
-                );
-                const querySnapshot = await getDocs(q);
-                let eventsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-                
-                // Sort client-side: newest first, items without createdAt go to the end
-                eventsData.sort((a, b) => {
-                    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-                    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                    return timeB - timeA;
-                });
-                
-                setEvents(eventsData);
+                const allEvents = await eventsService.getAll();
+                const workshopEvents = allEvents.filter(e => e.category === "Workshop" || !e.category);
+                setEvents(workshopEvents);
             } catch (error) {
                 console.error("Error fetching workshops:", error);
             } finally {

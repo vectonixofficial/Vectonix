@@ -1,16 +1,4 @@
-import { db } from "@/lib/firebase";
-import {
-    collection,
-    addDoc,
-    getDocs,
-    doc,
-    updateDoc,
-    deleteDoc,
-    query,
-    orderBy,
-    where,
-    serverTimestamp,
-} from "firebase/firestore";
+import { certificatesService } from "@/lib/services/certificatesService";
 
 export interface Certificate {
     id?: string;
@@ -29,84 +17,39 @@ export interface Certificate {
     createdAt?: any;
 }
 
-const COLLECTION = "certificates";
-
 export async function generateCertificateId(type: "completion" | "offer_letter" = "completion"): Promise<string> {
-    const year = new Date().getFullYear();
-    try {
-        const snapshot = await getDocs(collection(db, COLLECTION));
-        const count = snapshot.size + 1;
-        if (type === "offer_letter") {
-            return `VTX-OFF-${year}-${String(count).padStart(3, "0")}`;
-        }
-        return `VTX${year}-${String(count).padStart(3, "0")}`;
-    } catch {
-        const count = Math.floor(Math.random() * 899) + 100;
-        if (type === "offer_letter") {
-            return `VTX-OFF-${year}-${count}`;
-        }
-        return `VTX${year}-${count}`;
-    }
+    return certificatesService.generateCertificateId(type);
 }
 
 export async function addCertificate(
     data: Omit<Certificate, "id">
 ): Promise<string> {
-    const docRef = await addDoc(collection(db, COLLECTION), {
-        ...data,
-        createdAt: serverTimestamp(),
-    });
-    return docRef.id;
+    return certificatesService.create(data);
 }
 
 export async function getCertificates(): Promise<Certificate[]> {
-    const q = query(
-        collection(db, COLLECTION),
-        orderBy("createdAt", "desc")
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(
-        (d) => ({ id: d.id, ...d.data() } as Certificate)
-    );
+    return certificatesService.getAll();
 }
 
 export async function getCertificateByCode(
     certificateId: string
 ): Promise<Certificate | null> {
-    const decodedId = decodeURIComponent(certificateId);
-    try {
-        const q = query(
-            collection(db, COLLECTION),
-            where("certificateId", "==", decodedId)
-        );
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-            const d = snapshot.docs[0];
-            return { id: d.id, ...d.data() } as Certificate;
-        }
-    } catch (e) {
-        console.error("Firestore query failed in getCertificateByCode, trying fallback:", e);
-    }
-
-    // Try fallback DEFAULT_CERTIFICATES
-    const fallback = DEFAULT_CERTIFICATES.find(
-        (c) => c.certificateId.toUpperCase() === decodedId.toUpperCase()
-    );
-    if (fallback) {
-        return { id: fallback.certificateId, ...fallback } as Certificate;
-    }
-    return null;
+    return certificatesService.getByCode(certificateId);
 }
 
 export async function updateCertificate(
     id: string,
     data: Partial<Certificate>
 ): Promise<void> {
-    await updateDoc(doc(db, COLLECTION, id), data);
+    return certificatesService.update(id, data);
 }
 
 export async function deleteCertificate(id: string): Promise<void> {
-    await deleteDoc(doc(db, COLLECTION, id));
+    return certificatesService.delete(id);
+}
+
+export async function syncAllCertificates(certificates: Omit<Certificate, "id">[]): Promise<number> {
+    return certificatesService.syncAll(certificates);
 }
 
 export const DEFAULT_CERTIFICATES: Omit<Certificate, "id" | "createdAt">[] = [

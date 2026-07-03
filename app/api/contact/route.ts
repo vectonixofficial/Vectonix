@@ -22,6 +22,20 @@ export async function POST(request: Request) {
             },
         });
 
+        // Save response to Supabase
+        try {
+            const { responsesService } = await import("@/lib/services/responsesService");
+            await responsesService.createRegistration({
+                full_name: `${firstName} ${lastName}`,
+                email: email,
+                type: "contact",
+                answers: { subject, message },
+                status: "received",
+            });
+        } catch (dbErr) {
+            console.error("Saved to email, failed to store in Supabase:", dbErr);
+        }
+
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: 'vectonixofficial@gmail.com', // Explicitly send to this address
@@ -47,7 +61,7 @@ ${message}
         await transporter.sendMail(mailOptions);
 
         return NextResponse.json(
-            { message: "Email sent successfully" },
+            { message: "Contact request submitted and stored successfully" },
             { status: 200 }
         );
     } catch (error) {

@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Section } from "@/components/ui/Section";
 import { MotionWrapper } from "@/components/ui/MotionWrapper";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { eventsService } from "@/lib/services/eventsService";
 import { EventCard } from "@/components/EventCard";
 
 export default function InternshipsPage() {
@@ -14,21 +13,9 @@ export default function InternshipsPage() {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const q = query(
-                    collection(db, "events"),
-                    where("category", "==", "Internship")
-                );
-                const querySnapshot = await getDocs(q);
-                let eventsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-                
-                // Sort client-side: newest first, items without createdAt go to the end
-                eventsData.sort((a, b) => {
-                    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-                    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                    return timeB - timeA;
-                });
-                
-                setEvents(eventsData);
+                const allEvents = await eventsService.getAll();
+                const internshipEvents = allEvents.filter(e => e.category === "Internship");
+                setEvents(internshipEvents);
             } catch (error) {
                 console.error("Error fetching internships:", error);
             } finally {
