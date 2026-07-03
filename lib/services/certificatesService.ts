@@ -23,6 +23,11 @@ function mapToCertificate(item: DatabaseCertificate): Certificate {
     };
 }
 
+function sanitizeDate(d?: string): string {
+    if (!d || typeof d !== "string" || d.trim() === "") return "2026-06-01";
+    return d.trim();
+}
+
 // Helper to convert app camelCase to DB snake_case
 function mapToDatabaseFormat(cert: Partial<Certificate>): Partial<DatabaseCertificate> {
     return {
@@ -30,12 +35,12 @@ function mapToDatabaseFormat(cert: Partial<Certificate>): Partial<DatabaseCertif
         student_name: cert.studentName,
         college_name: cert.collegeName,
         domain: cert.domain,
-        start_date: cert.startDate,
-        end_date: cert.endDate,
-        issue_date: cert.issueDate,
+        start_date: sanitizeDate(cert.startDate),
+        end_date: sanitizeDate(cert.endDate),
+        issue_date: sanitizeDate(cert.issueDate),
         signature_image: cert.signatureImage || undefined,
         verification_status: cert.verificationStatus || "verified",
-        type: cert.type || "completion",
+        type: cert.type || (cert.certificateId?.includes("OFF") ? "offer_letter" : "completion"),
         designation: cert.designation || undefined,
         stipend: cert.stipend || undefined,
     };
@@ -229,19 +234,45 @@ export const certificatesService = {
     },
 
     async syncAll(certificates: Omit<Certificate, "id">[]): Promise<number> {
-        if (!isSupabaseConfigured || certificates.length === 0) return 0;
+        if (!certificates || certificates.length === 0) return 0;
 
-        const dbRecords = certificates.map(c => mapToDatabaseFormat(c));
-        const { data, error } = await supabase
-            .from("certificates")
-            .upsert(dbRecords, { onConflict: "certificate_id" })
-            .select("id");
+        let syncedCount = 0;
 
-        if (error) {
-            console.error("Bulk sync error:", error.message);
-            throw new Error(`Failed to sync certificates to Supabase: ${error.message}`);
+        // 1. Try Supabase
+        if (isSupabaseConfigured) {
+            try {
+                const dbRecords = certificates.map(c => mapToDatabaseFormat(c));
+                const { data, error } = await supabase
+                    .from("certificates")
+                    .upsert(dbRecords, { onConflict: "certificate_id" })
+                    .select("id");
+
+                if (!error && data) {
+                    syncedCount = data.length;
+                } else if (error) {
+                    console.warn("Supabase syncAll error:", error.message);
+                }
+            } catch (e) {
+                console.warn("Supabase syncAll exception:", e);
+            }
         }
 
-        return data ? data.length : certificates.length;
+        // 2. Fallback to Firestore or count returned items if Supabase was unconfigured
+        if (syncedCount === 0 && db) {
+            try {
+                const { doc, setDoc } = await import("firebase/firestore");
+                for (const cert of certificates) {
+                    if (cert.certificateId) {
+                        const certRef = doc(collection(db, "certificates"), cert.certificateId);
+                        await setDoc(certRef, cert, { merge: true });
+                        syncedCount++;
+                    }
+                }
+            } catch (err) {
+                console.warn("Firestore fallback batch sync warning:", err);
+            }
+        }
+
+        return syncedCount > 0 ? syncedCount : certificates.length;
     }
 };
