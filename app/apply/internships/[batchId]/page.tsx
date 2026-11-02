@@ -630,7 +630,9 @@ export default function InternshipApplyPage() {
                                     {/* Manual entry toggle */}
                                     <div className="mt-2 flex items-center justify-between text-xs">
                                         <span className="text-slate-500">
-                                            Can&apos;t find your institution in the directory?
+                                            {formData.isManualCollege
+                                                ? "Entered manually. Switch back to search official directory?"
+                                                : "Can't find your college in the list?"}
                                         </span>
                                         <button
                                             type="button"
@@ -638,44 +640,16 @@ export default function InternshipApplyPage() {
                                                 setFormData((prev) => ({
                                                     ...prev,
                                                     isManualCollege: !prev.isManualCollege,
-                                                    collegeSelectionType: "manual"
+                                                    collegeSelectionType: !prev.isManualCollege ? "manual" : "official_directory"
                                                 }));
                                                 setShowCollegeDropdown(false);
                                             }}
-                                            className="text-indigo-600 font-semibold hover:underline"
+                                            className="text-indigo-600 font-semibold hover:underline cursor-pointer"
                                         >
-                                            {formData.isManualCollege ? "Use Autocomplete" : "Add College Manually"}
+                                            {formData.isManualCollege ? "Use Search Directory" : "Add College Manually"}
                                         </button>
                                     </div>
                                 </div>
-
-                                {/* Manual College Fields if toggled */}
-                                {formData.isManualCollege && (
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                        <div>
-                                            <label className="block font-semibold text-slate-700 mb-1">College City</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Coimbatore, Karur, Pune"
-                                                value={formData.collegeCity}
-                                                onChange={(e) => setFormData({ ...formData, collegeCity: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block font-semibold text-slate-700 mb-1">College State</label>
-                                            <select
-                                                value={formData.collegeState || "Tamil Nadu"}
-                                                onChange={(e) => setFormData({ ...formData, collegeState: e.target.value })}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                                            >
-                                                {INDIAN_STATES.map((st) => (
-                                                    <option key={st} value={st}>{st}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>

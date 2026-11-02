@@ -47,32 +47,39 @@ export default function InternshipsPage() {
                 </div>
 
                 <div className="max-w-5xl mx-auto space-y-8">
-                    {/* Featured Winter Internship 2026 Card */}
-                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white p-8 sm:p-10 shadow-2xl border border-indigo-500/20">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                    {/* Featured Winter Internship 2026 Card - Light Theme */}
+                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-8 sm:p-10 shadow-xl border border-indigo-100/90">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200/25 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-72 h-72 bg-sky-200/20 rounded-full blur-2xl pointer-events-none" />
                         
                         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                             <div className="space-y-4 max-w-2xl">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-                                    <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-xs">
+                                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
                                     <span>Applications Open • Batch WI26</span>
                                 </div>
-                                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                                    Vectonix Winter Internship <span className="text-indigo-400">2026</span>
+                                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+                                    Vectonix Winter Internship <span className="text-indigo-600">2026</span>
                                 </h2>
-                                <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                                     Build industry-ready projects in Web Development, AI/ML, IoT, and Cloud with direct mentorship, verified completion certificates, and placement assistance.
                                 </p>
-                                <div className="flex flex-wrap gap-4 text-xs text-slate-300 pt-1">
-                                    <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4 text-emerald-400" /> Dec 2026 – Jan 2027</span>
-                                    <span className="flex items-center gap-1.5"><Award className="h-4 w-4 text-indigo-400" /> Verified Certificate</span>
-                                    <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-emerald-400" /> Live Industry Projects</span>
+                                <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 pt-1">
+                                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200/80 shadow-xs">
+                                        <Calendar className="h-4 w-4 text-emerald-600" /> Dec 2026 – Jan 2027
+                                    </span>
+                                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200/80 shadow-xs">
+                                        <Award className="h-4 w-4 text-indigo-600" /> Verified Certificate
+                                    </span>
+                                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200/80 shadow-xs">
+                                        <CheckCircle className="h-4 w-4 text-emerald-600" /> Live Industry Projects
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="flex-shrink-0 w-full md:w-auto">
                                 <Link href="/apply/internships/wi26">
-                                    <Button size="lg" className="w-full md:w-auto bg-indigo-500 hover:bg-indigo-600 text-white shadow-xl hover:shadow-indigo-500/30 font-semibold gap-2">
+                                    <Button size="lg" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl hover:shadow-indigo-600/30 font-semibold gap-2 py-6 px-8 rounded-xl text-sm">
                                         Apply for Batch WI26
                                         <ArrowRight className="h-4 w-4" />
                                     </Button>

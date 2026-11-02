@@ -3,29 +3,22 @@ import nodemailer from "nodemailer";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function getTransporter() {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const user = process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com";
+    const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "Vectonix#12@";
+
+    if (process.env.SMTP_HOST && process.env.SMTP_HOST !== "smtp.gmail.com") {
         return nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: Number(process.env.SMTP_PORT || 587),
             secure: process.env.SMTP_SECURE === "true",
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
+            auth: { user, pass },
         });
     }
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.EMAIL_PASS !== "your-google-app-password-here") {
-        return nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-    }
-
-    return null;
+    return nodemailer.createTransport({
+        service: "gmail",
+        auth: { user, pass },
+    });
 }
 
 function replacePlaceholders(template: string, data: Record<string, string>): string {

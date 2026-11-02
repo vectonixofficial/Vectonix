@@ -194,10 +194,38 @@ export const internshipService = {
         const expectedPrice = PACKAGES_CONFIG[payload.packageName]?.price ?? 749;
         const verifiedAmount = expectedPrice;
 
-        // Fallback unique application ID generator: VTX-WI26-0001
+        // Guaranteed Unique Sequential Application ID generator: VTX-WI26-0001, VTX-WI26-0002...
         const prefix = batch.prefix || "WI26";
-        const randomSeq = Math.floor(1000 + Math.random() * 9000);
-        const generatedAppId = `VTX-${prefix}-${randomSeq}`;
+        let nextSeq = 1;
+
+        if (isSupabaseConfigured) {
+            try {
+                const { count } = await supabase
+                    .from("internship_applications")
+                    .select("*", { count: "exact", head: true })
+                    .ilike("batch_id", `%${payload.batchId}%`);
+                if (typeof count === "number" && count >= 0) {
+                    nextSeq = count + 1;
+                }
+            } catch {
+                // fallback to local storage
+            }
+        }
+
+        if (typeof window !== "undefined") {
+            try {
+                const localApps = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
+                const batchApps = localApps.filter((a: any) => a.batch_id?.toLowerCase() === payload.batchId.toLowerCase());
+                if (batchApps.length >= nextSeq) {
+                    nextSeq = batchApps.length + 1;
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        const formattedSeq = String(nextSeq).padStart(4, "0");
+        const generatedAppId = `VTX-${prefix}-${formattedSeq}`;
 
         const appRecordToInsert = {
             batch_id: payload.batchId,
@@ -323,10 +351,12 @@ export const internshipService = {
                 updated_at: new Date().toISOString()
             };
         } else {
+            const finalAppId = appData.application_id || generatedAppId;
             createdApp = {
                 ...appRecordToInsert,
                 ...appData,
-                application_id: appData.application_id || generatedAppId,
+                application_id: finalAppId,
+                application_number: finalAppId,
                 id: appData.id || `app_${timestamp}`
             };
         }

@@ -162,12 +162,8 @@ BEGIN
 
     v_formatted_id := 'VTX-' || v_prefix || '-' || LPAD(v_next_val::TEXT, 4, '0');
     
-    IF NEW.application_id IS NULL OR NEW.application_id = '' THEN
-        NEW.application_id := v_formatted_id;
-    END IF;
-    IF NEW.application_number IS NULL OR NEW.application_number = '' THEN
-        NEW.application_number := v_formatted_id;
-    END IF;
+    NEW.application_id := v_formatted_id;
+    NEW.application_number := v_formatted_id;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

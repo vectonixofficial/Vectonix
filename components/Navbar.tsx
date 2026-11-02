@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Menu, X, LogIn, LogOut, LayoutDashboard, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, LayoutDashboard, ExternalLink, ShieldCheck, GraduationCap, Shield, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/context/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -24,6 +24,7 @@ const navLinks = [
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [showLoginDropdown, setShowLoginDropdown] = useState(false);
     const pathname = usePathname();
     const { user, isAdmin, loading } = useAuth();
 
@@ -181,12 +182,73 @@ const Navbar = () => {
                                             </Button>
                                         </>
                                     ) : (
-                                        <Link href="/login">
-                                            <Button size="sm" className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs">
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowLoginDropdown((prev) => !prev)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                                            >
                                                 <LogIn className="h-3.5 w-3.5" />
-                                                Login
-                                            </Button>
-                                        </Link>
+                                                <span>Login</span>
+                                                <ChevronDown className="h-3 w-3 opacity-80" />
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {showLoginDropdown && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                                                        transition={{ duration: 0.15 }}
+                                                        className="absolute right-0 mt-2 w-64 rounded-xl bg-white border border-slate-200 shadow-xl p-2 z-50 text-left"
+                                                    >
+                                                        <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                Choose Portal
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Student Login */}
+                                                        <Link
+                                                            href="/login?tab=student"
+                                                            onClick={() => setShowLoginDropdown(false)}
+                                                            className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-indigo-50/80 transition-colors group cursor-pointer"
+                                                        >
+                                                            <div className="p-1.5 rounded-md bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mt-0.5">
+                                                                <GraduationCap className="h-4 w-4" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-600">
+                                                                    Student Login
+                                                                </p>
+                                                                <p className="text-[11px] text-slate-500">
+                                                                    App ID & registered email
+                                                                </p>
+                                                            </div>
+                                                        </Link>
+
+                                                        {/* Admin Login */}
+                                                        <Link
+                                                            href="/login?tab=admin"
+                                                            onClick={() => setShowLoginDropdown(false)}
+                                                            className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50 transition-colors group cursor-pointer"
+                                                        >
+                                                            <div className="p-1.5 rounded-md bg-slate-100 text-slate-700 group-hover:bg-slate-800 group-hover:text-white transition-colors mt-0.5">
+                                                                <Shield className="h-4 w-4" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-900 group-hover:text-slate-800">
+                                                                    Admin Login
+                                                                </p>
+                                                                <p className="text-[11px] text-slate-500">
+                                                                    Management dashboard sign-in
+                                                                </p>
+                                                            </div>
+                                                        </Link>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -323,14 +385,25 @@ const Navbar = () => {
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <Link
-                                                        href="/login"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-2.5 rounded-xl text-base font-semibold text-center shadow-xs"
-                                                    >
-                                                        <LogIn className="h-5 w-5" />
-                                                        Login to Portal
-                                                    </Link>
+                                                    <div className="space-y-2 pt-1">
+                                                        <Link
+                                                            href="/login?tab=student"
+                                                            onClick={() => setIsOpen(false)}
+                                                            className="flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-3 rounded-xl text-sm font-semibold text-center shadow-xs"
+                                                        >
+                                                            <GraduationCap className="h-4 w-4" />
+                                                            <span>Student Login (Internship)</span>
+                                                        </Link>
+
+                                                        <Link
+                                                            href="/login?tab=admin"
+                                                            onClick={() => setIsOpen(false)}
+                                                            className="flex items-center justify-center gap-2 bg-slate-100 text-slate-800 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-sm font-semibold text-center border border-slate-200"
+                                                        >
+                                                            <Shield className="h-4 w-4 text-slate-600" />
+                                                            <span>Admin Login</span>
+                                                        </Link>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
