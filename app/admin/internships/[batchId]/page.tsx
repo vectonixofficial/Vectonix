@@ -30,7 +30,8 @@ import {
     Mail,
     MapPin,
     Sparkles,
-    User
+    User,
+    Trash2
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
@@ -124,6 +125,28 @@ export default function AdminInternshipsBatchPage() {
             }
         } catch (error) {
             console.error("Status update error:", error);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Permanently Delete Application
+    const handleDeleteApp = async (app: DatabaseInternshipApplication) => {
+        const idDisplay = app.application_id || app.application_number || app.id;
+        if (!window.confirm(`Are you sure you want to permanently delete application ${idDisplay} for ${app.full_name}?`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            await internshipService.deleteApplication(app.id, app.application_id);
+            if (selectedApp && (selectedApp.id === app.id || selectedApp.application_id === app.application_id)) {
+                setSelectedApp(null);
+            }
+            await loadData();
+        } catch (error) {
+            console.error("Delete application error:", error);
+            alert("Could not delete application. Please try again.");
         } finally {
             setActionLoading(false);
         }
@@ -536,18 +559,30 @@ export default function AdminInternshipsBatchPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => {
-                                                                setSelectedApp(app);
-                                                                setAdminNotes(app.internal_notes || "");
-                                                            }}
-                                                            className="h-7 text-xs gap-1"
-                                                        >
-                                                            <Eye className="h-3.5 w-3.5" />
-                                                            View
-                                                        </Button>
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setSelectedApp(app);
+                                                                    setAdminNotes(app.internal_notes || "");
+                                                                }}
+                                                                className="h-7 text-xs gap-1"
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" />
+                                                                View
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleDeleteApp(app)}
+                                                                className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 gap-1"
+                                                                title="Delete duplicate or test record"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Delete
+                                                            </Button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
@@ -879,6 +914,17 @@ export default function AdminInternshipsBatchPage() {
                                         className="h-8 text-xs text-red-600 hover:bg-red-50 hover:border-red-300"
                                     >
                                         Reject
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleDeleteApp(selectedApp)}
+                                        disabled={actionLoading}
+                                        className="h-8 text-xs text-rose-600 hover:bg-rose-50 hover:border-rose-300 gap-1"
+                                        title="Delete application"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                        Delete
                                     </Button>
                                 </div>
                             </div>

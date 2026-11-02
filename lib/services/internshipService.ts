@@ -280,6 +280,124 @@ export const internshipService = {
             }
         }
 
+        const cleanEmail = payload.email.trim().toLowerCase();
+
+        // 1. Prevent Duplicates: Check if candidate already registered for this batch
+        let existingUser: any = null;
+        if (isSupabaseConfigured) {
+            try {
+                const { data } = await supabase
+                    .from("internship_applications")
+                    .select("*")
+                    .ilike("email", cleanEmail)
+                    .limit(5);
+
+                if (data && data.length > 0) {
+                    existingUser = data.find(
+                        (d: any) =>
+                            !payload.batchId ||
+                            d.batch_id?.toLowerCase() === payload.batchId.toLowerCase()
+                    ) || data[0];
+                }
+            } catch (checkErr) {
+                console.warn("Check existing registration note:", checkErr);
+            }
+        }
+
+        if (!existingUser && typeof window !== "undefined") {
+            try {
+                const localApps = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
+                const found = localApps.find(
+                    (a: any) =>
+                        a.email?.trim().toLowerCase() === cleanEmail &&
+                        (!payload.batchId || a.batch_id?.toLowerCase() === payload.batchId.toLowerCase())
+                );
+                if (found) existingUser = found;
+            } catch {}
+        }
+
+        // If user already registered, update their record and retain their Application ID
+        if (existingUser) {
+            console.log("Applicant already registered for batch. Updating existing application:", cleanEmail);
+            const preservedAppId = existingUser.application_id || existingUser.application_number || `VTX-${prefix}-0001`;
+
+            const updatedAppRecord = {
+                ...existingUser,
+                batch_id: payload.batchId,
+                full_name: payload.fullName,
+                email: payload.email,
+                phone: payload.phone,
+                mobile_number: payload.mobileNumber || payload.phone,
+                whatsapp_number: payload.whatsappNumber || payload.phone,
+                gender: payload.gender,
+                college_name: payload.collegeName,
+                degree: payload.degree,
+                department: payload.department,
+                year_of_study: payload.yearOfStudy,
+                domain: payload.domain,
+                package_name: payload.packageName,
+                package_amount: verifiedAmount,
+                house_number: payload.houseNumber,
+                street_name: payload.streetName,
+                locality: payload.locality,
+                city: payload.city,
+                district: payload.district,
+                state: payload.state,
+                postal_code: payload.postalCode,
+                country: payload.country || "India",
+                application_id: preservedAppId,
+                application_number: preservedAppId,
+                id: existingUser.id,
+                updated_at: new Date().toISOString()
+            };
+
+            const metadataNotes = JSON.stringify({
+                application_id: preservedAppId,
+                application_number: preservedAppId,
+                gender: payload.gender,
+                package_name: payload.packageName,
+                package_amount: verifiedAmount,
+                graduation_year: payload.graduationYear || "",
+                house_number: payload.houseNumber || "",
+                street_name: payload.streetName || "",
+                locality: payload.locality || "",
+                city: payload.city || payload.collegeCity || "",
+                district: payload.district || "",
+                state: payload.state || payload.collegeState || "",
+                postal_code: payload.postalCode || "",
+                country: payload.country || "India",
+                college_city: payload.collegeCity || "",
+                college_state: payload.collegeState || "",
+                college_selection_type: payload.collegeSelectionType || "official_directory",
+                technical_skills: payload.technicalSkills || "",
+                programming_languages: payload.programmingLanguages || "",
+                portfolio_url: payload.portfolioUrl || "",
+                terms_accepted: payload.termsAccepted,
+                privacy_consent: payload.privacyConsent,
+                marketing_consent: payload.marketingConsent
+            });
+
+            await this.safeInsertApplication({
+                ...updatedAppRecord,
+                internal_notes: metadataNotes
+            });
+
+            const finalApp = hydrateApplication({
+                ...updatedAppRecord,
+                internal_notes: metadataNotes
+            });
+
+            if (typeof window !== "undefined") {
+                const localApps = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
+                const updatedList = localApps.map((a: any) =>
+                    (a.id === finalApp.id || a.email?.toLowerCase() === cleanEmail) ? finalApp : a
+                );
+                localStorage.setItem(LS_APPLICATIONS_KEY, JSON.stringify(updatedList));
+            }
+
+            return finalApp;
+        }
+
         const formattedSeq = String(nextSeq).padStart(4, "0");
         const generatedAppId = `VTX-${prefix}-${formattedSeq}`;
 
@@ -600,33 +718,29 @@ export const internshipService = {
             }
         }
 
-        // 3. Merge Supabase with Local records (deduplicate by application_id / id / email)
-        const appMap = new Map<string, DatabaseInternshipApplication>();
-        for (const app of results) {
-            const key = app.application_id || app.id || app.email;
-            if (key) appMap.set(key, app);
-        }
+        // 3. Deduplicate applications by student email (one active registration per applicant per batch)
+        const emailMap = new Map<string, DatabaseInternshipApplication>();
+        const allApplications = [...results, ...localApps];
 
-        for (const localApp of localApps) {
-            const key = localApp.application_id || localApp.id || localApp.email;
-            if (key && !appMap.has(key)) {
-                const matchesBatch =
-                    !batchId ||
-                    batchId.toLowerCase() === "all" ||
-                    localApp.batch_id?.toLowerCase() === batchId.toLowerCase();
+        for (const app of allApplications) {
+            const emailKey = app.email ? app.email.trim().toLowerCase() : (app.application_id || app.id);
+            if (!emailMap.has(emailKey)) {
+                emailMap.set(emailKey, app);
+            } else {
+                const existing = emailMap.get(emailKey)!;
+                // Prefer clean sequential ID (e.g. VTX-WI26-0001, 0002) over legacy random ID (e.g. VTX-WI26-3205)
+                const isSeq = app.application_id && /^VTX-WI26-\d{4}$/.test(app.application_id);
+                const isExistingSeq = existing.application_id && /^VTX-WI26-\d{4}$/.test(existing.application_id);
 
-                if (matchesBatch) {
-                    appMap.set(key, localApp);
-
-                    // Auto-sync local fallback record to Supabase if configured
-                    if (isSupabaseConfigured) {
-                        this.safeInsertApplication(localApp).catch(() => {});
-                    }
+                if (isSeq && !isExistingSeq) {
+                    emailMap.set(emailKey, app);
+                } else if (new Date(app.created_at || 0).getTime() > new Date(existing.created_at || 0).getTime()) {
+                    emailMap.set(emailKey, app);
                 }
             }
         }
 
-        results = Array.from(appMap.values());
+        results = Array.from(emailMap.values());
 
         // 4. Client-side filters
         if (filters?.domain && filters.domain !== "all") {
@@ -691,6 +805,36 @@ export const internshipService = {
             }
         }
 
+        return true;
+    },
+
+    /**
+     * Delete an application by id or application_id
+     */
+    async deleteApplication(id: string, applicationId?: string): Promise<boolean> {
+        if (isSupabaseConfigured) {
+            try {
+                if (id) {
+                    await supabase.from("internship_applications").delete().eq("id", id);
+                }
+                if (applicationId) {
+                    await supabase.from("internship_applications").delete().eq("application_id", applicationId);
+                }
+            } catch (err) {
+                console.warn("Supabase delete application error:", err);
+            }
+        }
+
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem(LS_APPLICATIONS_KEY);
+                if (stored) {
+                    const apps: any[] = JSON.parse(stored);
+                    const filtered = apps.filter((a) => a.id !== id && a.application_id !== applicationId);
+                    localStorage.setItem(LS_APPLICATIONS_KEY, JSON.stringify(filtered));
+                }
+            } catch {}
+        }
         return true;
     },
 
