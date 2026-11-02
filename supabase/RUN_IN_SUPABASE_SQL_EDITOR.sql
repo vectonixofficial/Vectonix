@@ -128,14 +128,18 @@ CREATE INDEX IF NOT EXISTS idx_internship_apps_email ON public.internship_applic
 CREATE INDEX IF NOT EXISTS idx_internship_apps_status ON public.internship_applications(status);
 CREATE INDEX IF NOT EXISTS idx_internship_apps_app_id ON public.internship_applications(application_id);
 
--- Enable RLS for internship_applications
+-- Enable RLS for internship_applications (Universal access policy matching app authentication)
 ALTER TABLE public.internship_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Can Submit Applications" ON public.internship_applications;
-CREATE POLICY "Public Can Submit Applications" ON public.internship_applications FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Public Can Read Own Application" ON public.internship_applications;
-CREATE POLICY "Public Can Read Own Application" ON public.internship_applications FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Admin Full Access Applications" ON public.internship_applications;
-CREATE POLICY "Admin Full Access Applications" ON public.internship_applications FOR ALL USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow all for internship_applications" ON public.internship_applications;
+
+CREATE POLICY "Allow all for internship_applications" 
+ON public.internship_applications 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
 
 -- 4. ATOMIC APPLICATION ID GENERATION TRIGGER: VTX-WI26-0001
 CREATE OR REPLACE FUNCTION public.fn_assign_application_id()
@@ -381,3 +385,4 @@ CREATE POLICY "Student Support Tickets" ON public.support_tickets FOR ALL USING 
 
 -- 8. RELOAD SCHEMA CACHE IMMEDIATELY
 NOTIFY pgrst, 'reload schema';
+

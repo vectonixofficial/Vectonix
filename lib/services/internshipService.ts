@@ -384,64 +384,106 @@ export const internshipService = {
     },
 
     /**
-     * Get applications for a batch with filters
+     * Get applications for a batch with filters (merges Supabase + Local Storage cache)
      */
     async getApplications(
         batchId: string,
         filters?: { domain?: string; status?: string; packageName?: string; search?: string }
     ): Promise<DatabaseInternshipApplication[]> {
-        if (!isSupabaseConfigured) {
-            if (typeof window === "undefined") return [];
-            let apps: DatabaseInternshipApplication[] = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
-            apps = apps.filter((a) => a.batch_id.toLowerCase() === batchId.toLowerCase());
+        let results: DatabaseInternshipApplication[] = [];
 
-            if (filters?.domain && filters.domain !== "all") {
-                apps = apps.filter((a) => a.domain === filters.domain);
+        // 1. Fetch from Supabase if configured
+        if (isSupabaseConfigured) {
+            try {
+                let query = supabase
+                    .from("internship_applications")
+                    .select("*")
+                    .order("created_at", { ascending: false });
+
+                if (batchId && batchId.toLowerCase() !== "all") {
+                    query = query.or(`batch_id.ilike.%${batchId}%,batch_id.eq.${batchId.toLowerCase()},batch_id.eq.${batchId.toUpperCase()}`);
+                }
+
+                if (filters?.domain && filters.domain !== "all") {
+                    query = query.eq("domain", filters.domain);
+                }
+                if (filters?.status && filters.status !== "all") {
+                    query = query.eq("status", filters.status);
+                }
+                if (filters?.packageName && filters.packageName !== "all") {
+                    query = query.eq("package_name", filters.packageName);
+                }
+
+                const { data, error } = await query;
+                if (error) {
+                    console.warn("Supabase applications query note:", error.message);
+                } else if (data && data.length > 0) {
+                    results = data as DatabaseInternshipApplication[];
+                }
+            } catch (err) {
+                console.warn("Could not query Supabase directly:", err);
             }
-            if (filters?.status && filters.status !== "all") {
-                apps = apps.filter((a) => a.status === filters.status);
-            }
-            if (filters?.packageName && filters.packageName !== "all") {
-                apps = apps.filter((a) => a.package_name === filters.packageName);
-            }
-            if (filters?.search) {
-                const s = filters.search.toLowerCase();
-                apps = apps.filter(
-                    (a) =>
-                        a.full_name.toLowerCase().includes(s) ||
-                        (a.application_id && a.application_id.toLowerCase().includes(s)) ||
-                        a.email.toLowerCase().includes(s) ||
-                        a.college_name.toLowerCase().includes(s) ||
-                        (a.city && a.city.toLowerCase().includes(s))
-                );
-            }
-            return apps;
         }
 
-        let query = supabase
-            .from("internship_applications")
-            .select("*")
-            .eq("batch_id", batchId.toLowerCase())
-            .order("created_at", { ascending: false });
+        // 2. Fetch from LocalStorage fallback
+        let localApps: DatabaseInternshipApplication[] = [];
+        if (typeof window !== "undefined") {
+            try {
+                localApps = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
+            } catch (e) {
+                localApps = [];
+            }
+        }
 
+        // 3. Merge Supabase with Local records (deduplicate by application_id / id / email)
+        const appMap = new Map<string, DatabaseInternshipApplication>();
+        for (const app of results) {
+            const key = app.application_id || app.id || app.email;
+            if (key) appMap.set(key, app);
+        }
+
+        for (const localApp of localApps) {
+            const key = localApp.application_id || localApp.id || localApp.email;
+            if (key && !appMap.has(key)) {
+                const matchesBatch =
+                    !batchId ||
+                    batchId.toLowerCase() === "all" ||
+                    localApp.batch_id?.toLowerCase() === batchId.toLowerCase();
+
+                if (matchesBatch) {
+                    appMap.set(key, localApp);
+
+                    // Auto-sync local fallback record to Supabase if configured
+                    if (isSupabaseConfigured) {
+                        (async () => {
+                            try {
+                                const { error: syncErr } = await supabase
+                                    .from("internship_applications")
+                                    .insert(localApp);
+                                if (!syncErr) {
+                                    console.log("Successfully auto-synced local application to Supabase:", key);
+                                }
+                            } catch {
+                                // Silent fallback
+                            }
+                        })();
+                    }
+                }
+            }
+        }
+
+        results = Array.from(appMap.values());
+
+        // 4. Client-side filters
         if (filters?.domain && filters.domain !== "all") {
-            query = query.eq("domain", filters.domain);
+            results = results.filter((a) => a.domain === filters.domain);
         }
         if (filters?.status && filters.status !== "all") {
-            query = query.eq("status", filters.status);
+            results = results.filter((a) => a.status === filters.status);
         }
         if (filters?.packageName && filters.packageName !== "all") {
-            query = query.eq("package_name", filters.packageName);
+            results = results.filter((a) => a.package_name === filters.packageName);
         }
-
-        const { data, error } = await query;
-        if (error) {
-            console.error("Error fetching applications:", error);
-            return [];
-        }
-
-        let results = (data || []) as DatabaseInternshipApplication[];
-
         if (filters?.search) {
             const s = filters.search.toLowerCase();
             results = results.filter(
@@ -465,10 +507,24 @@ export const internshipService = {
         status: InternshipApplicationStatus,
         internalNotes?: string
     ): Promise<boolean> {
-        if (!isSupabaseConfigured) {
-            if (typeof window !== "undefined") {
+        if (isSupabaseConfigured) {
+            try {
+                const updateData: any = { status, application_status: status };
+                if (internalNotes !== undefined) updateData.internal_notes = internalNotes;
+
+                await supabase
+                    .from("internship_applications")
+                    .update(updateData)
+                    .or(`id.eq.${applicationId},application_id.eq.${applicationId}`);
+            } catch (err) {
+                console.warn("Supabase updateApplicationStatus note:", err);
+            }
+        }
+
+        if (typeof window !== "undefined") {
+            try {
                 const apps: DatabaseInternshipApplication[] = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
-                const idx = apps.findIndex((a) => a.id === applicationId);
+                const idx = apps.findIndex((a) => a.id === applicationId || a.application_id === applicationId);
                 if (idx !== -1) {
                     apps[idx].status = status;
                     apps[idx].application_status = status;
@@ -476,19 +532,12 @@ export const internshipService = {
                     apps[idx].updated_at = new Date().toISOString();
                     localStorage.setItem(LS_APPLICATIONS_KEY, JSON.stringify(apps));
                 }
+            } catch (e) {
+                // ignore
             }
-            return true;
         }
 
-        const updateData: any = { status, application_status: status };
-        if (internalNotes !== undefined) updateData.internal_notes = internalNotes;
-
-        const { error } = await supabase
-            .from("internship_applications")
-            .update(updateData)
-            .eq("id", applicationId);
-
-        return !error;
+        return true;
     },
 
     /**

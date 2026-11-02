@@ -188,10 +188,10 @@ export default function AdminInternshipsBatchPage() {
         const s = searchTerm.toLowerCase();
         const matchesSearch =
             !searchTerm ||
-            app.full_name.toLowerCase().includes(s) ||
+            (app.full_name && app.full_name.toLowerCase().includes(s)) ||
             (app.application_id && app.application_id.toLowerCase().includes(s)) ||
-            app.email.toLowerCase().includes(s) ||
-            app.college_name.toLowerCase().includes(s) ||
+            (app.email && app.email.toLowerCase().includes(s)) ||
+            (app.college_name && app.college_name.toLowerCase().includes(s)) ||
             (app.city && app.city.toLowerCase().includes(s));
 
         return matchesDomain && matchesPackage && matchesStatus && matchesSearch;
@@ -450,8 +450,39 @@ export default function AdminInternshipsBatchPage() {
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredApps.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                                                No internship applications found matching these filters.
+                                            <td colSpan={7} className="px-4 py-16 text-center">
+                                                <div className="max-w-md mx-auto">
+                                                    <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                                                        <Users className="h-6 w-6" />
+                                                    </div>
+                                                    <p className="text-sm font-bold text-slate-800">
+                                                        {applications.length === 0 ? "No applications recorded yet" : "No matching applications"}
+                                                    </p>
+                                                    <p className="text-xs text-slate-400 mt-1">
+                                                        {applications.length === 0
+                                                            ? "Make sure the SQL migration has been executed in Supabase SQL editor. Once an applicant submits the registration form, their details will appear here immediately."
+                                                            : "Try clearing your search query or changing domain/package filters to see all candidates."}
+                                                    </p>
+                                                    <div className="mt-4 flex items-center justify-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={loadData}
+                                                            className="text-xs gap-1.5"
+                                                        >
+                                                            <RefreshCw className="h-3.5 w-3.5" />
+                                                            Refresh
+                                                        </Button>
+                                                        <Link
+                                                            href={`/apply/internships/${batchId}`}
+                                                            target="_blank"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                                                        >
+                                                            <span>Open Registration Portal</span>
+                                                            <ExternalLink className="h-3 w-3" />
+                                                        </Link>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : (
