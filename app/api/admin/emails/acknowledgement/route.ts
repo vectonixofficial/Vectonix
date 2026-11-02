@@ -3,8 +3,8 @@ import nodemailer from "nodemailer";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function getTransporter() {
-    const user = process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com";
-    const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "Vectonix#12@";
+    const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com").trim();
+    const pass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "Vectonix#12@").replace(/\s+/g, "");
 
     if (process.env.SMTP_HOST && process.env.SMTP_HOST !== "smtp.gmail.com") {
         return nodemailer.createTransport({
@@ -12,6 +12,7 @@ function getTransporter() {
             port: Number(process.env.SMTP_PORT || 587),
             secure: process.env.SMTP_SECURE === "true",
             auth: { user, pass },
+            tls: { rejectUnauthorized: false }
         });
     }
 
@@ -92,6 +93,8 @@ vectonixofficial@gmail.com
         let providerMessageId = `ack_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         let deliveryStatus = "queued";
 
+        let lastErrorMsg: string | null = null;
+
         if (transporter) {
             try {
                 const info = await transporter.sendMail({
@@ -106,6 +109,7 @@ vectonixofficial@gmail.com
             } catch (mailErr: any) {
                 console.error("Transporter delivery warning:", mailErr.message);
                 deliveryStatus = "failed";
+                lastErrorMsg = mailErr.message;
             }
         } else {
             console.log("Email transporter not configured. Logged confirmation dispatch for:", email);
@@ -129,9 +133,10 @@ vectonixofficial@gmail.com
         }
 
         return NextResponse.json({
-            success: true,
+            success: deliveryStatus === "sent",
             status: deliveryStatus,
-            providerMessageId
+            providerMessageId,
+            error: lastErrorMsg
         });
     } catch (err: any) {
         console.error("Acknowledgement email endpoint error:", err);
