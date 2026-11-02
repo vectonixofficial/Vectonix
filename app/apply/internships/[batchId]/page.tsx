@@ -7,24 +7,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Briefcase,
     CheckCircle2,
-    UploadCloud,
-    FileText,
-    CreditCard,
-    ArrowRight,
-    ArrowLeft,
-    Copy,
     Check,
     AlertCircle,
     Building2,
     User,
     GraduationCap,
     Send,
-    Loader2
+    Loader2,
+    ArrowRight,
+    ArrowLeft,
+    MapPin,
+    Search,
+    Globe,
+    Sparkles,
+    ShieldCheck,
+    Package,
+    Gift
 } from "lucide-react";
-import QRCode from "qrcode";
 import { Button } from "@/components/ui/Button";
-import { internshipService } from "@/lib/services/internshipService";
-import { DatabaseInternshipBatch, DatabaseInternshipApplication } from "@/lib/supabase";
+import { internshipService, PACKAGES_CONFIG, INTERNSHIP_DOMAINS } from "@/lib/services/internshipService";
+import { DatabaseInternshipBatch, DatabaseInternshipApplication, GenderType, InternshipPackageType } from "@/lib/supabase";
+import { INDIAN_STATES, COUNTRIES } from "@/lib/data/geoData";
+import { CollegeRecord } from "@/lib/data/collegesData";
 
 export default function InternshipApplyPage() {
     const params = useParams();
@@ -37,28 +41,59 @@ export default function InternshipApplyPage() {
 
     // Form State
     const [formData, setFormData] = useState({
+        // Personal
         fullName: "",
         email: "",
         phone: "",
         whatsappNumber: "",
+        gender: "Male" as GenderType,
+        dateOfBirth: "",
+
+        // College & Academic
         collegeName: "",
+        collegeId: "",
+        collegeCity: "",
+        collegeState: "",
+        collegeSelectionType: "official_directory" as "official_directory" | "manual",
+        isManualCollege: false,
         degree: "B.Tech",
         department: "",
         yearOfStudy: "3rd Year",
-        domain: "",
+        graduationYear: "2027",
+
+        // Residential Address
+        houseNumber: "",
+        streetName: "",
+        locality: "",
+        city: "",
+        district: "",
+        state: "Tamil Nadu",
+        postalCode: "",
+        country: "India",
+
+        // Track & Profile
+        domain: "Full Stack Development",
+        technicalSkills: "",
+        programmingLanguages: "",
         linkedinUrl: "",
         githubUrl: "",
-        transactionIdUtr: "",
-        agreedToTerms: false,
+        portfolioUrl: "",
+
+        // Package Selection
+        packageName: "Premium" as InternshipPackageType, // Default to most popular
+
+        // Consents
+        termsAccepted: false,
+        privacyConsent: false,
+        marketingConsent: false
     });
 
-    // File State
-    const [resumeFile, setResumeFile] = useState<File | null>(null);
-    const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-
-    // QR Code Data URL State
-    const [qrDataUrl, setQrDataUrl] = useState<string>("");
-    const [copiedUpi, setCopiedUpi] = useState(false);
+    // College Search Autocomplete State
+    const [collegeSearchQuery, setCollegeSearchQuery] = useState("");
+    const [collegeSuggestions, setCollegeSuggestions] = useState<CollegeRecord[]>([]);
+    const [isSearchingColleges, setIsSearchingColleges] = useState(false);
+    const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Submission State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,16 +110,6 @@ export default function InternshipApplyPage() {
                 if (data && data.domains.length > 0) {
                     setFormData((prev) => ({ ...prev, domain: data.domains[0] }));
                 }
-
-                // Generate UPI QR Code string
-                const upiId = data?.upi_id || "vectonixofficial@okhdfcbank";
-                const amount = data?.fee_amount || 499;
-                const upiString = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Vectonix%20Learning&am=${amount}&cu=INR&tn=${encodeURIComponent(
-                    `${data?.prefix || "WI26"} Internship Registration`
-                )}`;
-
-                const url = await QRCode.toDataURL(upiString, { width: 220, margin: 1 });
-                setQrDataUrl(url);
             } catch (err) {
                 console.error("Error loading batch:", err);
             } finally {
@@ -94,33 +119,91 @@ export default function InternshipApplyPage() {
         loadBatch();
     }, [batchId]);
 
-    const handleCopyUpi = () => {
-        if (!batch?.upi_id) return;
-        navigator.clipboard.writeText(batch.upi_id);
-        setCopiedUpi(true);
-        setTimeout(() => setCopiedUpi(false), 2500);
+    // Debounced College Autocomplete Search
+    const handleCollegeSearchChange = (value: string) => {
+        setCollegeSearchQuery(value);
+        setFormData((prev) => ({
+            ...prev,
+            collegeName: value,
+            collegeId: "",
+            collegeSelectionType: "manual"
+        }));
+
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+        if (!value.trim()) {
+            setCollegeSuggestions([]);
+            setShowCollegeDropdown(false);
+            return;
+        }
+
+        setIsSearchingColleges(true);
+        searchTimeoutRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/colleges/search?q=${encodeURIComponent(value.trim())}`);
+                const data = await res.json();
+                if (data.colleges) {
+                    setCollegeSuggestions(data.colleges);
+                    setShowCollegeDropdown(true);
+                }
+            } catch (e) {
+                console.error("Failed to fetch college suggestions:", e);
+            } finally {
+                setIsSearchingColleges(false);
+            }
+        }, 250);
+    };
+
+    const handleSelectCollege = (col: CollegeRecord) => {
+        setFormData((prev) => ({
+            ...prev,
+            collegeName: col.name,
+            collegeId: col.id,
+            collegeCity: col.city,
+            collegeState: col.state,
+            collegeSelectionType: "official_directory",
+            isManualCollege: false
+        }));
+        setCollegeSearchQuery(col.name);
+        setShowCollegeDropdown(false);
     };
 
     // Validation
     const validateStep1 = () => {
         if (!formData.fullName.trim()) return "Full name is required";
         if (!formData.email.trim() || !formData.email.includes("@")) return "A valid email is required";
-        if (!formData.phone.trim() || formData.phone.length < 10) return "A valid 10-digit phone number is required";
-        if (!formData.collegeName.trim()) return "College/University name is required";
+        if (!formData.phone.trim() || formData.phone.length < 10) return "A valid 10-digit mobile number is required";
+        if (!formData.gender) return "Please select your gender";
+
+        // College
+        if (!formData.collegeName.trim()) return "Please select or enter your college/university name";
         if (!formData.department.trim()) return "Department/Branch is required";
+
+        // Address
+        if (!formData.houseNumber.trim()) return "Door / House Number is required";
+        if (!formData.streetName.trim()) return "Street name is required";
+        if (!formData.locality.trim()) return "Area / Locality is required";
+        if (!formData.city.trim()) return "Village / Town / City is required";
+        if (!formData.district.trim()) return "District is required";
+        if (!formData.state) return "State is required";
+
+        // PIN Code (Indian 6-digit format)
+        const pinClean = formData.postalCode.trim();
+        if (!pinClean || !/^[1-9][0-9]{5}$/.test(pinClean)) {
+            return "Please enter a valid 6-digit Indian PIN Code";
+        }
+
         return null;
     };
 
     const validateStep2 = () => {
         if (!formData.domain) return "Please select an internship domain";
-        if (!resumeFile) return "Please upload your resume (PDF or DOCX)";
         return null;
     };
 
     const validateStep3 = () => {
-        if (!formData.transactionIdUtr.trim()) return "Please enter your UPI / Bank Transaction ID (UTR)";
-        if (!paymentProofFile) return "Please upload your payment confirmation screenshot";
-        if (!formData.agreedToTerms) return "Please accept the terms and conditions to proceed";
+        if (!formData.packageName) return "Please choose an internship package";
+        if (!formData.termsAccepted) return "Please accept the Terms & Conditions and Privacy Policy";
         return null;
     };
 
@@ -153,33 +236,63 @@ export default function InternshipApplyPage() {
             return;
         }
 
-        if (!resumeFile || !paymentProofFile) {
-            setSubmitError("Both resume and payment screenshot are required.");
-            return;
-        }
-
         setIsSubmitting(true);
         try {
+            const selectedPkg = PACKAGES_CONFIG[formData.packageName];
+            const verifiedPrice = selectedPkg?.price || 749;
+
             const result = await internshipService.submitApplication({
                 batchId: batch?.id || batchId,
                 fullName: formData.fullName,
                 email: formData.email,
                 phone: formData.phone,
+                mobileNumber: formData.phone,
                 whatsappNumber: formData.whatsappNumber || formData.phone,
+                gender: formData.gender,
+                dateOfBirth: formData.dateOfBirth,
+
+                // College
                 collegeName: formData.collegeName,
+                collegeId: formData.collegeId,
+                collegeCity: formData.collegeCity,
+                collegeState: formData.collegeState,
+                collegeSelectionType: formData.collegeSelectionType,
+
+                // Academic
                 degree: formData.degree,
                 department: formData.department,
                 yearOfStudy: formData.yearOfStudy,
+                graduationYear: formData.graduationYear,
+
+                // Track & Profile
                 domain: formData.domain,
+                technicalSkills: formData.technicalSkills,
+                programmingLanguages: formData.programmingLanguages,
                 linkedinUrl: formData.linkedinUrl,
                 githubUrl: formData.githubUrl,
-                transactionIdUtr: formData.transactionIdUtr,
-                amount: batch?.fee_amount || 499,
-                resumeFile,
-                paymentProofFile,
+                portfolioUrl: formData.portfolioUrl,
+
+                // Address
+                houseNumber: formData.houseNumber,
+                streetName: formData.streetName,
+                locality: formData.locality,
+                city: formData.city,
+                district: formData.district,
+                state: formData.state,
+                postalCode: formData.postalCode,
+                country: formData.country,
+
+                // Package
+                packageName: formData.packageName,
+                packageAmount: verifiedPrice,
+
+                // Consents
+                termsAccepted: formData.termsAccepted,
+                privacyConsent: true,
+                marketingConsent: formData.marketingConsent
             });
 
-            setSubmittedApplication(result.application);
+            setSubmittedApplication(result);
             setCurrentStep(4);
         } catch (error: any) {
             console.error("Submission error:", error);
@@ -222,9 +335,9 @@ export default function InternshipApplyPage() {
                     <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             {[
-                                { step: 1, label: "Personal & Academic" },
-                                { step: 2, label: "Track & Resume" },
-                                { step: 3, label: "Fee Payment & UTR" },
+                                { step: 1, label: "Personal, Academic & Address" },
+                                { step: 2, label: "Track & Professional Profile" },
+                                { step: 3, label: "Package Selection & Confirmation" },
                             ].map((item, idx) => (
                                 <div key={item.step} className="flex items-center flex-1 last:flex-none">
                                     <div className="flex items-center gap-2">
@@ -274,7 +387,7 @@ export default function InternshipApplyPage() {
 
                 {/* Form Container */}
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden p-6 sm:p-10">
-                    {/* STEP 1: Personal & Academic Info */}
+                    {/* STEP 1: Personal, Academic & Address Details */}
                     {currentStep === 1 && (
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
@@ -282,14 +395,12 @@ export default function InternshipApplyPage() {
                             exit={{ opacity: 0, x: -20 }}
                             className="space-y-6"
                         >
-                            <div className="border-b border-slate-100 pb-4">
-                                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            {/* SECTION A: Personal Details */}
+                            <div className="border-b border-slate-100 pb-3">
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                                     <User className="h-5 w-5 text-indigo-600" />
-                                    Personal & Contact Details
+                                    Personal Information
                                 </h2>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Please ensure your email and WhatsApp number are accurate for acceptance letters.
-                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -323,7 +434,7 @@ export default function InternshipApplyPage() {
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Phone Number *
+                                        Mobile / Phone Number *
                                     </label>
                                     <input
                                         type="tel"
@@ -341,97 +452,344 @@ export default function InternshipApplyPage() {
                                     </label>
                                     <input
                                         type="tel"
-                                        placeholder="If different from phone number"
+                                        placeholder="If different from mobile number"
                                         value={formData.whatsappNumber}
                                         onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
                                         className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="border-b border-slate-100 pt-4 pb-2">
-                                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                    <Building2 className="h-5 w-5 text-indigo-600" />
-                                    College & Academic Info
-                                </h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        College / University Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. National Institute of Technology"
-                                        value={formData.collegeName}
-                                        onChange={(e) => setFormData({ ...formData, collegeName: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Degree / Program *
+                                        Gender *
                                     </label>
                                     <select
-                                        value={formData.degree}
-                                        onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
+                                        value={formData.gender}
+                                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as GenderType })}
                                         className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                                     >
-                                        <option value="B.Tech">B.Tech / B.E.</option>
-                                        <option value="BCA">BCA</option>
-                                        <option value="MCA">MCA</option>
-                                        <option value="M.Tech">M.Tech</option>
-                                        <option value="B.Sc">B.Sc Computer Science / IT</option>
-                                        <option value="Diploma">Polytechnic Diploma</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
                                         <option value="Other">Other</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Department / Branch *
+                                        Date of Birth (Optional)
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={formData.dateOfBirth}
+                                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SECTION B: College & Academic Info with Autocomplete */}
+                            <div className="border-b border-slate-100 pt-4 pb-3">
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <Building2 className="h-5 w-5 text-indigo-600" />
+                                    College & Academic Information
+                                </h2>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Search our comprehensive directory of colleges and universities across India.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Searchable College Autocomplete */}
+                                <div className="relative">
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        College / University Name *
+                                    </label>
+                                    <div className="relative">
+                                        <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Type to search (e.g. V.S.B., Anna University, IIT, NIT, RVCE...)"
+                                            value={formData.collegeName}
+                                            onChange={(e) => handleCollegeSearchChange(e.target.value)}
+                                            onFocus={() => {
+                                                if (collegeSuggestions.length > 0) setShowCollegeDropdown(true);
+                                            }}
+                                            className="w-full pl-9 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        {isSearchingColleges && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
+                                        )}
+                                    </div>
+
+                                    {/* Autocomplete Dropdown */}
+                                    {showCollegeDropdown && collegeSuggestions.length > 0 && (
+                                        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
+                                            {collegeSuggestions.map((col) => (
+                                                <button
+                                                    key={col.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectCollege(col)}
+                                                    className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition-colors flex items-center justify-between text-xs"
+                                                >
+                                                    <div>
+                                                        <span className="font-semibold text-slate-900 block text-sm">
+                                                            {col.name}
+                                                        </span>
+                                                        <span className="text-slate-500 text-[11px]">
+                                                            {col.city}, {col.state} {col.category ? `• ${col.category}` : ""}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                                        Select
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Manual entry toggle */}
+                                    <div className="mt-2 flex items-center justify-between text-xs">
+                                        <span className="text-slate-500">
+                                            Can&apos;t find your institution in the directory?
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    isManualCollege: !prev.isManualCollege,
+                                                    collegeSelectionType: "manual"
+                                                }));
+                                                setShowCollegeDropdown(false);
+                                            }}
+                                            className="text-indigo-600 font-semibold hover:underline"
+                                        >
+                                            {formData.isManualCollege ? "Use Autocomplete" : "Add College Manually"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Manual College Fields if toggled */}
+                                {formData.isManualCollege && (
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-1">College City</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Coimbatore, Karur, Pune"
+                                                value={formData.collegeCity}
+                                                onChange={(e) => setFormData({ ...formData, collegeCity: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-1">College State</label>
+                                            <select
+                                                value={formData.collegeState || "Tamil Nadu"}
+                                                onChange={(e) => setFormData({ ...formData, collegeState: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                                            >
+                                                {INDIAN_STATES.map((st) => (
+                                                    <option key={st} value={st}>{st}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Degree / Program *
+                                        </label>
+                                        <select
+                                            value={formData.degree}
+                                            onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                        >
+                                            <option value="B.Tech">B.Tech / B.E.</option>
+                                            <option value="BCA">BCA</option>
+                                            <option value="MCA">MCA</option>
+                                            <option value="M.Tech">M.Tech</option>
+                                            <option value="B.Sc">B.Sc CS / IT</option>
+                                            <option value="Diploma">Polytechnic Diploma</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Department / Branch *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. CSE, ECE, IT, AI&DS"
+                                            value={formData.department}
+                                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Year of Study *
+                                        </label>
+                                        <select
+                                            value={formData.yearOfStudy}
+                                            onChange={(e) => setFormData({ ...formData, yearOfStudy: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                        >
+                                            <option value="1st Year">1st Year</option>
+                                            <option value="2nd Year">2nd Year</option>
+                                            <option value="3rd Year">3rd Year</option>
+                                            <option value="4th Year">4th Year (Final Year)</option>
+                                            <option value="Graduated">Recent Graduate</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECTION C: Complete Residential Address */}
+                            <div className="border-b border-slate-100 pt-4 pb-3">
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <MapPin className="h-5 w-5 text-indigo-600" />
+                                    Residential Address
+                                </h2>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Required for dispatch of welcome kits (Premium package) and official verification.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Door No. / House Number *
                                     </label>
                                     <input
                                         type="text"
                                         required
-                                        placeholder="e.g. CSE, ECE, IT, Mechanical"
-                                        value={formData.department}
-                                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                        placeholder="e.g. 12/B, Flat 301"
+                                        value={formData.houseNumber}
+                                        onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
                                         className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Current Year of Study *
+                                        Street Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Gandhi Nagar 2nd Street"
+                                        value={formData.streetName}
+                                        onChange={(e) => setFormData({ ...formData, streetName: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Area / Locality *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Anna Nagar, Kothrud"
+                                        value={formData.locality}
+                                        onChange={(e) => setFormData({ ...formData, locality: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Village / Town / City *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Chennai, Karur, Bangalore"
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        District *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Coimbatore, Karur, Pune"
+                                        value={formData.district}
+                                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        State *
                                     </label>
                                     <select
-                                        value={formData.yearOfStudy}
-                                        onChange={(e) => setFormData({ ...formData, yearOfStudy: e.target.value })}
+                                        value={formData.state}
+                                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                                         className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                                     >
-                                        <option value="1st Year">1st Year</option>
-                                        <option value="2nd Year">2nd Year</option>
-                                        <option value="3rd Year">3rd Year</option>
-                                        <option value="4th Year">4th Year (Final Year)</option>
-                                        <option value="Graduated">Recent Graduate</option>
+                                        {INDIAN_STATES.map((st) => (
+                                            <option key={st} value={st}>{st}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        PIN Code (6 digits) *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={6}
+                                        placeholder="e.g. 600001"
+                                        value={formData.postalCode}
+                                        onChange={(e) => setFormData({ ...formData, postalCode: e.target.value.replace(/[^0-9]/g, "") })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Country *
+                                    </label>
+                                    <select
+                                        value={formData.country}
+                                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    >
+                                        {COUNTRIES.map((c) => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
 
                             <div className="pt-4 flex justify-end">
-                                <Button onClick={handleNext} className="gap-2">
-                                    Next: Domain & Resume
+                                <Button onClick={handleNext} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                                    Next: Track & Profile
                                     <ArrowRight className="h-4 w-4" />
                                 </Button>
                             </div>
                         </motion.div>
                     )}
 
-                    {/* STEP 2: Domain Selection & Resume Upload */}
+                    {/* STEP 2: Internship Track & Professional Profile (Resume upload REMOVED) */}
                     {currentStep === 2 && (
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
@@ -442,31 +800,24 @@ export default function InternshipApplyPage() {
                             <div className="border-b border-slate-100 pb-4">
                                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                                     <GraduationCap className="h-5 w-5 text-indigo-600" />
-                                    Choose Your Track & Upload Resume
+                                    Internship Track & Professional Profile
                                 </h2>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Select the domain you wish to specialize in during the {batch?.title || "Winter Internship"}.
+                                    Select your preferred technical domain for the {batch?.title || "Winter Internship 2026"}.
                                 </p>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                                    Internship Domain *
+                                    Select Internship Domain *
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {(batch?.domains || [
-                                        "Full Stack Web Development",
-                                        "AI / Machine Learning",
-                                        "Data Science & Analytics",
-                                        "IoT & Embedded Systems",
-                                        "Cybersecurity & Cloud",
-                                        "UI/UX & Product Design"
-                                    ]).map((d) => (
+                                    {INTERNSHIP_DOMAINS.map((d) => (
                                         <label
                                             key={d}
-                                            className={`flex items-center gap-3 p-3.5 rounded-xl border text-sm font-medium cursor-pointer transition-all ${
+                                            className={`flex items-center gap-3 p-4 rounded-xl border text-sm font-medium cursor-pointer transition-all ${
                                                 formData.domain === d
-                                                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20"
+                                                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20 font-semibold"
                                                     : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
                                             }`}
                                         >
@@ -476,7 +827,7 @@ export default function InternshipApplyPage() {
                                                 value={d}
                                                 checked={formData.domain === d}
                                                 onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                                                className="text-indigo-600 focus:ring-indigo-500"
+                                                className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                                             />
                                             {d}
                                         </label>
@@ -484,67 +835,66 @@ export default function InternshipApplyPage() {
                                 </div>
                             </div>
 
-                            {/* Resume File Upload */}
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                                    Resume / Curriculum Vitae (PDF or DOCX, Max 5MB) *
-                                </label>
-                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-indigo-500 transition-colors bg-slate-50/50">
-                                    <input
-                                        type="file"
-                                        id="resume-upload"
-                                        accept=".pdf,.doc,.docx"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                setResumeFile(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="hidden"
-                                    />
-                                    <label htmlFor="resume-upload" className="cursor-pointer">
-                                        <UploadCloud className="h-10 w-10 text-indigo-600 mx-auto mb-2" />
-                                        {resumeFile ? (
-                                            <div className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-600">
-                                                <FileText className="h-4 w-4" />
-                                                {resumeFile.name} ({(resumeFile.size / 1024 / 1024).toFixed(2)} MB)
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="text-sm font-semibold text-slate-700">
-                                                    Click to upload or drag & drop
-                                                </p>
-                                                <p className="text-xs text-slate-500 mt-1">PDF, DOC, DOCX up to 5MB</p>
-                                            </>
-                                        )}
-                                    </label>
-                                </div>
-                            </div>
+                            <div className="border-t border-slate-100 pt-4">
+                                <h3 className="text-sm font-bold text-slate-900 mb-1">
+                                    Professional Profiles & Links (Optional)
+                                </h3>
+                                <p className="text-xs text-slate-500 mb-3">
+                                    Provide links to your online work or coding profiles to assist our review team.
+                                </p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        LinkedIn Profile (Optional)
-                                    </label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://linkedin.com/in/username"
-                                        value={formData.linkedinUrl}
-                                        onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            LinkedIn Profile URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            placeholder="https://linkedin.com/in/username"
+                                            value={formData.linkedinUrl}
+                                            onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        GitHub / Portfolio Link (Optional)
-                                    </label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://github.com/username"
-                                        value={formData.githubUrl}
-                                        onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            GitHub Profile URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            placeholder="https://github.com/username"
+                                            value={formData.githubUrl}
+                                            onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Portfolio / Personal Website URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            placeholder="https://yourportfolio.com"
+                                            value={formData.portfolioUrl}
+                                            onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Key Technical Skills / Languages (Optional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Python, React, JavaScript, SQL, C++, Figma"
+                                            value={formData.technicalSkills}
+                                            onChange={(e) => setFormData({ ...formData, technicalSkills: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -553,137 +903,190 @@ export default function InternshipApplyPage() {
                                     <ArrowLeft className="h-4 w-4" />
                                     Back
                                 </Button>
-                                <Button onClick={handleNext} className="gap-2">
-                                    Next: Payment & Verification
+                                <Button onClick={handleNext} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                                    Next: Package Selection
                                     <ArrowRight className="h-4 w-4" />
                                 </Button>
                             </div>
                         </motion.div>
                     )}
 
-                    {/* STEP 3: Payment Verification & Proof */}
+                    {/* STEP 3: Package Selection & Confirmation (NO PAYMENT GATEWAY) */}
                     {currentStep === 3 && (
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="border-b border-slate-100 pb-4">
                                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                    <CreditCard className="h-5 w-5 text-indigo-600" />
-                                    Internship Registration Fee & UTR
+                                    <Package className="h-5 w-5 text-indigo-600" />
+                                    Internship Package Selection
                                 </h2>
                                 <p className="text-xs text-slate-500 mt-1">
-                                    Scan the official Vectonix QR or transfer via UPI, then enter your UTR number and upload the screenshot.
+                                    Choose your preferred registration package. There is no online payment required at this step.
                                 </p>
                             </div>
 
-                            {/* Fee Card & QR Code */}
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
-                                {qrDataUrl && (
-                                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                                        <img src={qrDataUrl} alt="UPI QR Code" className="h-44 w-44 object-contain" />
-                                        <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">Scan with any UPI App</span>
-                                    </div>
-                                )}
-
-                                <div className="flex-1 space-y-3 text-center md:text-left">
+                            {/* Selectable Pricing Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* PACKAGE 1: STANDARD */}
+                                <div
+                                    onClick={() => setFormData({ ...formData, packageName: "Standard" })}
+                                    className={`relative rounded-2xl p-6 border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                        formData.packageName === "Standard"
+                                            ? "border-indigo-600 bg-indigo-50/20 shadow-lg ring-2 ring-indigo-500/20"
+                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                    }`}
+                                >
                                     <div>
-                                        <span className="text-xs text-slate-500 uppercase font-semibold">Total Registration Fee</span>
-                                        <div className="text-3xl font-extrabold text-slate-900">
-                                            ₹{batch?.fee_amount ?? 499}
-                                            <span className="text-xs font-normal text-slate-500 ml-1">one-time</span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                                Standard Package
+                                            </span>
+                                            <input
+                                                type="radio"
+                                                name="package"
+                                                checked={formData.packageName === "Standard"}
+                                                onChange={() => setFormData({ ...formData, packageName: "Standard" })}
+                                                className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                            />
                                         </div>
+                                        <div className="mt-3 flex items-baseline gap-1">
+                                            <span className="text-3xl font-extrabold text-slate-900">₹749</span>
+                                            <span className="text-xs text-slate-500 font-medium">/ complete internship</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                            Comprehensive program access, hands-on tasks, and verified certification.
+                                        </p>
+
+                                        <ul className="mt-5 space-y-2.5 text-xs text-slate-700 border-t border-slate-100 pt-4">
+                                            {PACKAGES_CONFIG.Standard.features.map((item, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <span
+                                            className={`block text-center py-2 rounded-xl text-xs font-semibold ${
+                                                formData.packageName === "Standard"
+                                                    ? "bg-indigo-600 text-white"
+                                                    : "bg-slate-100 text-slate-700"
+                                            }`}
+                                        >
+                                            {formData.packageName === "Standard" ? "Selected Package" : "Select Standard"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* PACKAGE 2: PREMIUM (MOST POPULAR) */}
+                                <div
+                                    onClick={() => setFormData({ ...formData, packageName: "Premium" })}
+                                    className={`relative rounded-2xl p-6 border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                        formData.packageName === "Premium"
+                                            ? "border-indigo-600 bg-indigo-50/30 shadow-xl ring-2 ring-indigo-500/20"
+                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                    }`}
+                                >
+                                    {/* Most Popular Badge */}
+                                    <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold tracking-wider uppercase shadow-md flex items-center gap-1">
+                                        <Sparkles className="h-3 w-3" />
+                                        Most Popular
                                     </div>
 
                                     <div>
-                                        <span className="text-xs text-slate-500 block mb-1">Official Vectonix UPI ID:</span>
-                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-sm font-mono text-slate-800">
-                                            <span>{batch?.upi_id || "vectonixofficial@okhdfcbank"}</span>
-                                            <button
-                                                type="button"
-                                                onClick={handleCopyUpi}
-                                                className="text-indigo-600 hover:text-indigo-800 p-1"
-                                                title="Copy UPI ID"
-                                            >
-                                                {copiedUpi ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                                            </button>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+                                                Premium Package
+                                            </span>
+                                            <input
+                                                type="radio"
+                                                name="package"
+                                                checked={formData.packageName === "Premium"}
+                                                onChange={() => setFormData({ ...formData, packageName: "Premium" })}
+                                                className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                            />
                                         </div>
+                                        <div className="mt-3 flex items-baseline gap-1">
+                                            <span className="text-3xl font-extrabold text-slate-900">₹999</span>
+                                            <span className="text-xs text-slate-500 font-medium">/ complete internship</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                            Includes full curriculum access plus the physical Vectonix branded welcome kit delivered to your doorstep.
+                                        </p>
+
+                                        <ul className="mt-5 space-y-2.5 text-xs text-slate-700 border-t border-slate-100 pt-4">
+                                            {PACKAGES_CONFIG.Premium.features.map((item, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                                    <span className={idx === 0 ? "font-semibold text-slate-900" : ""}>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
 
-                                    <div className="text-xs text-slate-500 bg-white/80 p-2.5 rounded-lg border border-slate-200/60">
-                                        💡 Supported apps: <strong>Google Pay, PhonePe, Paytm, BHIM, Cred</strong>. After paying, copy the 12-digit UTR/UPI Transaction ID.
+                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <span
+                                            className={`block text-center py-2 rounded-xl text-xs font-semibold ${
+                                                formData.packageName === "Premium"
+                                                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                                                    : "bg-slate-100 text-slate-700"
+                                            }`}
+                                        >
+                                            {formData.packageName === "Premium" ? "Selected Package" : "Select Premium"}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* UTR Input */}
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                    UPI / Bank Transaction ID (UTR Number) *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. 402918239012"
-                                    value={formData.transactionIdUtr}
-                                    onChange={(e) => setFormData({ ...formData, transactionIdUtr: e.target.value })}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                                />
+                            {/* Summary Banner */}
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                                <div>
+                                    <span className="text-slate-500 block">Selected Option:</span>
+                                    <span className="font-bold text-slate-900 text-sm">
+                                        {formData.packageName} Package — ₹{PACKAGES_CONFIG[formData.packageName].price}
+                                    </span>
+                                </div>
+                                <div className="text-slate-500">
+                                    Domain Track: <strong className="text-slate-800">{formData.domain}</strong>
+                                </div>
                             </div>
 
-                            {/* Payment Screenshot Upload */}
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                                    Payment Screenshot / Receipt (PNG, JPG, PDF) *
-                                </label>
-                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-indigo-500 transition-colors bg-slate-50/50">
+                            {/* Legal & Consent Checkboxes */}
+                            <div className="space-y-3 pt-2">
+                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                                     <input
-                                        type="file"
-                                        id="proof-upload"
-                                        accept="image/*,.pdf"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                setPaymentProofFile(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="hidden"
+                                        type="checkbox"
+                                        id="terms"
+                                        checked={formData.termsAccepted}
+                                        onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
+                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                     />
-                                    <label htmlFor="proof-upload" className="cursor-pointer">
-                                        <UploadCloud className="h-10 w-10 text-indigo-600 mx-auto mb-2" />
-                                        {paymentProofFile ? (
-                                            <div className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-600">
-                                                <FileText className="h-4 w-4" />
-                                                {paymentProofFile.name} ({(paymentProofFile.size / 1024 / 1024).toFixed(2)} MB)
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="text-sm font-semibold text-slate-700">
-                                                    Click to upload payment screenshot
-                                                </p>
-                                                <p className="text-xs text-slate-500 mt-1">PNG, JPG, JPEG or PDF</p>
-                                            </>
-                                        )}
+                                    <label htmlFor="terms" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+                                        I agree to Vectonix&apos;s{" "}
+                                        <Link href="/terms-and-conditions" target="_blank" className="text-indigo-600 underline font-medium">
+                                            Terms & Conditions
+                                        </Link>{" "}
+                                        and acknowledge the{" "}
+                                        <Link href="/privacy-policy" target="_blank" className="text-indigo-600 underline font-medium">
+                                            Privacy Policy
+                                        </Link>
+                                        . I declare that the submitted information is accurate and authentic. *
                                     </label>
                                 </div>
-                            </div>
 
-                            {/* Terms & Conditions Agreement */}
-                            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <input
-                                    type="checkbox"
-                                    id="terms"
-                                    checked={formData.agreedToTerms}
-                                    onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
-                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <label htmlFor="terms" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
-                                    I agree to Vectonix's{" "}
-                                    <Link href="/terms-and-conditions" target="_blank" className="text-indigo-600 underline font-medium">
-                                        Terms & Conditions
-                                    </Link>{" "}
-                                    and acknowledge the{" "}
-                                    <Link href="/privacy-policy" target="_blank" className="text-indigo-600 underline font-medium">
-                                        Privacy Policy
-                                    </Link>
-                                    . I declare that the submitted transaction details are authentic.
-                                </label>
+                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                    <input
+                                        type="checkbox"
+                                        id="marketing"
+                                        checked={formData.marketingConsent}
+                                        onChange={(e) => setFormData({ ...formData, marketingConsent: e.target.checked })}
+                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <label htmlFor="marketing" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+                                        Keep me informed about future tech workshops, hackathons, job placements, and learning resources from Vectonix Technologies (Optional).
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="pt-4 flex justify-between">
@@ -697,7 +1100,11 @@ export default function InternshipApplyPage() {
                                     <ArrowLeft className="h-4 w-4" />
                                     Back
                                 </Button>
-                                <Button type="submit" disabled={isSubmitting} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 shadow-lg shadow-indigo-600/25"
+                                >
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -706,7 +1113,7 @@ export default function InternshipApplyPage() {
                                     ) : (
                                         <>
                                             <Send className="h-4 w-4" />
-                                            Submit Application & Verify
+                                            Submit Internship Application
                                         </>
                                     )}
                                 </Button>
@@ -730,38 +1137,46 @@ export default function InternshipApplyPage() {
                                     Application Submitted Successfully!
                                 </h2>
                                 <p className="text-slate-600 mt-2 text-sm sm:text-base">
-                                    Welcome to Vectonix, <strong>{submittedApplication.full_name}</strong>. Your application record and payment proof have been received.
+                                    Welcome to Vectonix, <strong>{submittedApplication.full_name}</strong>. Your registration for the Winter Internship 2026 has been recorded.
                                 </p>
                             </div>
 
                             {/* Application ID Card */}
                             <div className="bg-gradient-to-r from-indigo-50 via-slate-50 to-indigo-50 border border-indigo-100 rounded-2xl p-6 max-w-lg mx-auto shadow-sm">
-                                <span className="text-xs uppercase font-bold tracking-wider text-indigo-700">Your Official Application ID</span>
+                                <span className="text-xs uppercase font-bold tracking-wider text-indigo-700">
+                                    Official Application ID
+                                </span>
                                 <div className="text-3xl font-mono font-extrabold text-slate-900 mt-2 tracking-wider">
-                                    {submittedApplication.application_id}
+                                    {submittedApplication.application_id || submittedApplication.application_number}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-2">
-                                    Please keep this Application ID safe for tracking and certificate verification.
+                                    An acknowledgement has been queued for your email ({submittedApplication.email}).
                                 </p>
                             </div>
 
                             {/* Summary Table */}
                             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left max-w-lg mx-auto text-xs space-y-2">
                                 <div className="flex justify-between py-1 border-b border-slate-200">
-                                    <span className="text-slate-500 font-medium">Batch</span>
-                                    <span className="font-semibold text-slate-800">{batch?.title || "Winter Internship 2026"}</span>
-                                </div>
-                                <div className="flex justify-between py-1 border-b border-slate-200">
                                     <span className="text-slate-500 font-medium">Selected Domain</span>
                                     <span className="font-semibold text-slate-800">{submittedApplication.domain}</span>
                                 </div>
                                 <div className="flex justify-between py-1 border-b border-slate-200">
-                                    <span className="text-slate-500 font-medium">College</span>
-                                    <span className="font-semibold text-slate-800">{submittedApplication.college_name}</span>
+                                    <span className="text-slate-500 font-medium">Chosen Package</span>
+                                    <span className="font-semibold text-indigo-700">
+                                        {submittedApplication.package_name} (₹{submittedApplication.package_amount})
+                                    </span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b border-slate-200">
+                                    <span className="text-slate-500 font-medium">College / Institution</span>
+                                    <span className="font-semibold text-slate-800 truncate max-w-xs">{submittedApplication.college_name}</span>
+                                </div>
+                                <div className="flex justify-between py-1 border-b border-slate-200">
+                                    <span className="text-slate-500 font-medium">City & State</span>
+                                    <span className="font-semibold text-slate-800">{submittedApplication.city}, {submittedApplication.state}</span>
                                 </div>
                                 <div className="flex justify-between py-1">
-                                    <span className="text-slate-500 font-medium">Payment Verification</span>
-                                    <span className="font-semibold text-amber-600">Pending Verification (within 24-48 hrs)</span>
+                                    <span className="text-slate-500 font-medium">Application Status</span>
+                                    <span className="font-semibold text-blue-600 uppercase">Received / Under Review</span>
                                 </div>
                             </div>
 
@@ -787,4 +1202,3 @@ export default function InternshipApplyPage() {
         </div>
     );
 }
-

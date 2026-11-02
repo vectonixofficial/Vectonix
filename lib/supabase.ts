@@ -88,44 +88,102 @@ export interface DatabaseInternshipBatch {
 }
 
 export type InternshipApplicationStatus = "pending" | "under_review" | "accepted" | "rejected" | "waitlisted";
+export type InternshipPackageType = "Standard" | "Premium";
+export type GenderType = "Male" | "Female" | "Other" | "Prefer not to say";
 
 export interface DatabaseInternshipApplication {
     id: string;
-    application_id: string; // e.g. 'VX-WI26-0001'
+    application_id: string; // e.g. 'VTX-WI26-0001'
+    application_number?: string;
     batch_id: string;
     full_name: string;
     email: string;
     phone: string;
+    mobile_number?: string;
     whatsapp_number?: string;
+    gender: GenderType;
+    date_of_birth?: string | null;
+    // College fields
     college_name: string;
+    college_id?: string | null;
+    college_city?: string | null;
+    college_state?: string | null;
+    college_selection_type?: "official_directory" | "manual";
+    // Academic fields
     degree: string;
     department: string;
     year_of_study: string;
-    domain: string;
-    resume_url: string;
-    linkedin_url?: string;
-    github_url?: string;
+    academic_year?: string | null;
+    semester?: string | null;
+    graduation_year?: string | null;
+    // Skills & Profiles
+    domain: string; // e.g. "Full Stack Development"
+    internship_domain?: string;
+    technical_skills?: string | null;
+    programming_languages?: string | null;
+    resume_url?: string | null;
+    linkedin_url?: string | null;
+    github_url?: string | null;
+    portfolio_url?: string | null;
+    // Address fields
+    house_number: string;
+    street_name: string;
+    locality: string;
+    city: string;
+    district: string;
+    state: string;
+    postal_code: string;
+    country: string;
+    // Package selection (No payment gateway)
+    package_name: InternshipPackageType;
+    package_amount: number; // 749 or 999
+    // Status & Consents
     status: InternshipApplicationStatus;
-    internal_notes?: string;
+    application_status?: InternshipApplicationStatus;
+    terms_accepted: boolean;
+    privacy_consent: boolean;
+    marketing_consent: boolean;
+    internal_notes?: string | null;
     created_at?: string;
     updated_at?: string;
-    // Joined payment record
-    payment?: DatabaseInternshipPayment;
 }
 
-export type InternshipPaymentStatus = "pending_verification" | "verified" | "rejected";
-
-export interface DatabaseInternshipPayment {
+// Bulk Email Management Types
+export interface DatabaseEmailCampaign {
     id: string;
-    application_id: string;
-    batch_id: string;
-    amount: number;
-    transaction_id_utr: string;
-    screenshot_url: string;
-    payment_status: InternshipPaymentStatus;
-    verified_by?: string;
-    verified_at?: string;
-    rejection_reason?: string;
+    campaign_id: string;
+    subject: string;
+    message: string;
+    created_by: string;
+    total_recipients: number;
+    sent_count: number;
+    failed_count: number;
+    status: "draft" | "queued" | "sending" | "completed" | "failed";
+    filter_criteria?: Record<string, any>;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface DatabaseEmailRecipient {
+    id: string;
+    campaign_id: string;
+    application_id?: string;
+    recipient_email: string;
+    recipient_name?: string;
+    delivery_status: "queued" | "sent" | "failed" | "bounced";
+    provider_message_id?: string;
+    sent_at?: string;
+    error_message?: string;
+    created_at?: string;
+}
+
+export interface DatabaseEmailTemplate {
+    id: string;
+    name: string;
+    subject: string;
+    body: string;
+    category?: string;
+    is_system?: boolean;
     created_at?: string;
     updated_at?: string;
 }

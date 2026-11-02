@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Briefcase,
     Users,
-    CreditCard,
+    Package,
     CheckCircle2,
     Clock,
     XCircle,
@@ -18,7 +18,6 @@ import {
     Filter,
     Eye,
     MessageCircle,
-    Plus,
     RefreshCw,
     TrendingUp,
     ChevronDown,
@@ -27,18 +26,20 @@ import {
     AlertTriangle,
     Check,
     X,
-    FileText
+    FileText,
+    Mail,
+    MapPin,
+    Sparkles,
+    User
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
-import { internshipService } from "@/lib/services/internshipService";
+import { internshipService, INTERNSHIP_DOMAINS, PACKAGES_CONFIG } from "@/lib/services/internshipService";
 import {
     DatabaseInternshipBatch,
     DatabaseInternshipApplication,
-    DatabaseInternshipPayment,
-    InternshipApplicationStatus,
-    InternshipPaymentStatus
+    InternshipApplicationStatus
 } from "@/lib/supabase";
 
 export default function AdminInternshipsBatchPage() {
@@ -52,48 +53,38 @@ export default function AdminInternshipsBatchPage() {
     const [batches, setBatches] = useState<DatabaseInternshipBatch[]>([]);
     const [currentBatch, setCurrentBatch] = useState<DatabaseInternshipBatch | null>(null);
 
-    // Applications & Payments
+    // Applications & Analytics
     const [applications, setApplications] = useState<DatabaseInternshipApplication[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"applications" | "payments" | "analytics" | "reports">("applications");
+    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports">("applications");
 
     // Filter & Search
     const [searchTerm, setSearchTerm] = useState("");
     const [domainFilter, setDomainFilter] = useState("all");
+    const [packageFilter, setPackageFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
 
     // Modal / Drawer states
     const [selectedApp, setSelectedApp] = useState<DatabaseInternshipApplication | null>(null);
-    const [inspectingProofUrl, setInspectingProofUrl] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [adminNotes, setAdminNotes] = useState("");
-
-    // Create New Batch Modal State
-    const [showNewBatchModal, setShowNewBatchModal] = useState(false);
-    const [newBatchForm, setNewBatchForm] = useState({
-        id: "",
-        title: "",
-        prefix: "",
-        fee_amount: 499,
-        domains: "Full Stack Web Development, AI / Machine Learning, IoT & Embedded Systems, Cybersecurity",
-    });
 
     // Analytics State
     const [analytics, setAnalytics] = useState<{
         total: number;
-        verifiedCount: number;
-        pendingPaymentCount: number;
-        totalRevenue: number;
-        conversionRate: number;
+        standardCount: number;
+        premiumCount: number;
+        totalProjectedRevenue: number;
         domainBreakdown: Record<string, number>;
+        packageBreakdown: Record<string, number>;
         statusBreakdown: Record<string, number>;
     }>({
         total: 0,
-        verifiedCount: 0,
-        pendingPaymentCount: 0,
-        totalRevenue: 0,
-        conversionRate: 0,
+        standardCount: 0,
+        premiumCount: 0,
+        totalProjectedRevenue: 0,
         domainBreakdown: {},
+        packageBreakdown: {},
         statusBreakdown: {},
     });
 
@@ -138,63 +129,47 @@ export default function AdminInternshipsBatchPage() {
         }
     };
 
-    // Handle Payment Verification
-    const handleVerifyPayment = async (
-        payment: DatabaseInternshipPayment,
-        appId: string,
-        newStatus: InternshipPaymentStatus,
-        reason?: string
-    ) => {
-        setActionLoading(true);
-        try {
-            await internshipService.verifyPayment(
-                payment.id,
-                appId,
-                newStatus,
-                user?.email || "admin@vectonix.com",
-                reason
-            );
-            await loadData();
-            if (selectedApp && selectedApp.id === appId) {
-                setSelectedApp(null);
-            }
-        } catch (error) {
-            console.error("Payment verification error:", error);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    // Export to Excel
-    const handleExportExcel = (exportType: "all" | "verified" | "accepted") => {
+    // Export to Excel with all address & package fields
+    const handleExportExcel = (exportType: "all" | "standard" | "premium" | "accepted") => {
         let exportData = applications;
-        if (exportType === "verified") {
-            exportData = applications.filter((a) => a.payment?.payment_status === "verified");
+        if (exportType === "standard") {
+            exportData = applications.filter((a) => a.package_name === "Standard");
+        } else if (exportType === "premium") {
+            exportData = applications.filter((a) => a.package_name === "Premium");
         } else if (exportType === "accepted") {
             exportData = applications.filter((a) => a.status === "accepted");
         }
 
         const rows = exportData.map((app) => ({
-            "Application ID": app.application_id,
+            "Application ID": app.application_id || app.application_number,
             "Full Name": app.full_name,
             "Email Address": app.email,
-            "Phone Number": app.phone,
+            "Mobile Phone": app.phone,
             "WhatsApp": app.whatsapp_number || app.phone,
+            "Gender": app.gender || "N/A",
             "College Name": app.college_name,
+            "College City": app.college_city || "N/A",
+            "College State": app.college_state || "N/A",
+            "College Selection": app.college_selection_type || "N/A",
             "Degree": app.degree,
             "Department": app.department,
-            "Year": app.year_of_study,
-            "Domain Track": app.domain,
+            "Year of Study": app.year_of_study,
+            "Internship Domain": app.domain,
+            "Package Selected": app.package_name,
+            "Package Amount (INR)": app.package_amount || (app.package_name === "Premium" ? 999 : 749),
             "Application Status": app.status.toUpperCase(),
-            "Resume Link": app.resume_url,
-            "LinkedIn": app.linkedin_url || "N/A",
-            "GitHub": app.github_url || "N/A",
-            "Fee (INR)": app.payment?.amount || 0,
-            "UTR / Transaction ID": app.payment?.transaction_id_utr || "N/A",
-            "Payment Status": app.payment?.payment_status || "N/A",
-            "Payment Proof URL": app.payment?.screenshot_url || "N/A",
-            "Payment Verified By": app.payment?.verified_by || "N/A",
-            "Application Date": app.created_at ? new Date(app.created_at).toLocaleDateString() : "N/A",
+            "Door / House No": app.house_number || "N/A",
+            "Street Name": app.street_name || "N/A",
+            "Locality": app.locality || "N/A",
+            "City": app.city || "N/A",
+            "District": app.district || "N/A",
+            "State": app.state || "N/A",
+            "PIN Code": app.postal_code || "N/A",
+            "Country": app.country || "India",
+            "LinkedIn URL": app.linkedin_url || "N/A",
+            "GitHub URL": app.github_url || "N/A",
+            "Portfolio URL": app.portfolio_url || "N/A",
+            "Registration Date": app.created_at ? new Date(app.created_at).toLocaleDateString() : "N/A",
         }));
 
         const wb = XLSX.utils.book_new();
@@ -208,23 +183,19 @@ export default function AdminInternshipsBatchPage() {
     // Filter applications
     const filteredApps = applications.filter((app) => {
         const matchesDomain = domainFilter === "all" || app.domain === domainFilter;
+        const matchesPackage = packageFilter === "all" || app.package_name === packageFilter;
         const matchesStatus = statusFilter === "all" || app.status === statusFilter;
         const s = searchTerm.toLowerCase();
         const matchesSearch =
             !searchTerm ||
             app.full_name.toLowerCase().includes(s) ||
-            app.application_id.toLowerCase().includes(s) ||
+            (app.application_id && app.application_id.toLowerCase().includes(s)) ||
             app.email.toLowerCase().includes(s) ||
             app.college_name.toLowerCase().includes(s) ||
-            (app.payment?.transaction_id_utr && app.payment.transaction_id_utr.toLowerCase().includes(s));
+            (app.city && app.city.toLowerCase().includes(s));
 
-        return matchesDomain && matchesStatus && matchesSearch;
+        return matchesDomain && matchesPackage && matchesStatus && matchesSearch;
     });
-
-    // Payment Pending Queue
-    const pendingPayments = applications.filter(
-        (app) => app.payment && app.payment.payment_status === "pending_verification"
-    );
 
     return (
         <div className="space-y-8 pb-16">
@@ -240,7 +211,7 @@ export default function AdminInternshipsBatchPage() {
                                 {currentBatch?.title || "Internship Batch Administration"}
                             </h1>
                             <p className="text-xs text-slate-500">
-                                Manage candidate intakes, verify payments, and export cohort reports.
+                                Manage candidate registrations, packages, residential addresses, and export cohort reports.
                             </p>
                         </div>
                     </div>
@@ -263,6 +234,15 @@ export default function AdminInternshipsBatchPage() {
                         <ChevronDown className="h-4 w-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
                     </div>
 
+                    {/* Email Manager Shortcut */}
+                    <Link
+                        href={`/admin/internships/${batchId}/emails`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
+                    >
+                        <Mail className="h-3.5 w-3.5" />
+                        <span>Send Bulk Emails</span>
+                    </Link>
+
                     {/* Refresh Button */}
                     <button
                         onClick={loadData}
@@ -284,7 +264,7 @@ export default function AdminInternshipsBatchPage() {
                 </div>
             </div>
 
-            {/* Metric KPI Cards */}
+            {/* Metric KPI Cards (Reflecting Package Registrations, No Payment Gateway) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
@@ -297,6 +277,36 @@ export default function AdminInternshipsBatchPage() {
                     </div>
                     <div className="mt-3 flex items-baseline gap-2">
                         <span className="text-3xl font-extrabold text-slate-900">{analytics.total}</span>
+                        <span className="text-xs text-slate-400">students</span>
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Premium Package (₹999)
+                        </span>
+                        <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+                            <Sparkles className="h-5 w-5" />
+                        </div>
+                    </div>
+                    <div className="mt-3 flex items-baseline gap-2">
+                        <span className="text-3xl font-extrabold text-amber-600">{analytics.premiumCount}</span>
+                        <span className="text-xs text-slate-400">welcome kits</span>
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Standard Package (₹749)
+                        </span>
+                        <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                            <Package className="h-5 w-5" />
+                        </div>
+                    </div>
+                    <div className="mt-3 flex items-baseline gap-2">
+                        <span className="text-3xl font-extrabold text-slate-900">{analytics.standardCount}</span>
                         <span className="text-xs text-slate-400">candidates</span>
                     </div>
                 </div>
@@ -304,119 +314,113 @@ export default function AdminInternshipsBatchPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Verified Payments
-                        </span>
-                        <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-                            <CheckCircle2 className="h-5 w-5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-3xl font-extrabold text-emerald-600">{analytics.verifiedCount}</span>
-                        <span className="text-xs text-emerald-700 font-medium">({analytics.conversionRate}% verified)</span>
-                    </div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Pending Verification
-                        </span>
-                        <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
-                            <Clock className="h-5 w-5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-3xl font-extrabold text-amber-600">{analytics.pendingPaymentCount}</span>
-                        <span className="text-xs text-slate-400">awaiting review</span>
-                    </div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Verified Revenue
+                            Projected Intake Value
                         </span>
                         <div className="p-2 rounded-xl bg-violet-50 text-violet-600">
-                            <CreditCard className="h-5 w-5" />
+                            <TrendingUp className="h-5 w-5" />
                         </div>
                     </div>
                     <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-3xl font-extrabold text-slate-900">₹{analytics.totalRevenue.toLocaleString()}</span>
+                        <span className="text-3xl font-extrabold text-slate-900">
+                            ₹{analytics.totalProjectedRevenue.toLocaleString()}
+                        </span>
                         <span className="text-xs text-slate-400">INR</span>
                     </div>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-slate-200">
-                {[
-                    { id: "applications", label: "Manage Applications", icon: Users, badge: applications.length },
-                    { id: "payments", label: "Verify Payments", icon: CreditCard, badge: pendingPayments.length },
-                    { id: "analytics", label: "Cohort Analytics", icon: TrendingUp },
-                    { id: "reports", label: "Export Reports", icon: FileSpreadsheet },
-                ].map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-                                isActive
-                                    ? "border-indigo-600 text-indigo-600"
-                                    : "border-transparent text-slate-500 hover:text-slate-900"
-                            }`}
-                        >
-                            <Icon className="h-4 w-4" />
-                            <span>{tab.label}</span>
-                            {tab.badge !== undefined && (
-                                <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                        isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
-                                    }`}
-                                >
-                                    {tab.badge}
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
+            <div className="flex items-center justify-between border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                    {[
+                        { id: "applications", label: "Manage Applications", icon: Users, badge: applications.length },
+                        { id: "analytics", label: "Cohort Analytics", icon: TrendingUp },
+                        { id: "reports", label: "Export Reports", icon: FileSpreadsheet },
+                    ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                                    isActive
+                                        ? "border-indigo-600 text-indigo-600"
+                                        : "border-transparent text-slate-500 hover:text-slate-900"
+                                }`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                <span>{tab.label}</span>
+                                {tab.badge !== undefined && (
+                                    <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
+                                        }`}
+                                    >
+                                        {tab.badge}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Email management quick link */}
+                <Link
+                    href={`/admin/internships/${batchId}/emails`}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 pr-2"
+                >
+                    <Mail className="h-4 w-4" />
+                    <span>Open Email Center &rarr;</span>
+                </Link>
             </div>
 
             {/* TAB 1: APPLICATIONS LIST */}
             {activeTab === "applications" && (
                 <div className="space-y-4">
                     {/* Filter Bar */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
-                        <div className="relative w-full md:w-80">
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                        <div className="relative">
                             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                             <input
                                 type="text"
-                                placeholder="Search Name, App ID, Email, College, UTR..."
+                                placeholder="Search Name, App ID, College, City..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             />
                         </div>
 
-                        <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div>
                             <select
                                 value={domainFilter}
                                 onChange={(e) => setDomainFilter(e.target.value)}
-                                className="bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
                                 <option value="all">All Domains</option>
-                                {(currentBatch?.domains || []).map((d) => (
-                                    <option key={d} value={d}>
-                                        {d}
-                                    </option>
+                                {INTERNSHIP_DOMAINS.map((d) => (
+                                    <option key={d} value={d}>{d}</option>
                                 ))}
                             </select>
+                        </div>
 
+                        <div>
+                            <select
+                                value={packageFilter}
+                                onChange={(e) => setPackageFilter(e.target.value)}
+                                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="all">All Packages</option>
+                                <option value="Standard">Standard (₹749)</option>
+                                <option value="Premium">Premium (₹999)</option>
+                            </select>
+                        </div>
+
+                        <div>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
                                 <option value="all">All Statuses</option>
                                 <option value="pending">Pending</option>
@@ -435,11 +439,11 @@ export default function AdminInternshipsBatchPage() {
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
                                         <th className="px-4 py-3.5">Application ID</th>
-                                        <th className="px-4 py-3.5">Candidate</th>
-                                        <th className="px-4 py-3.5">College & Branch</th>
+                                        <th className="px-4 py-3.5">Candidate Details</th>
+                                        <th className="px-4 py-3.5">College & Location</th>
                                         <th className="px-4 py-3.5">Domain</th>
-                                        <th className="px-4 py-3.5">Application Status</th>
-                                        <th className="px-4 py-3.5">Payment</th>
+                                        <th className="px-4 py-3.5">Package</th>
+                                        <th className="px-4 py-3.5">Status</th>
                                         <th className="px-4 py-3.5 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -447,7 +451,7 @@ export default function AdminInternshipsBatchPage() {
                                     {filteredApps.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                                                No internship applications found for this filter.
+                                                No internship applications found matching these filters.
                                             </td>
                                         </tr>
                                     ) : (
@@ -460,31 +464,35 @@ export default function AdminInternshipsBatchPage() {
                                                 rejected: "bg-red-50 text-red-700 border-red-200",
                                             };
 
-                                            const paymentStatus = app.payment?.payment_status || "pending_verification";
-                                            const paymentColors: Record<string, string> = {
-                                                verified: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                                pending_verification: "bg-amber-50 text-amber-700 border-amber-200",
-                                                rejected: "bg-red-50 text-red-700 border-red-200",
-                                            };
-
                                             return (
                                                 <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
                                                     <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                                                        {app.application_id}
+                                                        {app.application_id || app.application_number}
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <div className="font-semibold text-slate-900">{app.full_name}</div>
-                                                        <div className="text-slate-400 text-[11px]">{app.email}</div>
+                                                        <div className="text-slate-400 text-[11px]">{app.email} • {app.gender || "N/A"}</div>
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-600">
                                                         <div className="font-medium truncate max-w-xs">{app.college_name}</div>
                                                         <div className="text-slate-400 text-[11px]">
-                                                            {app.degree} • {app.department}
+                                                            {app.city ? `${app.city}, ${app.state}` : app.degree}
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
                                                             {app.domain}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span
+                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-bold uppercase ${
+                                                                app.package_name === "Premium"
+                                                                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                                                                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                            }`}
+                                                        >
+                                                            {app.package_name} (₹{app.package_amount || (app.package_name === "Premium" ? 999 : 749)})
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
@@ -496,16 +504,7 @@ export default function AdminInternshipsBatchPage() {
                                                             {app.status.replace("_", " ")}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold uppercase ${
-                                                                paymentColors[paymentStatus]
-                                                            }`}
-                                                        >
-                                                            {paymentStatus.replace("_", " ")}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right space-x-1">
+                                                    <td className="px-4 py-3 text-right">
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
@@ -530,122 +529,61 @@ export default function AdminInternshipsBatchPage() {
                 </div>
             )}
 
-            {/* TAB 2: VERIFY PAYMENTS */}
-            {activeTab === "payments" && (
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-900">Payment Verification Desk</h2>
-                            <p className="text-xs text-slate-500">
-                                Inspect candidate transaction screenshots against submitted UTR numbers to approve or flag.
-                            </p>
-                        </div>
-                    </div>
-
-                    {pendingPayments.length === 0 ? (
-                        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
-                            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                            <h3 className="text-base font-bold text-slate-900">All payments are up to date!</h3>
-                            <p className="text-xs text-slate-500 mt-1">No pending verification requests in this batch.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {pendingPayments.map((app) => {
-                                const payment = app.payment!;
-                                return (
-                                    <div
-                                        key={app.id}
-                                        className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4"
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                                    {app.application_id}
-                                                </span>
-                                                <h3 className="font-bold text-slate-900 text-sm mt-1">{app.full_name}</h3>
-                                                <p className="text-xs text-slate-500">{app.email} • {app.phone}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-lg font-extrabold text-slate-900">₹{payment.amount}</span>
-                                                <span className="block text-[10px] text-amber-600 font-bold uppercase">
-                                                    Pending Review
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">UTR / Transaction ID:</span>
-                                                <span className="font-mono font-bold text-slate-900 select-all">
-                                                    {payment.transaction_id_utr}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">Submitted:</span>
-                                                <span>{payment.created_at ? new Date(payment.created_at).toLocaleString() : "N/A"}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Screenshot Preview */}
-                                        <div className="relative border border-slate-200 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center h-48 group">
-                                            <img
-                                                src={payment.screenshot_url}
-                                                alt="Receipt Proof"
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                            />
-                                            <button
-                                                onClick={() => setInspectingProofUrl(payment.screenshot_url)}
-                                                className="absolute inset-0 bg-slate-900/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-xs font-semibold cursor-pointer"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                                Click to enlarge proof
-                                            </button>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2 pt-2">
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handleVerifyPayment(payment, app.id, "verified")}
-                                                disabled={actionLoading}
-                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs"
-                                            >
-                                                <Check className="h-3.5 w-3.5" />
-                                                Verify & Approve
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const reason = prompt("Enter reason for rejection (e.g. Invalid UTR, duplicate receipt):");
-                                                    if (reason) {
-                                                        handleVerifyPayment(payment, app.id, "rejected", reason);
-                                                    }
-                                                }}
-                                                disabled={actionLoading}
-                                                className="text-red-600 hover:bg-red-50 hover:border-red-300 gap-1 text-xs"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                                Reject Proof
-                                            </Button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* TAB 3: COHORT ANALYTICS */}
+            {/* TAB 2: COHORT ANALYTICS */}
             {activeTab === "analytics" && (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Package Breakdown */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                            <h3 className="font-bold text-slate-900 text-sm mb-4 flex items-center gap-2">
+                                <Package className="h-4 w-4 text-indigo-600" />
+                                Registration Package Breakdown
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-amber-950">Premium Package (₹999)</span>
+                                        <span className="font-extrabold text-amber-700 text-sm">
+                                            {analytics.premiumCount} ({analytics.total > 0 ? Math.round((analytics.premiumCount / analytics.total) * 100) : 0}%)
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 rounded-full bg-amber-100 overflow-hidden mt-2">
+                                        <div
+                                            className="h-full bg-amber-500 rounded-full"
+                                            style={{
+                                                width: `${analytics.total > 0 ? (analytics.premiumCount / analytics.total) * 100 : 0}%`
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="text-[11px] text-amber-700 mt-2 block">
+                                        Includes welcome kit dispatch (branded bottle, pen, badge)
+                                    </span>
+                                </div>
+
+                                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-indigo-950">Standard Package (₹749)</span>
+                                        <span className="font-extrabold text-indigo-700 text-sm">
+                                            {analytics.standardCount} ({analytics.total > 0 ? Math.round((analytics.standardCount / analytics.total) * 100) : 0}%)
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 rounded-full bg-indigo-100 overflow-hidden mt-2">
+                                        <div
+                                            className="h-full bg-indigo-600 rounded-full"
+                                            style={{
+                                                width: `${analytics.total > 0 ? (analytics.standardCount / analytics.total) * 100 : 0}%`
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Domain Distribution */}
                         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                             <h3 className="font-bold text-slate-900 text-sm mb-4 flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4 text-indigo-600" />
-                                Domain Registration Breakdown
+                                Domain Track Distribution
                             </h3>
                             <div className="space-y-3">
                                 {Object.keys(analytics.domainBreakdown).length === 0 ? (
@@ -673,47 +611,11 @@ export default function AdminInternshipsBatchPage() {
                                 )}
                             </div>
                         </div>
-
-                        {/* Status Breakdown */}
-                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                            <h3 className="font-bold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                                <Users className="h-4 w-4 text-indigo-600" />
-                                Application Status Distribution
-                            </h3>
-                            <div className="space-y-3">
-                                {[
-                                    { key: "pending", label: "Pending", color: "bg-slate-400" },
-                                    { key: "under_review", label: "Under Review", color: "bg-blue-500" },
-                                    { key: "accepted", label: "Accepted", color: "bg-emerald-500" },
-                                    { key: "waitlisted", label: "Waitlisted", color: "bg-purple-500" },
-                                    { key: "rejected", label: "Rejected", color: "bg-red-500" },
-                                ].map((st) => {
-                                    const count = analytics.statusBreakdown[st.key] || 0;
-                                    const pct = analytics.total > 0 ? Math.round((count / analytics.total) * 100) : 0;
-                                    return (
-                                        <div key={st.key} className="space-y-1">
-                                            <div className="flex justify-between text-xs">
-                                                <span className="font-medium text-slate-700">{st.label}</span>
-                                                <span className="font-bold text-slate-900">
-                                                    {count} ({pct}%)
-                                                </span>
-                                            </div>
-                                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                    className={`h-full ${st.color} rounded-full transition-all`}
-                                                    style={{ width: `${pct}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
 
-            {/* TAB 4: EXPORT REPORTS */}
+            {/* TAB 3: EXPORT REPORTS */}
             {activeTab === "reports" && (
                 <div className="space-y-4">
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -724,7 +626,7 @@ export default function AdminInternshipsBatchPage() {
                             <div>
                                 <h3 className="font-bold text-slate-900 text-base">Export Cohort Spreadsheet</h3>
                                 <p className="text-xs text-slate-500">
-                                    Download detailed candidate rosters in Microsoft Excel (.xlsx) format including contact details, college names, domain tracks, and UTR proofs.
+                                    Download complete rosters in Microsoft Excel (.xlsx) format including full residential address components, chosen packages, contact details, and institutional data.
                                 </p>
                             </div>
                         </div>
@@ -734,7 +636,7 @@ export default function AdminInternshipsBatchPage() {
                                 <div>
                                     <h4 className="font-bold text-slate-900 text-sm">Full Batch Roster</h4>
                                     <p className="text-xs text-slate-500 mt-1">
-                                        All {applications.length} submitted applications across all statuses.
+                                        All {applications.length} submitted registrations with complete addresses.
                                     </p>
                                 </div>
                                 <Button
@@ -746,32 +648,32 @@ export default function AdminInternshipsBatchPage() {
                                 </Button>
                             </div>
 
-                            <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 flex flex-col justify-between space-y-3">
+                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between space-y-3">
                                 <div>
-                                    <h4 className="font-bold text-emerald-950 text-sm">Verified Candidates Only</h4>
-                                    <p className="text-xs text-emerald-700 mt-1">
-                                        Only applicants whose payments have been verified ({analytics.verifiedCount} records).
+                                    <h4 className="font-bold text-amber-950 text-sm">Premium Welcome Kit List</h4>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Only applicants who chose Premium package ({analytics.premiumCount} records for shipping kits).
                                     </p>
                                 </div>
                                 <Button
-                                    onClick={() => handleExportExcel("verified")}
-                                    className="gap-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    onClick={() => handleExportExcel("premium")}
+                                    className="gap-2 text-xs bg-amber-600 hover:bg-amber-700 text-white"
                                 >
                                     <Download className="h-4 w-4" />
-                                    Download Verified (.xlsx)
+                                    Download Kit Orders (.xlsx)
                                 </Button>
                             </div>
 
-                            <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col justify-between space-y-3">
+                            <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 flex flex-col justify-between space-y-3">
                                 <div>
-                                    <h4 className="font-bold text-indigo-950 text-sm">Accepted Students</h4>
-                                    <p className="text-xs text-indigo-700 mt-1">
-                                        Shortlisted students accepted into the internship cohort.
+                                    <h4 className="font-bold text-emerald-950 text-sm">Accepted Students</h4>
+                                    <p className="text-xs text-emerald-700 mt-1">
+                                        Shortlisted candidates accepted into the winter cohort.
                                     </p>
                                 </div>
                                 <Button
                                     onClick={() => handleExportExcel("accepted")}
-                                    className="gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    className="gap-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                                 >
                                     <Download className="h-4 w-4" />
                                     Download Accepted (.xlsx)
@@ -795,10 +697,10 @@ export default function AdminInternshipsBatchPage() {
                             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                                 <div>
                                     <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                        {selectedApp.application_id}
+                                        {selectedApp.application_id || selectedApp.application_number}
                                     </span>
                                     <h2 className="text-xl font-bold text-slate-900 mt-1">{selectedApp.full_name}</h2>
-                                    <p className="text-xs text-slate-500">{selectedApp.college_name}</p>
+                                    <p className="text-xs text-slate-500">Gender: {selectedApp.gender || "N/A"}</p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedApp(null)}
@@ -808,7 +710,7 @@ export default function AdminInternshipsBatchPage() {
                                 </button>
                             </div>
 
-                            {/* Contact & Links */}
+                            {/* Contact Details */}
                             <div className="grid grid-cols-2 gap-4 text-xs">
                                 <div>
                                     <span className="text-slate-400 uppercase font-semibold block">Email</span>
@@ -833,72 +735,76 @@ export default function AdminInternshipsBatchPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <span className="text-slate-400 uppercase font-semibold block">Program & Year</span>
-                                    <span className="text-slate-800 font-medium">
-                                        {selectedApp.degree} • {selectedApp.department} ({selectedApp.year_of_study})
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-400 uppercase font-semibold block">Domain Track</span>
+                                    <span className="text-slate-400 uppercase font-semibold block">Selected Track</span>
                                     <span className="text-indigo-700 font-bold">{selectedApp.domain}</span>
                                 </div>
-                            </div>
-
-                            {/* Resume & Profiles */}
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-                                <a
-                                    href={selectedApp.resume_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    Open Candidate Resume (PDF)
-                                </a>
-
-                                <div className="flex items-center gap-3">
-                                    {selectedApp.linkedin_url && (
-                                        <a
-                                            href={selectedApp.linkedin_url}
-                                            target="_blank"
-                                            className="text-indigo-600 hover:underline flex items-center gap-1"
-                                        >
-                                            LinkedIn <ExternalLink className="h-3 w-3" />
-                                        </a>
-                                    )}
-                                    {selectedApp.github_url && (
-                                        <a
-                                            href={selectedApp.github_url}
-                                            target="_blank"
-                                            className="text-slate-700 hover:underline flex items-center gap-1"
-                                        >
-                                            GitHub <ExternalLink className="h-3 w-3" />
-                                        </a>
-                                    )}
+                                <div>
+                                    <span className="text-slate-400 uppercase font-semibold block">Package Chosen</span>
+                                    <span className="font-bold text-amber-700">
+                                        {selectedApp.package_name} (₹{selectedApp.package_amount || (selectedApp.package_name === "Premium" ? 999 : 749)})
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Payment Information */}
-                            {selectedApp.payment && (
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-slate-800">Payment Status:</span>
-                                        <span className="font-bold uppercase text-indigo-700">
-                                            {selectedApp.payment.payment_status} (₹{selectedApp.payment.amount})
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">UTR / Ref Number:</span>
-                                        <span className="font-mono font-bold">{selectedApp.payment.transaction_id_utr}</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setInspectingProofUrl(selectedApp.payment!.screenshot_url)}
-                                        className="text-indigo-600 font-medium hover:underline flex items-center gap-1"
+                            {/* College & Academic Details */}
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                                <span className="font-bold text-slate-800 block">Institution Details</span>
+                                <p className="text-slate-700 font-semibold">{selectedApp.college_name}</p>
+                                <p className="text-slate-500">
+                                    {selectedApp.degree} • {selectedApp.department} ({selectedApp.year_of_study})
+                                </p>
+                                {selectedApp.college_city && (
+                                    <p className="text-slate-500">
+                                        Location: {selectedApp.college_city}, {selectedApp.college_state} ({selectedApp.college_selection_type})
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Residential Address Details */}
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                    <MapPin className="h-4 w-4 text-indigo-600" />
+                                    Residential Shipping Address
+                                </span>
+                                <p className="text-slate-700">
+                                    {selectedApp.house_number}, {selectedApp.street_name}, {selectedApp.locality}
+                                </p>
+                                <p className="text-slate-700">
+                                    {selectedApp.city}, {selectedApp.district}, {selectedApp.state} — <strong className="font-mono">{selectedApp.postal_code}</strong>
+                                </p>
+                                <p className="text-slate-500">Country: {selectedApp.country || "India"}</p>
+                            </div>
+
+                            {/* Online Profiles */}
+                            <div className="flex items-center gap-4 text-xs">
+                                {selectedApp.linkedin_url && (
+                                    <a
+                                        href={selectedApp.linkedin_url}
+                                        target="_blank"
+                                        className="text-indigo-600 hover:underline flex items-center gap-1 font-medium"
                                     >
-                                        <Eye className="h-3 w-3" /> View Submitted Payment Proof
-                                    </button>
-                                </div>
-                            )}
+                                        LinkedIn Profile <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                )}
+                                {selectedApp.github_url && (
+                                    <a
+                                        href={selectedApp.github_url}
+                                        target="_blank"
+                                        className="text-slate-700 hover:underline flex items-center gap-1 font-medium"
+                                    >
+                                        GitHub Profile <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                )}
+                                {selectedApp.portfolio_url && (
+                                    <a
+                                        href={selectedApp.portfolio_url}
+                                        target="_blank"
+                                        className="text-indigo-600 hover:underline flex items-center gap-1 font-medium"
+                                    >
+                                        Portfolio Website <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                )}
+                            </div>
 
                             {/* Internal Review Notes */}
                             <div>
@@ -949,28 +855,6 @@ export default function AdminInternshipsBatchPage() {
                     </div>
                 )}
             </AnimatePresence>
-
-            {/* Proof Lightbox Modal */}
-            <AnimatePresence>
-                {inspectingProofUrl && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm">
-                        <div className="relative max-w-3xl w-full bg-white rounded-2xl p-4 shadow-2xl">
-                            <button
-                                onClick={() => setInspectingProofUrl(null)}
-                                className="absolute top-4 right-4 p-2 bg-slate-900/60 hover:bg-slate-900 text-white rounded-full z-10"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                            <img
-                                src={inspectingProofUrl}
-                                alt="Payment Verification Screenshot"
-                                className="w-full max-h-[80vh] object-contain rounded-xl"
-                            />
-                        </div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }
-
