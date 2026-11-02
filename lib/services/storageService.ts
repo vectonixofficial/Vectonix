@@ -1,9 +1,12 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
+export type StorageBucket = "signatures" | "events" | "documents" | "internship-resumes" | "internship-payments" | string;
+
 export const storageService = {
-    async uploadFile(bucketName: "signatures" | "events" | "documents", filePath: string, file: File | Blob): Promise<string> {
+    async uploadFile(bucketName: StorageBucket, filePath: string, file: File | Blob): Promise<string> {
         if (!isSupabaseConfigured) {
-            throw new Error("Supabase is not configured.");
+            // Fallback for development if Supabase env vars are not set
+            return URL.createObjectURL(file);
         }
 
         const { data, error } = await supabase.storage
@@ -21,7 +24,7 @@ export const storageService = {
         return publicUrlData.publicUrl;
     },
 
-    async uploadBase64(bucketName: "signatures" | "events" | "documents", fileName: string, base64Data: string): Promise<string> {
+    async uploadBase64(bucketName: StorageBucket, fileName: string, base64Data: string): Promise<string> {
         if (!isSupabaseConfigured) {
             return base64Data;
         }

@@ -68,3 +68,64 @@ export interface DatabaseRegistration {
     created_at?: string;
     updated_at?: string;
 }
+
+// Internship Management Types
+export interface DatabaseInternshipBatch {
+    id: string; // e.g. 'wi26', 'si26'
+    title: string;
+    program_type: "internship" | "workshop" | "bootcamp";
+    year: number;
+    prefix: string; // e.g. 'WI26'
+    fee_amount: number;
+    upi_id?: string;
+    qr_code_url?: string;
+    domains: string[];
+    is_active: boolean;
+    start_date?: string;
+    end_date?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export type InternshipApplicationStatus = "pending" | "under_review" | "accepted" | "rejected" | "waitlisted";
+
+export interface DatabaseInternshipApplication {
+    id: string;
+    application_id: string; // e.g. 'VX-WI26-0001'
+    batch_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    whatsapp_number?: string;
+    college_name: string;
+    degree: string;
+    department: string;
+    year_of_study: string;
+    domain: string;
+    resume_url: string;
+    linkedin_url?: string;
+    github_url?: string;
+    status: InternshipApplicationStatus;
+    internal_notes?: string;
+    created_at?: string;
+    updated_at?: string;
+    // Joined payment record
+    payment?: DatabaseInternshipPayment;
+}
+
+export type InternshipPaymentStatus = "pending_verification" | "verified" | "rejected";
+
+export interface DatabaseInternshipPayment {
+    id: string;
+    application_id: string;
+    batch_id: string;
+    amount: number;
+    transaction_id_utr: string;
+    screenshot_url: string;
+    payment_status: InternshipPaymentStatus;
+    verified_by?: string;
+    verified_at?: string;
+    rejection_reason?: string;
+    created_at?: string;
+    updated_at?: string;
+}

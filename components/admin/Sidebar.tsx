@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarPlus, FileText, LogOut, Award } from "lucide-react";
+import { LayoutDashboard, CalendarPlus, FileText, LogOut, Award, Briefcase } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const sidebarLinks = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },
+    { name: "Internship Batches", href: "/admin/internships/wi26", icon: Briefcase },
     { name: "Create Event", href: "/admin/events/create", icon: CalendarPlus },
     { name: "View Responses", href: "/admin/responses", icon: FileText },
     { name: "Certificates & Offers", href: "/admin/certificates", icon: Award },
@@ -32,7 +33,7 @@ export const Sidebar = () => {
                 </p>
                 {sidebarLinks.map((link) => {
                     const Icon = link.icon;
-                    const isActive = pathname === link.href;
+                    const isActive = pathname === link.href || (link.href.startsWith("/admin/internships") && pathname.startsWith("/admin/internships"));
                     return (
                         <Link
                             key={link.name}
