@@ -833,3 +833,4 @@ Managing Director, Vectonix Technologies`
         </div>
     );
 }
+

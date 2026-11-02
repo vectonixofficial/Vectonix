@@ -197,3 +197,4 @@ export const INDIAN_COLLEGES: CollegeRecord[] = [
     { id: "jk-002", name: "Indian Institute of Technology Jammu (IIT Jammu)", city: "Jammu", state: "Jammu & Kashmir", category: "IIT" },
     { id: "py-001", name: "Pondicherry Engineering College (Puducherry Technological University)", city: "Puducherry", state: "Puducherry", category: "State University" }
 ];
+

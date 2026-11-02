@@ -229,6 +229,7 @@ export const internshipService = {
             internship_domain: payload.domain,
             technical_skills: payload.technicalSkills || null,
             programming_languages: payload.programmingLanguages || null,
+            resume_url: "", // Safe default for non-null constraints
             linkedin_url: payload.linkedinUrl || null,
             github_url: payload.githubUrl || null,
             portfolio_url: payload.portfolioUrl || null,
@@ -277,14 +278,42 @@ export const internshipService = {
             return newApp;
         }
 
-        // Supabase Insertion
-        const { data: appData, error: appError } = await supabase
-            .from("internship_applications")
-            .insert(appRecordToInsert)
-            .select()
-            .single();
+        // Supabase Insertion with resilient schema cache handling
+        let insertPayload: Record<string, any> = { ...appRecordToInsert };
+        let appData: any = null;
+        let appError: any = null;
+
+        // Try insert up to 3 times stripping missing columns if schema cache is pending reload
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const res = await supabase
+                .from("internship_applications")
+                .insert(insertPayload)
+                .select()
+                .single();
+
+            appData = res.data;
+            appError = res.error;
+
+            if (!appError) break;
+
+            if (appError.message && appError.message.includes("in the schema cache")) {
+                const match = appError.message.match(/Could not find the '([^']+)' column/);
+                if (match && match[1]) {
+                    const missingCol = match[1];
+                    console.warn(`Column '${missingCol}' missing in database schema cache. Stripping and retrying...`);
+                    delete insertPayload[missingCol];
+                    continue;
+                }
+            }
+            break;
+        }
 
         if (appError) {
+            if (appError.message && appError.message.includes("in the schema cache")) {
+                throw new Error(
+                    `Database columns pending migration. Please run the SQL migration in Supabase SQL Editor: 'supabase/migrations/20261102010000_update_internship_portal_and_emails.sql'`
+                );
+            }
             throw new Error(`Application submission failed: ${appError.message}`);
         }
 

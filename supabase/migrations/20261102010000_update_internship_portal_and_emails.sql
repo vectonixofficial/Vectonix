@@ -15,6 +15,7 @@ ALTER TABLE public.internship_applications
     ADD COLUMN IF NOT EXISTS college_selection_type TEXT DEFAULT 'official_directory',
     ADD COLUMN IF NOT EXISTS academic_year TEXT,
     ADD COLUMN IF NOT EXISTS semester TEXT,
+    ADD COLUMN IF NOT EXISTS graduation_year TEXT,
     ADD COLUMN IF NOT EXISTS technical_skills TEXT,
     ADD COLUMN IF NOT EXISTS programming_languages TEXT,
     ADD COLUMN IF NOT EXISTS portfolio_url TEXT,
@@ -194,3 +195,7 @@ VALUES
     true
 )
 ON CONFLICT DO NOTHING;
+
+-- 6. RELOAD SCHEMA CACHE IN SUPABASE POSTGREST
+NOTIFY pgrst, 'reload schema';
+
