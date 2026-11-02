@@ -43,11 +43,21 @@ ON CONFLICT (id) DO UPDATE SET
     fee_amount = EXCLUDED.fee_amount,
     is_active = EXCLUDED.is_active;
 
+ALTER TABLE public.internship_batches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Read Batches" ON public.internship_batches;
+CREATE POLICY "Public Read Batches" ON public.internship_batches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin Manage Batches" ON public.internship_batches;
+CREATE POLICY "Admin Manage Batches" ON public.internship_batches FOR ALL USING (true);
+
 -- 2. BATCH SEQUENCES TRACKER
 CREATE TABLE IF NOT EXISTS public.batch_sequences (
     batch_id TEXT PRIMARY KEY REFERENCES public.internship_batches(id) ON DELETE CASCADE,
     last_val INTEGER NOT NULL DEFAULT 0
 );
+
+ALTER TABLE public.batch_sequences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Manage Sequences" ON public.batch_sequences;
+CREATE POLICY "Public Manage Sequences" ON public.batch_sequences FOR ALL USING (true);
 
 INSERT INTO public.batch_sequences (batch_id, last_val)
 VALUES ('wi26', 0)
@@ -236,9 +246,22 @@ CREATE TABLE IF NOT EXISTS public.email_consent_records (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Email Recipients Log (Tracks acknowledgements and dispatches)
+CREATE TABLE IF NOT EXISTS public.email_recipients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    recipient_email TEXT NOT NULL,
+    recipient_name TEXT,
+    application_id TEXT,
+    delivery_status TEXT NOT NULL DEFAULT 'queued',
+    provider_message_id TEXT,
+    error_message TEXT,
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 ALTER TABLE public.email_campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_campaign_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_consent_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_recipients ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admin Campaigns" ON public.email_campaigns;
 CREATE POLICY "Admin Campaigns" ON public.email_campaigns FOR ALL USING (auth.role() = 'authenticated');
@@ -246,6 +269,8 @@ DROP POLICY IF EXISTS "Admin Logs" ON public.email_campaign_logs;
 CREATE POLICY "Admin Logs" ON public.email_campaign_logs FOR ALL USING (auth.role() = 'authenticated');
 DROP POLICY IF EXISTS "Public Consent Upsert" ON public.email_consent_records;
 CREATE POLICY "Public Consent Upsert" ON public.email_consent_records FOR ALL USING (true);
+DROP POLICY IF EXISTS "Public Manage Email Recipients" ON public.email_recipients;
+CREATE POLICY "Public Manage Email Recipients" ON public.email_recipients FOR ALL USING (true);
 
 -- 7. STUDENT DASHBOARD MODULES
 
@@ -370,6 +395,14 @@ ALTER TABLE public.student_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.weekly_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.learning_resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public Read Announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Public Read Assignments" ON public.assignments;
+DROP POLICY IF EXISTS "Student Submissions Manage" ON public.assignment_submissions;
+DROP POLICY IF EXISTS "Student Projects Manage" ON public.student_projects;
+DROP POLICY IF EXISTS "Public Read Reviews" ON public.weekly_reviews;
+DROP POLICY IF EXISTS "Public Read Resources" ON public.learning_resources;
+DROP POLICY IF EXISTS "Student Support Tickets" ON public.support_tickets;
 
 CREATE POLICY "Public Read Announcements" ON public.announcements FOR SELECT USING (true);
 CREATE POLICY "Public Read Assignments" ON public.assignments FOR SELECT USING (true);

@@ -128,6 +128,14 @@ ALTER TABLE public.weekly_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.learning_resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public Read Announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Public Read Assignments" ON public.assignments;
+DROP POLICY IF EXISTS "Public Select/Insert Submissions" ON public.assignment_submissions;
+DROP POLICY IF EXISTS "Public Select/Modify Projects" ON public.student_projects;
+DROP POLICY IF EXISTS "Public Read Weekly Reviews" ON public.weekly_reviews;
+DROP POLICY IF EXISTS "Public Read Learning Resources" ON public.learning_resources;
+DROP POLICY IF EXISTS "Public Select/Insert Support Tickets" ON public.support_tickets;
+
 CREATE POLICY "Public Read Announcements" ON public.announcements FOR SELECT USING (true);
 CREATE POLICY "Public Read Assignments" ON public.assignments FOR SELECT USING (true);
 CREATE POLICY "Public Select/Insert Submissions" ON public.assignment_submissions FOR ALL USING (true);
