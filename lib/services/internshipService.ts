@@ -200,24 +200,37 @@ export const internshipService = {
 
         if (isSupabaseConfigured) {
             try {
-                const { count } = await supabase
+                const { data: existingApps } = await supabase
                     .from("internship_applications")
-                    .select("*", { count: "exact", head: true })
-                    .ilike("batch_id", `%${payload.batchId}%`);
-                if (typeof count === "number" && count >= 0) {
-                    nextSeq = count + 1;
+                    .select("application_id, application_number");
+
+                if (existingApps && existingApps.length > 0) {
+                    let maxNum = 0;
+                    for (const a of existingApps) {
+                        const idStr = a.application_id || a.application_number || "";
+                        const match = idStr.match(/(\d+)$/);
+                        if (match) {
+                            const n = parseInt(match[1], 10);
+                            if (n > maxNum) maxNum = n;
+                        }
+                    }
+                    nextSeq = Math.max(existingApps.length + 1, maxNum + 1);
                 }
-            } catch {
-                // fallback to local storage
+            } catch (cntErr) {
+                console.warn("Could not query existing application count:", cntErr);
             }
         }
 
         if (typeof window !== "undefined") {
             try {
                 const localApps = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
-                const batchApps = localApps.filter((a: any) => a.batch_id?.toLowerCase() === payload.batchId.toLowerCase());
-                if (batchApps.length >= nextSeq) {
-                    nextSeq = batchApps.length + 1;
+                for (const a of localApps) {
+                    const idStr = a.application_id || a.application_number || "";
+                    const match = idStr.match(/(\d+)$/);
+                    if (match) {
+                        const n = parseInt(match[1], 10);
+                        if (n >= nextSeq) nextSeq = n + 1;
+                    }
                 }
             } catch {
                 // ignore
@@ -228,6 +241,8 @@ export const internshipService = {
         const generatedAppId = `VTX-${prefix}-${formattedSeq}`;
 
         const appRecordToInsert = {
+            application_id: generatedAppId,
+            application_number: generatedAppId,
             batch_id: payload.batchId,
             full_name: payload.fullName,
             email: payload.email,
@@ -287,10 +302,8 @@ export const internshipService = {
         if (!isSupabaseConfigured) {
             // Local fallback simulation
             const newApp: DatabaseInternshipApplication = {
-                id: `app_${timestamp}`,
-                application_id: generatedAppId,
-                application_number: generatedAppId,
                 ...appRecordToInsert,
+                id: `app_${timestamp}`,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
@@ -311,7 +324,7 @@ export const internshipService = {
         let appData: any = null;
         let appError: any = null;
 
-        // Try insert up to 25 times stripping missing columns if schema cache is pending reload
+        // Try insert up to 25 times stripping missing columns or resolving duplicate IDs
         for (let attempt = 0; attempt < 25; attempt++) {
             const res = await supabase
                 .from("internship_applications")
@@ -324,6 +337,7 @@ export const internshipService = {
 
             if (!appError && appData) break;
 
+            // Handle schema cache missing column
             if (appError?.message && appError.message.includes("in the schema cache")) {
                 const match = appError.message.match(/Could not find the '([^']+)' column/i);
                 if (match && match[1]) {
@@ -333,6 +347,17 @@ export const internshipService = {
                     continue;
                 }
             }
+
+            // Handle unique constraint / duplicate key collision
+            if (appError?.message && (appError.message.includes("duplicate key") || appError.message.includes("unique constraint") || appError.message.includes("already exists"))) {
+                nextSeq++;
+                const newId = `VTX-${prefix}-${String(nextSeq).padStart(4, "0")}`;
+                console.warn(`Application ID collision detected. Incrementing to '${newId}' and retrying...`);
+                insertPayload.application_id = newId;
+                insertPayload.application_number = newId;
+                continue;
+            }
+
             break;
         }
 
@@ -343,15 +368,13 @@ export const internshipService = {
         if (appError || !appData) {
             console.warn("Supabase insert encountered issue (using resilient fallback):", appError?.message);
             createdApp = {
-                id: `app_${timestamp}`,
-                application_id: generatedAppId,
-                application_number: generatedAppId,
                 ...appRecordToInsert,
+                id: `app_${timestamp}`,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
         } else {
-            const finalAppId = appData.application_id || generatedAppId;
+            const finalAppId = appData.application_id || insertPayload.application_id || generatedAppId;
             createdApp = {
                 ...appRecordToInsert,
                 ...appData,

@@ -177,45 +177,67 @@ export const studentService = {
      * Authenticate student with Application ID and Email
      */
     async login(appId: string, email: string): Promise<DatabaseInternshipApplication | null> {
-        const cleanId = appId.trim().toUpperCase();
+        const cleanId = appId.trim();
         const cleanEmail = email.trim().toLowerCase();
 
-        if (!isSupabaseConfigured) {
-            if (typeof window !== "undefined") {
-                const stored = localStorage.getItem("vx_internship_apps");
+        // 1. Query Supabase
+        if (isSupabaseConfigured) {
+            try {
+                const { data, error } = await supabase
+                    .from("internship_applications")
+                    .select("*")
+                    .or(`application_id.ilike.${cleanId},application_number.ilike.${cleanId}`)
+                    .ilike("email", cleanEmail)
+                    .maybeSingle();
+
+                if (!error && data) {
+                    if (typeof window !== "undefined") {
+                        localStorage.setItem("vx_active_student", JSON.stringify(data));
+                    }
+                    return data as DatabaseInternshipApplication;
+                }
+            } catch (err) {
+                console.warn("Supabase student login query error:", err);
+            }
+        }
+
+        // 2. Check LocalStorage fallback (if registered offline or pending sync)
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_internship_apps") || localStorage.getItem("vx_internship_applications");
                 if (stored) {
                     const apps: DatabaseInternshipApplication[] = JSON.parse(stored);
                     const found = apps.find(
                         (a) =>
-                            ((a.application_id && a.application_id.toUpperCase() === cleanId) ||
-                             (a.application_number && a.application_number.toUpperCase() === cleanId)) &&
-                            a.email.toLowerCase() === cleanEmail
+                            ((a.application_id && a.application_id.toLowerCase() === cleanId.toLowerCase()) ||
+                             (a.application_number && a.application_number.toLowerCase() === cleanId.toLowerCase())) &&
+                            a.email?.toLowerCase() === cleanEmail
                     );
+
                     if (found) {
                         localStorage.setItem("vx_active_student", JSON.stringify(found));
+
+                        // Auto-sync into Supabase so subsequent logins and admin dashboard see it!
+                        if (isSupabaseConfigured) {
+                            (async () => {
+                                try {
+                                    await supabase.from("internship_applications").insert(found);
+                                    console.log("Auto-synced student application to Supabase upon login:", found.application_id);
+                                } catch {
+                                    // Silent
+                                }
+                            })();
+                        }
+
                         return found;
                     }
                 }
+            } catch (e) {
+                console.warn("LocalStorage student lookup error:", e);
             }
-            return null;
         }
 
-        const { data, error } = await supabase
-            .from("internship_applications")
-            .select("*")
-            .or(`application_id.ilike.${cleanId},application_number.ilike.${cleanId}`)
-            .eq("email", cleanEmail)
-            .single();
-
-        if (error || !data) {
-            return null;
-        }
-
-        if (typeof window !== "undefined") {
-            localStorage.setItem("vx_active_student", JSON.stringify(data));
-        }
-
-        return data as DatabaseInternshipApplication;
+        return null;
     },
 
     /**
