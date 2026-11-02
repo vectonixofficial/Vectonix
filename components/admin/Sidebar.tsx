@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarPlus, FileText, LogOut, Award, Briefcase, Mail } from "lucide-react";
+import { LayoutDashboard, CalendarPlus, FileText, LogOut, Award, Briefcase, Mail, FolderKanban, Layers, CheckSquare } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const sidebarLinks = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },
     { name: "Internship Batches", href: "/admin/internships/wi26", icon: Briefcase },
+    { name: "Project Bank", href: "/admin/internships/wi26/projects", icon: FolderKanban },
+    { name: "Project Allocations", href: "/admin/internships/wi26/allocations", icon: Layers },
+    { name: "Assignments & Reviews", href: "/admin/internships/wi26/assignments", icon: CheckSquare },
     { name: "Internship Emails", href: "/admin/internships/wi26/emails", icon: Mail },
     { name: "Create Event", href: "/admin/events/create", icon: CalendarPlus },
     { name: "View Responses", href: "/admin/responses", icon: FileText },

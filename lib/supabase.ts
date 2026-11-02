@@ -185,3 +185,112 @@ export interface DatabaseEmailTemplate {
     created_at?: string;
     updated_at?: string;
 }
+
+// ============================================================================
+// PHASE 1: PROJECT BANK, ALLOCATIONS, MENTORS & MILESTONES TYPES
+// ============================================================================
+
+export type ProjectDifficulty = "Beginner" | "Intermediate" | "Advanced";
+
+export interface ProjectTemplate {
+    id: string;
+    title: string;
+    domain: string;
+    short_description: string;
+    problem_statement: string;
+    objectives: string[];
+    requirements: string[];
+    expected_features: string[];
+    tech_stack: string[];
+    difficulty_level: ProjectDifficulty;
+    expected_deliverables: string[];
+    duration_weeks: number;
+    evaluation_criteria: string[];
+    reference_materials: string[];
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface DatabaseMentor {
+    id: string;
+    name: string;
+    email: string;
+    domains: string[];
+    designation?: string;
+    bio?: string;
+    max_students: number;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export type ProjectStatus =
+    | "Not Started"
+    | "In Progress"
+    | "Submitted"
+    | "Under Review"
+    | "Revision Required"
+    | "Approved"
+    | "Completed"
+    | "Overdue"
+    | "Planning"
+    | "In Development"
+    | "Testing"
+    | "Needs Review";
+
+export interface DatabaseStudentProject {
+    id: string;
+    application_id: string;
+    batch_id: string;
+    domain: string;
+    project_template_id?: string;
+    project_title: string;
+    description?: string;
+    assigned_mentor_id?: string;
+    assigned_mentor_name?: string;
+    start_date?: string;
+    deadline?: string;
+    personalized_instructions?: string;
+    github_url?: string;
+    project_url?: string;
+    documentation_url?: string;
+    presentation_url?: string;
+    evidence_url?: string;
+    status: ProjectStatus;
+    progress_percent: number;
+    current_milestone: number;
+    milestones: { title: string; completed: boolean; status?: string; feedback?: string }[];
+    mentor_feedback?: string;
+    evaluation_marks?: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface DatabaseMilestoneSubmission {
+    id: string;
+    student_project_id: string;
+    application_id: string;
+    milestone_index: number;
+    milestone_title: string;
+    submission_urls?: string[];
+    github_url?: string;
+    demo_url?: string;
+    documentation_url?: string;
+    evidence_url?: string;
+    notes?: string;
+    status: "Submitted" | "Under Review" | "Revision Required" | "Approved";
+    mentor_feedback?: string;
+    marks?: number;
+    submitted_at: string;
+    reviewed_at?: string;
+}
+
+export interface DatabaseMentorAllocation {
+    id: string;
+    mentor_id: string;
+    application_id: string;
+    batch_id: string;
+    domain: string;
+    created_at?: string;
+}

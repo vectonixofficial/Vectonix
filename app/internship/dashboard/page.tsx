@@ -28,7 +28,15 @@ import {
     Lock,
     MapPin,
     Package,
-    Loader2
+    Loader2,
+    FolderKanban,
+    Code,
+    Shield,
+    TrendingUp,
+    Target,
+    Layers,
+    FileCheck,
+    X
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -78,7 +86,18 @@ function StudentDashboardContent() {
     // Project links state
     const [githubRepoUrl, setGithubRepoUrl] = useState("");
     const [liveDemoUrl, setLiveDemoUrl] = useState("");
+    const [documentationUrl, setDocumentationUrl] = useState("");
+    const [evidenceUrl, setEvidenceUrl] = useState("");
     const [isSavingProject, setIsSavingProject] = useState(false);
+
+    // Milestone submission modal state
+    const [selectedMilestoneForSubmit, setSelectedMilestoneForSubmit] = useState<{
+        index: number;
+        title: string;
+    } | null>(null);
+    const [milestoneSubmitUrl, setMilestoneSubmitUrl] = useState("");
+    const [milestoneSubmitNotes, setMilestoneSubmitNotes] = useState("");
+    const [isSubmittingMilestone, setIsSubmittingMilestone] = useState(false);
 
     useEffect(() => {
         const initDashboard = async () => {
@@ -120,8 +139,12 @@ function StudentDashboardContent() {
                 setAnnouncements(annList);
                 setAssignments(asgList);
                 setProject(projData);
-                setGithubRepoUrl(projData.github_url || "");
-                setLiveDemoUrl(projData.project_url || "");
+                if (projData) {
+                    setGithubRepoUrl(projData.github_url || "");
+                    setLiveDemoUrl(projData.project_url || "");
+                    setDocumentationUrl(projData.documentation_url || "");
+                    setEvidenceUrl(projData.evidence_url || "");
+                }
                 setWeeklyReviews(revList);
                 setResources(resList);
                 setSupportTickets(tickList);
@@ -179,7 +202,12 @@ function StudentDashboardContent() {
         setIsSavingProject(true);
         try {
             const appId = student.application_id || student.application_number || "";
-            await studentService.updateProjectLinks(appId, githubRepoUrl, liveDemoUrl);
+            await studentService.updateProjectLinks(appId, {
+                githubUrl: githubRepoUrl,
+                projectUrl: liveDemoUrl,
+                documentationUrl: documentationUrl,
+                evidenceUrl: evidenceUrl
+            });
             const proj = await studentService.getStudentProject(appId, student.domain);
             setProject(proj);
             alert("Project links updated successfully!");
@@ -187,6 +215,39 @@ function StudentDashboardContent() {
             console.error("Save project failure:", err);
         } finally {
             setIsSavingProject(false);
+        }
+    };
+
+    const handleSubmitMilestone = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedMilestoneForSubmit || !project || !student || !milestoneSubmitUrl.trim()) return;
+
+        setIsSubmittingMilestone(true);
+        try {
+            const appId = student.application_id || student.application_number || "";
+            const res = await studentService.submitMilestone({
+                projectId: project.id,
+                applicationId: appId,
+                milestoneIndex: selectedMilestoneForSubmit.index,
+                milestoneTitle: selectedMilestoneForSubmit.title,
+                submissionUrl: milestoneSubmitUrl.trim(),
+                notes: milestoneSubmitNotes.trim()
+            });
+
+            if (res.success) {
+                alert(`Milestone ${selectedMilestoneForSubmit.index} submitted for mentor review!`);
+                setSelectedMilestoneForSubmit(null);
+                setMilestoneSubmitUrl("");
+                setMilestoneSubmitNotes("");
+                const refreshedProj = await studentService.getStudentProject(appId, student.domain);
+                setProject(refreshedProj);
+            } else {
+                alert(`Submission error: ${res.error}`);
+            }
+        } catch (err: any) {
+            alert(`Submission error: ${err.message}`);
+        } finally {
+            setIsSubmittingMilestone(false);
         }
     };
 
@@ -600,90 +661,424 @@ function StudentDashboardContent() {
                     )}
 
                     {/* SECTION 4: PROJECT WORKSPACE */}
-                    {activeSection === "project" && project && (
+                    {activeSection === "project" && (
                         <div className="space-y-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-900">Capstone Project Workspace</h2>
-                                <p className="text-xs text-slate-500">
-                                    Manage your core capstone repository and deployment links for mentor review.
-                                </p>
-                            </div>
+                            {!project ? (
+                                /* AWAITING ALLOCATION SCREEN */
+                                <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-3xl shadow-sm text-center max-w-2xl mx-auto space-y-6">
+                                    <div className="h-16 w-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600">
+                                        <Clock className="h-8 w-8 animate-pulse" />
+                                    </div>
 
-                            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
-                                <div>
-                                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700">
-                                        Track: {project.domain}
-                                    </span>
-                                    <h3 className="text-lg font-bold text-slate-900 mt-2">{project.project_title}</h3>
-                                    <p className="text-xs text-slate-600 mt-1">{project.description}</p>
-                                </div>
-
-                                {/* Milestones Checklist */}
-                                <div className="space-y-2 border-t border-slate-100 pt-4">
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                        Project Milestones
-                                    </h4>
                                     <div className="space-y-2">
-                                        {project.milestones.map((m, idx) => (
-                                            <div key={idx} className="flex items-center gap-2.5 text-xs text-slate-700">
-                                                <div
-                                                    className={`h-4 w-4 rounded-full flex items-center justify-center text-[10px] ${
-                                                        m.completed ? "bg-emerald-500 text-white" : "border border-slate-300"
-                                                    }`}
-                                                >
-                                                    {m.completed && "✓"}
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                            Status: Project Awaiting Allocation
+                                        </span>
+                                        <h2 className="text-2xl font-extrabold text-slate-900">
+                                            Project Allocation in Progress
+                                        </h2>
+                                        <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                                            Welcome to Vectonix Winter Internship 2026! Your technical mentor is reviewing your application details and will assign your individual capstone project before cohort commencement on <strong>25 November 2026</strong>.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left text-xs space-y-2 max-w-md mx-auto">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Student Name:</span>
+                                            <span className="font-semibold text-slate-800">{student.full_name}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Application ID:</span>
+                                            <span className="font-mono font-semibold text-indigo-600">
+                                                {student.application_id || student.application_number}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Domain:</span>
+                                            <span className="font-semibold text-slate-800">{student.domain}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Batch Duration:</span>
+                                            <span className="font-medium text-slate-700">Nov 25, 2026 – Dec 25, 2026</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                                        <Button
+                                            onClick={() => setActiveSection("resources")}
+                                            className="w-full sm:w-auto px-5 py-2.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        >
+                                            <BookOpen className="h-4 w-4 mr-2" />
+                                            Explore Learning Materials
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setActiveSection("support")}
+                                            className="w-full sm:w-auto px-5 py-2.5 text-xs border-slate-300 text-slate-700"
+                                        >
+                                            <HelpCircle className="h-4 w-4 mr-2" />
+                                            Contact Mentor Support
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ALLOCATED PROJECT WORKSPACE */
+                                <div className="space-y-6">
+                                    {/* 1. Project Header Banner */}
+                                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-slate-100 pb-5">
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                        <FolderKanban className="h-3.5 w-3.5" />
+                                                        {project.domain}
+                                                    </span>
+
+                                                    {project.difficulty_level && (
+                                                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">
+                                                            {project.difficulty_level}
+                                                        </span>
+                                                    )}
+
+                                                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                        Status: {project.status}
+                                                    </span>
                                                 </div>
-                                                <span className={m.completed ? "line-through text-slate-400" : "font-medium"}>
-                                                    {m.title}
-                                                </span>
+
+                                                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                                                    {project.project_title}
+                                                </h1>
+                                                <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                                                    {project.description}
+                                                </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
 
-                                {/* Project Repository & Live URLs */}
-                                <div className="border-t border-slate-100 pt-4 space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                            GitHub Repository URL
-                                        </label>
-                                        <div className="relative">
-                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
-                                            <input
-                                                type="url"
-                                                placeholder="https://github.com/your-username/capstone-project"
-                                                value={githubRepoUrl}
-                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
-                                                className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500"
-                                            />
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shrink-0 text-xs space-y-1.5 min-w-[220px]">
+                                                <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                                                    <User className="h-4 w-4 text-indigo-600" />
+                                                    <span>{project.assigned_mentor_name || "Lead Technical Mentor"}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-400">Assigned Technical Guide</p>
+                                                <div className="pt-2 border-t border-slate-200/70 text-[11px] text-slate-500 space-y-0.5">
+                                                    <div>Start: <strong>{project.start_date || "25 Nov 2026"}</strong></div>
+                                                    <div>Deadline: <strong>{project.deadline || "25 Dec 2026"}</strong></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Personalized Mentor Instructions */}
+                                        {project.personalized_instructions && (
+                                            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-950 flex items-start gap-3">
+                                                <Sparkles className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <strong className="block text-indigo-900 mb-0.5">Personalized Mentor Instructions:</strong>
+                                                    <span>{project.personalized_instructions}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 2. Dynamic 30-Day Internship Timeline Engine */}
+                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-3">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 text-indigo-600" />
+                                                    <span className="font-bold text-slate-900">
+                                                        Winter Internship 2026 Timeline
+                                                    </span>
+                                                    <span className="text-slate-400">•</span>
+                                                    <span className="text-slate-600 font-medium">
+                                                        25 Nov 2026 – 25 Dec 2026 (30-Day Cohort)
+                                                    </span>
+                                                </div>
+                                                <div className="font-bold text-indigo-700 bg-indigo-100/60 px-3 py-1 rounded-full text-[11px]">
+                                                    Current Phase: Milestone {project.current_milestone || 1} of 4
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <div className="flex justify-between text-[11px] font-semibold text-slate-600">
+                                                    <span>Overall Project Progress</span>
+                                                    <span>{project.progress_percent || 0}% Completed</span>
+                                                </div>
+                                                <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-indigo-600 to-violet-600 rounded-full transition-all duration-500"
+                                                        style={{ width: `${Math.max(5, project.progress_percent || 0)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                            Live Hosted Demo / Staging URL
-                                        </label>
-                                        <div className="relative">
-                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
-                                            <input
-                                                type="url"
-                                                placeholder="https://your-project.vercel.app"
-                                                value={liveDemoUrl}
-                                                onChange={(e) => setLiveDemoUrl(e.target.value)}
-                                                className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500"
-                                            />
+                                    {/* 3. Four Visual Milestone Progress Cards */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                                                Project Milestones & Deliverables
+                                            </h3>
+                                            <span className="text-xs text-slate-400">Weekly evaluation milestones</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                {
+                                                    index: 1,
+                                                    title: "Milestone 1: Project Proposal & Architecture Design",
+                                                    deadline: "Dec 02, 2026",
+                                                    scope: "System architecture diagrams, database schema entity-relationships, API specifications, and tool setup.",
+                                                    deliverables: "Design proposal document, Figma wireframes, or architecture rubric link."
+                                                },
+                                                {
+                                                    index: 2,
+                                                    title: "Milestone 2: Core Engineering & Implementation",
+                                                    deadline: "Dec 09, 2026",
+                                                    scope: "Primary backend models, API routes, user authentication, core workflows or threat scanner logic.",
+                                                    deliverables: "Working Git branch commit, API test results, or initial component demo."
+                                                },
+                                                {
+                                                    index: 3,
+                                                    title: "Milestone 3: Integration, Testing & Optimization",
+                                                    deadline: "Dec 16, 2026",
+                                                    scope: "End-to-end integration, error boundaries, performance benchmarks, and mobile responsiveness.",
+                                                    deliverables: "Staging deployment link, vulnerability check results, or campaign draft."
+                                                },
+                                                {
+                                                    index: 4,
+                                                    title: "Milestone 4: Final Deployment & Documentation",
+                                                    deadline: "Dec 25, 2026",
+                                                    scope: "Production release, public hosting, comprehensive README/documentation, and video walkthrough.",
+                                                    deliverables: "Live production URL, final report link, and demonstration walkthrough video."
+                                                }
+                                            ].map((m) => {
+                                                const existingMilestone = project.milestones?.[m.index - 1];
+                                                const isDone = existingMilestone?.completed;
+                                                const currentStatus = existingMilestone?.status || (isDone ? "Approved" : "Pending");
+
+                                                return (
+                                                    <div
+                                                        key={m.index}
+                                                        className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
+                                                            isDone
+                                                                ? "bg-emerald-50/20 border-emerald-200"
+                                                                : "bg-white border-slate-200 shadow-sm"
+                                                        }`}
+                                                    >
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700">
+                                                                    Week {m.index} • Due {m.deadline}
+                                                                </span>
+                                                                <span
+                                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                        isDone
+                                                                            ? "bg-emerald-100 text-emerald-800"
+                                                                            : "bg-slate-100 text-slate-600"
+                                                                    }`}
+                                                                >
+                                                                    {currentStatus}
+                                                                </span>
+                                                            </div>
+
+                                                            <h4 className="font-bold text-slate-900 text-sm">
+                                                                {m.title}
+                                                            </h4>
+
+                                                            <p className="text-xs text-slate-600 leading-relaxed">
+                                                                {m.scope}
+                                                            </p>
+
+                                                            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[11px] text-slate-600">
+                                                                <strong className="text-slate-800">Deliverables: </strong>
+                                                                {m.deliverables}
+                                                            </div>
+
+                                                            {existingMilestone?.feedback && (
+                                                                <div className="p-2.5 rounded-xl bg-violet-50 text-[11px] text-violet-900 border border-violet-100">
+                                                                    <strong>Mentor Feedback: </strong>
+                                                                    {existingMilestone.feedback}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                                            {existingMilestone?.submissionUrl ? (
+                                                                <a
+                                                                    href={existingMilestone.submissionUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-xs text-indigo-600 hover:underline font-semibold flex items-center gap-1"
+                                                                >
+                                                                    <span>View Submission</span>
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-[11px] text-slate-400">No submission yet</span>
+                                                            )}
+
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    setSelectedMilestoneForSubmit({
+                                                                        index: m.index,
+                                                                        title: m.title
+                                                                    })
+                                                                }
+                                                                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5"
+                                                            >
+                                                                {isDone ? "Update Deliverable" : "Submit Deliverable"}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
-                                    <Button
-                                        onClick={handleSaveProjectLinks}
-                                        disabled={isSavingProject}
-                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-                                    >
-                                        {isSavingProject ? "Saving..." : "Save Project Links"}
-                                    </Button>
+                                    {/* 4. Domain-Tailored Project Repository & Evidence Links */}
+                                    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+                                        <div>
+                                            <h3 className="text-base font-bold text-slate-900">
+                                                Project Evidence & Submission Links
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Provide access links to your work. Reviewers and mentors evaluate these links during weekly review checkpoints.
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                            {/* Software Project inputs */}
+                                            {project.domain?.toLowerCase().includes("full") || project.domain?.toLowerCase().includes("stack") ? (
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            GitHub Repository URL *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://github.com/your-username/capstone-project"
+                                                                value={githubRepoUrl}
+                                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Live Hosted Demo (Vercel / Netlify / Render)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://your-project.vercel.app"
+                                                                value={liveDemoUrl}
+                                                                onChange={(e) => setLiveDemoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : project.domain?.toLowerCase().includes("cyber") || project.domain?.toLowerCase().includes("sec") ? (
+                                                /* Cybersecurity inputs */
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Evidence / Vulnerability Report URL (Google Drive / Notion) *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Shield className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://drive.google.com/... or https://notion.so/..."
+                                                                value={evidenceUrl}
+                                                                onChange={(e) => setEvidenceUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Tool Repository / Source Link (Optional)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://github.com/..."
+                                                                value={githubRepoUrl}
+                                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                /* Digital Marketing inputs */
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Campaign Strategy Deck / Report Link (Google Slides / Docs) *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <TrendingUp className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://docs.google.com/presentation/..."
+                                                                value={documentationUrl}
+                                                                onChange={(e) => setDocumentationUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Figma / Canva / Content Calendar Link
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://www.canva.com/design/... or Notion link"
+                                                                value={evidenceUrl}
+                                                                onChange={(e) => setEvidenceUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            <div className="sm:col-span-2">
+                                                <label className="block font-semibold text-slate-700 mb-1">
+                                                    Technical Documentation & Walkthrough Video URL (Optional)
+                                                </label>
+                                                <input
+                                                    type="url"
+                                                    placeholder="https://loom.com/share/... or YouTube unlisted / Google Drive link"
+                                                    value={documentationUrl}
+                                                    onChange={(e) => setDocumentationUrl(e.target.value)}
+                                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-end pt-2">
+                                            <Button
+                                                onClick={handleSaveProjectLinks}
+                                                disabled={isSavingProject}
+                                                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm"
+                                            >
+                                                {isSavingProject ? "Saving..." : "Save Project Links"}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
@@ -931,8 +1326,19 @@ function StudentDashboardContent() {
                                 </div>
 
                                 <div>
-                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 uppercase">
-                                        Status: In Progress
+                                    <span
+                                        className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                                            (assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
+                                            (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false)
+                                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                                : "bg-amber-50 text-amber-800 border border-amber-200"
+                                        }`}
+                                    >
+                                        Status:{" "}
+                                        {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
+                                        (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false)
+                                            ? "Eligible for Certification"
+                                            : "Cohort In Progress"}
                                     </span>
                                     <h3 className="text-lg font-bold text-slate-900 mt-3">
                                         Vectonix Certificate of Internship
@@ -942,23 +1348,40 @@ function StudentDashboardContent() {
                                     </p>
                                 </div>
 
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-left space-y-1.5">
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-left space-y-2">
                                     <span className="font-bold text-slate-800 block">Eligibility Criteria:</span>
                                     <p className="flex items-center gap-2 text-slate-600">
                                         <span className="text-emerald-600 font-bold">✓</span> Registration confirmed ({student.application_id || student.application_number})
                                     </p>
                                     <p className="flex items-center gap-2 text-slate-600">
-                                        <span className="text-amber-600 font-bold">○</span> Complete at least 80% of milestone assignments
+                                        <span className={(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                                            {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 ? "✓" : "○"}
+                                        </span>{" "}
+                                        Complete at least 80% of milestone assignments (Current: {assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0}%)
                                     </p>
                                     <p className="flex items-center gap-2 text-slate-600">
-                                        <span className="text-amber-600 font-bold">○</span> Deliver capstone project in {student.domain}
+                                        <span className={(project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                                            {(project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? "✓" : "○"}
+                                        </span>{" "}
+                                        Deliver capstone project in {student.domain} (Current: {project?.progress_percent || 0}%)
                                     </p>
                                 </div>
 
                                 <div className="pt-2">
-                                    <Button disabled className="text-xs cursor-not-allowed">
-                                        Download Certificate (Available upon completion)
-                                    </Button>
+                                    {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
+                                    (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? (
+                                        <Link
+                                            href={`/verify/${student.application_id || student.application_number}`}
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                        >
+                                            <Award className="h-4 w-4" />
+                                            <span>View Certificate Record</span>
+                                        </Link>
+                                    ) : (
+                                        <Button disabled className="text-xs cursor-not-allowed">
+                                            Download Certificate (Available upon completion)
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1053,6 +1476,86 @@ function StudentDashboardContent() {
                                     </div>
                                 </form>
                             )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Milestone Submission Modal */}
+            <AnimatePresence>
+                {selectedMilestoneForSubmit && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-4 border border-slate-200"
+                        >
+                            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                                        Milestone {selectedMilestoneForSubmit.index} Submission
+                                    </span>
+                                    <h3 className="font-bold text-slate-900 text-sm mt-1">
+                                        {selectedMilestoneForSubmit.title}
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedMilestoneForSubmit(null)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitMilestone} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Deliverable Access URL (Drive / GitHub / Figma / Vercel) *
+                                    </label>
+                                    <input
+                                        type="url"
+                                        required
+                                        placeholder="https://drive.google.com/... or https://github.com/..."
+                                        value={milestoneSubmitUrl}
+                                        onChange={(e) => setMilestoneSubmitUrl(e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-1">
+                                        Ensure sharing permissions are set to "Anyone with the link can view".
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Submission Summary & Notes
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Summarize key tasks completed, tools used, or questions for your mentor..."
+                                        value={milestoneSubmitNotes}
+                                        onChange={(e) => setMilestoneSubmitNotes(e.target.value)}
+                                        className="w-full p-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setSelectedMilestoneForSubmit(null)}
+                                        className="text-xs"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmittingMilestone}
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2"
+                                    >
+                                        {isSubmittingMilestone ? "Submitting..." : "Submit for Mentor Review"}
+                                    </Button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}

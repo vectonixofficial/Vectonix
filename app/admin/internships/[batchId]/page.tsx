@@ -31,7 +31,10 @@ import {
     MapPin,
     Sparkles,
     User,
-    Trash2
+    Trash2,
+    FolderKanban,
+    Layers,
+    CheckSquare
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
@@ -256,6 +259,33 @@ export default function AdminInternshipsBatchPage() {
                         </select>
                         <ChevronDown className="h-4 w-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
                     </div>
+
+                    {/* Project Bank Shortcut */}
+                    <Link
+                        href={`/admin/internships/${batchId}/projects`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm transition-colors"
+                    >
+                        <FolderKanban className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Project Bank</span>
+                    </Link>
+
+                    {/* Project Allocations Shortcut */}
+                    <Link
+                        href={`/admin/internships/${batchId}/allocations`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm transition-colors"
+                    >
+                        <Layers className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Allocations</span>
+                    </Link>
+
+                    {/* Assignments & Submissions Shortcut */}
+                    <Link
+                        href={`/admin/internships/${batchId}/assignments`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm transition-colors"
+                    >
+                        <CheckSquare className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Assignments</span>
+                    </Link>
 
                     {/* Email Manager Shortcut */}
                     <Link

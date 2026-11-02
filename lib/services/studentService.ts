@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured, DatabaseInternshipApplication } from "@/lib/supabase";
 import { hydrateApplication, internshipService } from "@/lib/services/internshipService";
+import { hydrateStudentProject } from "@/lib/services/allocationService";
 
 export interface StudentAnnouncement {
     id: string;
@@ -49,14 +50,47 @@ export interface StudentProject {
     application_id: string;
     batch_id: string;
     domain: string;
+    project_template_id?: string;
     project_title: string;
     description: string;
+    assigned_mentor_id?: string;
+    assigned_mentor_name?: string;
+    start_date?: string;
+    deadline?: string;
+    personalized_instructions?: string;
+    difficulty_level?: string;
     github_url?: string;
     project_url?: string;
-    status: "Planning" | "In Development" | "Testing" | "Completed" | "Needs Review";
+    documentation_url?: string;
+    presentation_url?: string;
+    evidence_url?: string;
+    status:
+        | "Not Started"
+        | "In Progress"
+        | "Submitted"
+        | "Under Review"
+        | "Revision Required"
+        | "Approved"
+        | "Completed"
+        | "Overdue"
+        | "Planning"
+        | "In Development"
+        | "Testing"
+        | "Needs Review";
     progress_percent: number;
-    milestones: { title: string; completed: boolean }[];
+    current_milestone: number;
+    milestones: {
+        index?: number;
+        title: string;
+        completed: boolean;
+        status?: string;
+        feedback?: string;
+        submissionUrl?: string;
+        deadline?: string;
+    }[];
     mentor_feedback?: string;
+    evaluation_marks?: number;
+    template?: any;
 }
 
 export interface WeeklyReview {
@@ -436,55 +470,162 @@ export const studentService = {
     },
 
     /**
-     * Get or initialize student project
+     * Get allocated student project or null if awaiting allocation
      */
-    async getStudentProject(appId: string, domain: string): Promise<StudentProject> {
-        if (isSupabaseConfigured) {
-            const { data } = await supabase
+    async getStudentProject(appId: string, domain: string): Promise<StudentProject | null> {
+        if (!isSupabaseConfigured) return null;
+
+        try {
+            const { data, error } = await supabase
                 .from("student_projects")
                 .select("*")
                 .eq("application_id", appId)
-                .single();
+                .maybeSingle();
 
-            if (data) return data as StudentProject;
+            if (error || !data) {
+                return null;
+            }
+
+            const proj = hydrateStudentProject(data) as StudentProject;
+
+            // Fetch template details if template ID exists
+            if (proj.project_template_id) {
+                try {
+                    const { data: tmpl } = await supabase
+                        .from("project_templates")
+                        .select("*")
+                        .eq("id", proj.project_template_id)
+                        .maybeSingle();
+
+                    if (tmpl) {
+                        proj.template = tmpl;
+                        proj.difficulty_level = tmpl.difficulty_level;
+                    }
+                } catch (ignore) {
+                    // non-blocking
+                }
+            }
+
+            return proj;
+        } catch (err) {
+            console.error("Error loading student project:", err);
+            return null;
         }
-
-        return {
-            id: `proj_${appId}`,
-            application_id: appId,
-            batch_id: "wi26",
-            domain: domain,
-            project_title: `Capstone Industrial Project (${domain})`,
-            description: `Design and deliver an industry-grade project in ${domain} with complete documentation, testing, and deployment.`,
-            status: "Planning",
-            progress_percent: 25,
-            milestones: [
-                { title: "Project Proposal & Architecture Design", completed: true },
-                { title: "Core Module & API Implementation", completed: false },
-                { title: "Integration, Testing & UI Polish", completed: false },
-                { title: "Final Deployment & Documentation", completed: false }
-            ]
-        };
     },
 
     /**
-     * Update project links
+     * Update project URLs (supporting GitHub, live demo, evidence report, and docs)
      */
-    async updateProjectLinks(appId: string, githubUrl: string, projectUrl: string): Promise<boolean> {
+    async updateProjectLinks(
+        appId: string,
+        links: {
+            githubUrl?: string;
+            projectUrl?: string;
+            documentationUrl?: string;
+            evidenceUrl?: string;
+        }
+    ): Promise<boolean> {
         if (!isSupabaseConfigured) return true;
 
-        const { error } = await supabase
-            .from("student_projects")
-            .update({
-                github_url: githubUrl,
-                project_url: projectUrl,
-                status: "In Development",
-                progress_percent: 50,
+        try {
+            const updatePayload: Record<string, any> = {
+                status: "In Progress",
                 updated_at: new Date().toISOString()
-            })
-            .eq("application_id", appId);
+            };
 
-        return !error;
+            if (links.githubUrl !== undefined) updatePayload.github_url = links.githubUrl || null;
+            if (links.projectUrl !== undefined) updatePayload.project_url = links.projectUrl || null;
+            if (links.documentationUrl !== undefined) updatePayload.documentation_url = links.documentationUrl || null;
+            if (links.evidenceUrl !== undefined) updatePayload.evidence_url = links.evidenceUrl || null;
+
+            const { error } = await supabase
+                .from("student_projects")
+                .update(updatePayload)
+                .eq("application_id", appId);
+
+            return !error;
+        } catch (e) {
+            console.error("Error updating project links:", e);
+            return false;
+        }
+    },
+
+    /**
+     * Submit work for a specific milestone
+     */
+    async submitMilestone(payload: {
+        projectId: string;
+        applicationId: string;
+        milestoneIndex: number;
+        milestoneTitle: string;
+        submissionUrl: string;
+        secondaryUrl?: string;
+        notes?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        if (!isSupabaseConfigured) return { success: true };
+
+        try {
+            // 1. Record submission
+            const submissionRecord = {
+                student_project_id: payload.projectId,
+                application_id: payload.applicationId,
+                milestone_index: payload.milestoneIndex,
+                milestone_title: payload.milestoneTitle,
+                documentation_url: payload.submissionUrl,
+                notes: payload.notes || "",
+                status: "Submitted",
+                submitted_at: new Date().toISOString()
+            };
+
+            try {
+                await supabase
+                    .from("student_milestone_submissions")
+                    .insert(submissionRecord);
+            } catch (ignore) {
+                // non-blocking if table is being created
+            }
+
+            // 2. Update milestone status in student_projects
+            const { data: project } = await supabase
+                .from("student_projects")
+                .select("milestones, progress_percent")
+                .eq("id", payload.projectId)
+                .single();
+
+            if (project) {
+                const milestones = project.milestones || [];
+                const updatedMilestones = milestones.map((m: any, idx: number) => {
+                    if (idx + 1 === payload.milestoneIndex) {
+                        return {
+                            ...m,
+                            completed: true,
+                            status: "Under Review",
+                            submissionUrl: payload.submissionUrl
+                        };
+                    }
+                    return m;
+                });
+
+                const completedCount = updatedMilestones.filter((m: any) => m.completed).length;
+                const progressPercent = Math.min(100, Math.round((completedCount / updatedMilestones.length) * 100));
+
+                await supabase
+                    .from("student_projects")
+                    .update({
+                        milestones: updatedMilestones,
+                        progress_percent: progressPercent,
+                        current_milestone: Math.min(4, payload.milestoneIndex + 1),
+                        status: progressPercent === 100 ? "Completed" : "Under Review",
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("id", payload.projectId);
+            }
+
+            return { success: true };
+        } catch (e: any) {
+            console.error("Milestone submission error:", e);
+            return { success: false, error: e.message || "Failed to submit milestone" };
+        }
     },
 
     /**
