@@ -4,7 +4,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function getTransporter() {
     const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com").trim();
-    const pass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "Vectonix#12@").replace(/\s+/g, "");
+    const pass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "wxuzlwkkfamlayvz").replace(/\s+/g, "");
 
     if (process.env.SMTP_HOST && process.env.SMTP_HOST !== "smtp.gmail.com") {
         return nodemailer.createTransport({

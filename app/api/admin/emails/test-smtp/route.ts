@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 
 export async function GET() {
     const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com").trim();
-    const rawPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "Vectonix#12@";
+    const rawPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "wxuzlwkkfamlayvz";
     const pass = rawPass.replace(/\s+/g, "");
 
     const isAppPasswordFormat = /^[a-z]{16}$/i.test(pass);
