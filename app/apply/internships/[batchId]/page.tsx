@@ -95,6 +95,51 @@ export default function InternshipApplyPage() {
     const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Live Email Validation State (No OTP)
+    const [emailValidation, setEmailValidation] = useState<{
+        checking: boolean;
+        status: "idle" | "checking" | "valid" | "invalid_format" | "invalid_domain" | "disposable" | "unable_to_check";
+        message: string;
+    }>({
+        checking: false,
+        status: "idle",
+        message: ""
+    });
+    const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Debounced Live Email Verification Handler
+    const handleEmailChange = (val: string) => {
+        setFormData((prev) => ({ ...prev, email: val }));
+
+        if (emailTimeoutRef.current) clearTimeout(emailTimeoutRef.current);
+
+        const clean = val.trim();
+        if (!clean) {
+            setEmailValidation({ checking: false, status: "idle", message: "" });
+            return;
+        }
+
+        setEmailValidation({ checking: true, status: "checking", message: "Checking email availability..." });
+
+        emailTimeoutRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/validate-email?email=${encodeURIComponent(clean)}`);
+                const data = await res.json();
+                setEmailValidation({
+                    checking: false,
+                    status: data.status || (data.valid ? "valid" : "invalid_format"),
+                    message: data.message
+                });
+            } catch (err) {
+                setEmailValidation({
+                    checking: false,
+                    status: "unable_to_check",
+                    message: "Unable to check email availability. Please try again."
+                });
+            }
+        }, 400);
+    };
+
     // Submission State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -422,14 +467,47 @@ export default function InternshipApplyPage() {
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                                         Email Address *
                                     </label>
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder="rahul@example.com"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="rahul@example.com"
+                                            value={formData.email}
+                                            onChange={(e) => handleEmailChange(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        {emailValidation.checking && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
+                                        )}
+                                    </div>
+                                    {/* Live Email Availability State Indicators */}
+                                    {emailValidation.status !== "idle" && (
+                                        <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                                            {emailValidation.status === "checking" && (
+                                                <span className="text-slate-500 flex items-center gap-1">
+                                                    <Loader2 className="h-3 w-3 animate-spin" /> Checking email availability...
+                                                </span>
+                                            )}
+                                            {emailValidation.status === "valid" && (
+                                                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <Check className="h-3 w-3 text-emerald-600" />
+                                                    Valid email format. Email domain is configured to receive email.
+                                                </span>
+                                            )}
+                                            {(emailValidation.status === "invalid_format" || emailValidation.status === "invalid_domain" || emailValidation.status === "disposable") && (
+                                                <span className="text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <AlertCircle className="h-3 w-3 text-red-600" />
+                                                    {emailValidation.message || "Email domain does not appear to accept email."}
+                                                </span>
+                                            )}
+                                            {emailValidation.status === "unable_to_check" && (
+                                                <span className="text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <AlertCircle className="h-3 w-3 text-amber-600" />
+                                                    Unable to check email availability. Please try again.
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -1182,6 +1260,13 @@ export default function InternshipApplyPage() {
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
                                 <Button
+                                    onClick={() => router.push(`/internship/dashboard?appId=${submittedApplication.application_id || submittedApplication.application_number}&email=${encodeURIComponent(submittedApplication.email)}`)}
+                                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-2 shadow-lg shadow-indigo-600/25"
+                                >
+                                    <span>Access Student Dashboard</span>
+                                    <ArrowRight className="h-4 w-4" />
+                                </Button>
+                                <Button
                                     variant="outline"
                                     onClick={() => window.print()}
                                     className="w-full sm:w-auto"
@@ -1189,8 +1274,9 @@ export default function InternshipApplyPage() {
                                     Print / Save Confirmation
                                 </Button>
                                 <Button
+                                    variant="ghost"
                                     onClick={() => router.push("/")}
-                                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700"
+                                    className="w-full sm:w-auto text-slate-600"
                                 >
                                     Return to Home
                                 </Button>
