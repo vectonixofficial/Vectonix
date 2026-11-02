@@ -510,6 +510,10 @@ ALTER TABLE public.student_projects
     ADD COLUMN IF NOT EXISTS current_milestone INTEGER DEFAULT 1,
     ADD COLUMN IF NOT EXISTS evaluation_marks NUMERIC(5,2);
 
+-- Update status check constraint to support both existing and new statuses
+ALTER TABLE public.student_projects DROP CONSTRAINT IF EXISTS student_projects_status_check;
+ALTER TABLE public.student_projects ADD CONSTRAINT student_projects_status_check CHECK (status IN ('Not Started', 'In Progress', 'Submitted', 'Under Review', 'Revision Required', 'Approved', 'Completed', 'Overdue', 'Planning', 'In Development', 'Testing', 'Needs Review'));
+
 -- 4. STUDENT MILESTONE SUBMISSIONS TABLE (URL-based submissions)
 CREATE TABLE IF NOT EXISTS public.student_milestone_submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

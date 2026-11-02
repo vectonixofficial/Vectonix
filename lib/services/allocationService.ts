@@ -14,6 +14,14 @@ export function hydrateStudentProject(raw: any): DatabaseStudentProject {
     if (!raw) return raw;
     const proj: any = { ...raw };
 
+    if (proj.status === "Planning") {
+        proj.status = "Not Started";
+    } else if (proj.status === "In Development") {
+        proj.status = "In Progress";
+    } else if (proj.status === "Needs Review") {
+        proj.status = "Under Review";
+    }
+
     if (Array.isArray(proj.milestones)) {
         const metaItem = proj.milestones.find((m: any) => m && m._meta);
         if (metaItem) {
@@ -127,7 +135,7 @@ export const allocationService = {
                 start_date: startDate,
                 deadline: deadline,
                 personalized_instructions: payload.personalizedInstructions || null,
-                status: "Not Started",
+                status: "Planning",
                 progress_percent: 0,
                 current_milestone: 1,
                 milestones: standardMilestones,
@@ -143,9 +151,9 @@ export const allocationService = {
 
             if (!firstAttempt.error) {
                 resultData = firstAttempt.data;
-            } else if (firstAttempt.error.message?.includes("column") && firstAttempt.error.message?.includes("schema cache")) {
+            } else {
                 // 2. Fallback to base columns packing extra metadata into milestones JSON
-                console.warn("Retrying student_projects upsert with schema-compatible base columns...");
+                console.warn("Retrying student_projects upsert with schema-compatible base columns:", firstAttempt.error.message);
                 const baseRecord: any = {
                     application_id: payload.applicationId,
                     batch_id: batchId,
@@ -176,8 +184,6 @@ export const allocationService = {
 
                 if (retryAttempt.error) throw retryAttempt.error;
                 resultData = retryAttempt.data;
-            } else {
-                throw firstAttempt.error;
             }
 
             // Sync mentor allocation table if possible

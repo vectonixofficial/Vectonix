@@ -529,7 +529,7 @@ export const studentService = {
 
         try {
             const updatePayload: Record<string, any> = {
-                status: "In Progress",
+                status: "In Development",
                 updated_at: new Date().toISOString()
             };
 
@@ -609,16 +609,26 @@ export const studentService = {
                 const completedCount = updatedMilestones.filter((m: any) => m.completed).length;
                 const progressPercent = Math.min(100, Math.round((completedCount / updatedMilestones.length) * 100));
 
-                await supabase
+                const updatePayload: any = {
+                    milestones: updatedMilestones,
+                    progress_percent: progressPercent,
+                    current_milestone: Math.min(4, payload.milestoneIndex + 1),
+                    status: progressPercent === 100 ? "Completed" : "Needs Review",
+                    updated_at: new Date().toISOString()
+                };
+
+                const { error: updateErr } = await supabase
                     .from("student_projects")
-                    .update({
-                        milestones: updatedMilestones,
-                        progress_percent: progressPercent,
-                        current_milestone: Math.min(4, payload.milestoneIndex + 1),
-                        status: progressPercent === 100 ? "Completed" : "Under Review",
-                        updated_at: new Date().toISOString()
-                    })
+                    .update(updatePayload)
                     .eq("id", payload.projectId);
+
+                if (updateErr) {
+                    // Retry with status Completed or Needs Review
+                    await supabase
+                        .from("student_projects")
+                        .update({ ...updatePayload, status: "Needs Review" })
+                        .eq("id", payload.projectId);
+                }
             }
 
             return { success: true };
