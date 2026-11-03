@@ -34,12 +34,15 @@ import {
     Trash2,
     FolderKanban,
     Layers,
-    CheckSquare
+    CheckSquare,
+    Bell,
+    Plus
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
 import { internshipService, INTERNSHIP_DOMAINS, PACKAGES_CONFIG } from "@/lib/services/internshipService";
+import { studentService, StudentAnnouncement } from "@/lib/services/studentService";
 import {
     DatabaseInternshipBatch,
     DatabaseInternshipApplication,
@@ -60,7 +63,7 @@ export default function AdminInternshipsBatchPage() {
     // Applications & Analytics
     const [applications, setApplications] = useState<DatabaseInternshipApplication[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports">("applications");
+    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports" | "announcements">("applications");
 
     // Filter & Search
     const [searchTerm, setSearchTerm] = useState("");
@@ -68,10 +71,24 @@ export default function AdminInternshipsBatchPage() {
     const [packageFilter, setPackageFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
 
+    // Bulk selection state
+    const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+
     // Modal / Drawer states
     const [selectedApp, setSelectedApp] = useState<DatabaseInternshipApplication | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [adminNotes, setAdminNotes] = useState("");
+
+    // Announcements Management State
+    const [announcementsList, setAnnouncementsList] = useState<StudentAnnouncement[]>([]);
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [annForm, setAnnForm] = useState({
+        title: "",
+        message: "",
+        priority: "normal" as "normal" | "important" | "urgent",
+        domain: "All",
+        reference_url: ""
+    });
 
     // Analytics State
     const [analytics, setAnalytics] = useState<{
@@ -106,6 +123,9 @@ export default function AdminInternshipsBatchPage() {
 
             const stats = await internshipService.getBatchAnalytics(batchId);
             setAnalytics(stats);
+
+            const anns = await studentService.getAnnouncements(batchId);
+            setAnnouncementsList(anns);
         } catch (error) {
             console.error("Error loading internship admin data:", error);
         } finally {
@@ -153,6 +173,100 @@ export default function AdminInternshipsBatchPage() {
         } finally {
             setActionLoading(false);
         }
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedAppIds(filteredApps.map((a) => a.id));
+        } else {
+            setSelectedAppIds([]);
+        }
+    };
+
+    const handleToggleSelectApp = (id: string) => {
+        setSelectedAppIds((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkAccept = async () => {
+        if (selectedAppIds.length === 0) return;
+        if (!window.confirm(`Accept ${selectedAppIds.length} selected candidate(s)? This will unlock their student workspace.`)) return;
+
+        setActionLoading(true);
+        try {
+            for (const id of selectedAppIds) {
+                await internshipService.updateApplicationStatus(id, "accepted", "Bulk approved by administrator");
+            }
+            setSelectedAppIds([]);
+            await loadData();
+            alert("Selected applications approved successfully!");
+        } catch (err) {
+            console.error("Bulk accept error:", err);
+            alert("Failed to bulk approve applications.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleBulkReject = async () => {
+        if (selectedAppIds.length === 0) return;
+        const reason = window.prompt("Enter rejection note for selected candidates:", "Application criteria not met for Batch WI26.");
+        if (reason === null) return;
+
+        setActionLoading(true);
+        try {
+            for (const id of selectedAppIds) {
+                await internshipService.updateApplicationStatus(id, "rejected", reason);
+            }
+            setSelectedAppIds([]);
+            await loadData();
+            alert("Selected applications marked as rejected.");
+        } catch (err) {
+            console.error("Bulk reject error:", err);
+            alert("Failed to bulk reject applications.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleCreateAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!annForm.title.trim() || !annForm.message.trim()) return;
+
+        setActionLoading(true);
+        try {
+            const newAnn: StudentAnnouncement = {
+                id: `ann-${Date.now()}`,
+                batch_id: batchId,
+                title: annForm.title.trim(),
+                message: annForm.message.trim(),
+                priority: annForm.priority,
+                domain: annForm.domain,
+                reference_url: annForm.reference_url.trim() || undefined,
+                created_at: new Date().toISOString()
+            };
+
+            setAnnouncementsList((prev) => [newAnn, ...prev]);
+            setShowAnnouncementModal(false);
+            setAnnForm({
+                title: "",
+                message: "",
+                priority: "normal",
+                domain: "All",
+                reference_url: ""
+            });
+            alert("Batch announcement published!");
+        } catch (err) {
+            console.error("Error creating announcement:", err);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteAnnouncement = (id: string) => {
+        if (!window.confirm("Delete this cohort announcement?")) return;
+        setAnnouncementsList((prev) => prev.filter((a) => a.id !== id));
     };
 
     // Export to Excel with all address & package fields
@@ -387,6 +501,7 @@ export default function AdminInternshipsBatchPage() {
                 <div className="flex items-center gap-2">
                     {[
                         { id: "applications", label: "Manage Applications", icon: Users, badge: applications.length },
+                        { id: "announcements", label: "Cohort Announcements", icon: Bell, badge: announcementsList.length },
                         { id: "analytics", label: "Cohort Analytics", icon: TrendingUp },
                         { id: "reports", label: "Export Reports", icon: FileSpreadsheet },
                     ].map((tab) => {
@@ -485,12 +600,50 @@ export default function AdminInternshipsBatchPage() {
                         </div>
                     </div>
 
+                    {/* Bulk Selection Action Bar */}
+                    {selectedAppIds.length > 0 && (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center justify-between shadow-xs">
+                            <span className="text-xs font-bold text-indigo-900">
+                                {selectedAppIds.length} candidate(s) selected for bulk review
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={handleBulkAccept}
+                                    disabled={actionLoading}
+                                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1"
+                                >
+                                    <Check className="h-3.5 w-3.5" />
+                                    Bulk Accept Selected
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleBulkReject}
+                                    disabled={actionLoading}
+                                    className="text-xs text-rose-600 hover:bg-rose-50 border-rose-200 font-semibold gap-1"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                    Bulk Reject Selected
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Applications Table */}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse text-xs">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                                        <th className="w-10 px-3 py-3.5 text-center">
+                                            <input
+                                                type="checkbox"
+                                                onChange={handleSelectAll}
+                                                checked={selectedAppIds.length > 0 && selectedAppIds.length === filteredApps.length}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                        </th>
                                         <th className="px-4 py-3.5">Application ID</th>
                                         <th className="px-4 py-3.5">Candidate Details</th>
                                         <th className="px-4 py-3.5">College & Location</th>
@@ -503,7 +656,7 @@ export default function AdminInternshipsBatchPage() {
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredApps.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-16 text-center">
+                                            <td colSpan={8} className="px-4 py-16 text-center">
                                                 <div className="max-w-md mx-auto">
                                                     <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
                                                         <Users className="h-6 w-6" />
@@ -548,8 +701,18 @@ export default function AdminInternshipsBatchPage() {
                                                 rejected: "bg-red-50 text-red-700 border-red-200",
                                             };
 
+                                            const isSelected = selectedAppIds.includes(app.id);
+
                                             return (
-                                                <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                                                <tr key={app.id} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? "bg-indigo-50/30" : ""}`}>
+                                                    <td className="w-10 px-3 py-3 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => handleToggleSelectApp(app.id)}
+                                                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                    </td>
                                                     <td className="px-4 py-3 font-mono font-bold text-slate-900">
                                                         {app.application_id || app.application_number}
                                                     </td>
@@ -573,10 +736,12 @@ export default function AdminInternshipsBatchPage() {
                                                             className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-bold uppercase ${
                                                                 app.package_name === "Premium"
                                                                     ? "bg-amber-50 text-amber-800 border-amber-200"
+                                                                    : app.package_name === "Free"
+                                                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                                                                     : "bg-indigo-50 text-indigo-700 border-indigo-200"
                                                             }`}
                                                         >
-                                                            {app.package_name} (₹{app.package_amount || (app.package_name === "Premium" ? 999 : 749)})
+                                                            {app.package_name} (₹{app.package_name === "Free" ? 0 : (app.package_amount || (app.package_name === "Premium" ? 999 : 749))})
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
@@ -590,6 +755,36 @@ export default function AdminInternshipsBatchPage() {
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
                                                         <div className="flex items-center justify-end gap-1.5">
+                                                            {app.status !== "accepted" && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => handleUpdateStatus(app.id, "accepted")}
+                                                                    disabled={actionLoading}
+                                                                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 gap-1"
+                                                                    title="Accept Application & Unlock Portal"
+                                                                >
+                                                                    <Check className="h-3.5 w-3.5" />
+                                                                    Accept
+                                                                </Button>
+                                                            )}
+                                                            {app.status !== "rejected" && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        const reason = window.prompt(`Enter rejection reason for ${app.full_name}:`, "Application criteria not met.");
+                                                                        if (reason !== null) {
+                                                                            internshipService.updateApplicationStatus(app.id, "rejected", reason).then(loadData);
+                                                                        }
+                                                                    }}
+                                                                    disabled={actionLoading}
+                                                                    className="h-7 text-xs text-rose-600 hover:bg-rose-50 border-rose-200 font-semibold px-2.5 gap-1"
+                                                                    title="Reject Application"
+                                                                >
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                    Reject
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
@@ -779,6 +974,197 @@ export default function AdminInternshipsBatchPage() {
                     </div>
                 </div>
             )}
+
+            {/* TAB 4: COHORT ANNOUNCEMENTS */}
+            {activeTab === "announcements" && (
+                <div className="space-y-4">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                                    <Bell className="h-5 w-5 text-indigo-600" />
+                                    Cohort Announcement Broadcasts
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Publish important notices, schedule changes, and orientation updates directly to student dashboards.
+                                </p>
+                            </div>
+
+                            <Button
+                                onClick={() => setShowAnnouncementModal(true)}
+                                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 self-start sm:self-auto"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Create Announcement
+                            </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {announcementsList.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400 text-xs">
+                                    No announcements published yet. Click &quot;Create Announcement&quot; to broadcast your first update.
+                                </div>
+                            ) : (
+                                announcementsList.map((ann) => (
+                                    <div
+                                        key={ann.id}
+                                        className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                                    >
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                    ann.priority === "urgent"
+                                                        ? "bg-rose-100 text-rose-800"
+                                                        : ann.priority === "important"
+                                                        ? "bg-amber-100 text-amber-800"
+                                                        : "bg-indigo-100 text-indigo-700"
+                                                }`}>
+                                                    {ann.priority}
+                                                </span>
+                                                <span className="font-semibold text-slate-500">Domain: {ann.domain || "All"}</span>
+                                                <span className="text-slate-400">• {new Date(ann.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 text-sm">{ann.title}</h4>
+                                            <p className="text-slate-600 max-w-2xl">{ann.message}</p>
+                                        </div>
+
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                                            className="text-xs text-rose-600 hover:bg-rose-50 border-rose-200 self-end sm:self-center"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                            Delete
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Announcement Modal */}
+            <AnimatePresence>
+                {showAnnouncementModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                    <Bell className="h-4 w-4 text-indigo-600" />
+                                    Publish Cohort Announcement
+                                </h3>
+                                <button
+                                    onClick={() => setShowAnnouncementModal(false)}
+                                    className="text-slate-400 hover:text-slate-600 text-sm"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleCreateAnnouncement} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="block font-semibold text-slate-700 mb-1">
+                                        Announcement Title *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Milestone 1 Code Review Links Released"
+                                        value={annForm.title}
+                                        onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block font-semibold text-slate-700 mb-1">
+                                            Priority Level
+                                        </label>
+                                        <select
+                                            value={annForm.priority}
+                                            onChange={(e) => setAnnForm({ ...annForm, priority: e.target.value as any })}
+                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                                        >
+                                            <option value="normal">Normal</option>
+                                            <option value="important">Important</option>
+                                            <option value="urgent">Critical / Urgent</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-semibold text-slate-700 mb-1">
+                                            Target Domain
+                                        </label>
+                                        <select
+                                            value={annForm.domain}
+                                            onChange={(e) => setAnnForm({ ...annForm, domain: e.target.value })}
+                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                                        >
+                                            <option value="All">All Domains</option>
+                                            {INTERNSHIP_DOMAINS.map((d) => (
+                                                <option key={d} value={d}>{d}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block font-semibold text-slate-700 mb-1">
+                                        Announcement Body *
+                                    </label>
+                                    <textarea
+                                        rows={4}
+                                        required
+                                        placeholder="Write notice details for students..."
+                                        value={annForm.message}
+                                        onChange={(e) => setAnnForm({ ...annForm, message: e.target.value })}
+                                        className="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block font-semibold text-slate-700 mb-1">
+                                        Reference / External URL (Optional)
+                                    </label>
+                                    <input
+                                        type="url"
+                                        placeholder="https://meet.google.com/... or https://..."
+                                        value={annForm.reference_url}
+                                        onChange={(e) => setAnnForm({ ...annForm, reference_url: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowAnnouncementModal(false)}
+                                        className="text-xs"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={actionLoading}
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                    >
+                                        {actionLoading ? "Publishing..." : "Broadcast Announcement"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Candidate Detail Drawer / Modal */}
             <AnimatePresence>

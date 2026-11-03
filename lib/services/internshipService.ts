@@ -20,6 +20,20 @@ export const INTERNSHIP_DOMAINS = [
 ];
 
 export const PACKAGES_CONFIG = {
+    Free: {
+        name: "Free" as InternshipPackageType,
+        price: 0,
+        popular: false,
+        features: [
+            "Full Access to Domain Learning",
+            "Live Capstone Project Assignment",
+            "Milestone Tracking & Mentor Feedback",
+            "Full Project Workspace Access",
+            "Weekly Review Meetings & Mentorship",
+            "No Certificate Included",
+            "No Welcome Kit"
+        ]
+    },
     Standard: {
         name: "Standard" as InternshipPackageType,
         price: 749,

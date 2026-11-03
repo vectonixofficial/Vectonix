@@ -103,6 +103,27 @@ export interface WeeklyReview {
     meeting_link?: string;
     status: "Upcoming" | "Completed" | "Rescheduled";
     mentor_comments?: string;
+    visible_from?: string; // Date string from when the link is visible
+    is_always_visible?: boolean;
+}
+
+export interface QuizQuestion {
+    id: string;
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+}
+
+export interface DomainQuiz {
+    id: string;
+    week: number;
+    domain: string;
+    title: string;
+    description: string;
+    durationMinutes: number;
+    totalMarks: number;
+    questions: QuizQuestion[];
 }
 
 export interface LearningResource {
@@ -153,24 +174,64 @@ const DEFAULT_ANNOUNCEMENTS: StudentAnnouncement[] = [
 
 const DEFAULT_REVIEWS: WeeklyReview[] = [
     {
-        id: "rev-01",
+        id: "rev-orient-01",
         batch_id: "wi26",
         domain: "All",
-        review_date: "2026-12-02T18:30:00+05:30",
+        review_date: "2026-11-25T18:00:00+05:30",
         topic: "Inaugural Technical Orientation & Workspace Setup",
         assigned_mentor: "Senior Vectonix Engineering Team",
-        meeting_link: "https://meet.google.com/vectonix-wi26",
-        status: "Upcoming"
+        meeting_link: "https://meet.google.com/rub-omic-zqn",
+        status: "Upcoming",
+        is_always_visible: true,
+        visible_from: "2026-11-01"
     },
     {
-        id: "rev-02",
+        id: "rev-m1-02",
         batch_id: "wi26",
         domain: "All",
-        review_date: "2026-12-09T18:30:00+05:30",
-        topic: "Sprint 1 Milestone Code Review & Architecture Q&A",
+        review_date: "2026-12-02T19:00:00+05:30",
+        topic: "Milestone 1 Code Review & Architectural Audit",
         assigned_mentor: "Lead Technical Mentors",
-        meeting_link: "https://meet.google.com/vectonix-wi26",
-        status: "Upcoming"
+        meeting_link: "https://meet.google.com/gim-dtax-fsq",
+        status: "Upcoming",
+        is_always_visible: false,
+        visible_from: "2026-11-30"
+    },
+    {
+        id: "rev-m2-03",
+        batch_id: "wi26",
+        domain: "All",
+        review_date: "2026-12-09T19:00:00+05:30",
+        topic: "Milestone 2 Core Engineering & API Verification",
+        assigned_mentor: "Lead Technical Mentors",
+        meeting_link: "https://meet.google.com/gim-dtax-fsq",
+        status: "Upcoming",
+        is_always_visible: false,
+        visible_from: "2026-12-07"
+    },
+    {
+        id: "rev-m3-04",
+        batch_id: "wi26",
+        domain: "All",
+        review_date: "2026-12-16T19:00:00+05:30",
+        topic: "Milestone 3 Security Hardening & Integration Audit",
+        assigned_mentor: "Lead Technical Mentors",
+        meeting_link: "https://meet.google.com/gim-dtax-fsq",
+        status: "Upcoming",
+        is_always_visible: false,
+        visible_from: "2026-12-14"
+    },
+    {
+        id: "rev-m4-05",
+        batch_id: "wi26",
+        domain: "All",
+        review_date: "2026-12-23T19:00:00+05:30",
+        topic: "Milestone 4 Final Capstone Review & Presentation",
+        assigned_mentor: "Senior Engineering Directorate",
+        meeting_link: "https://meet.google.com/gim-dtax-fsq",
+        status: "Upcoming",
+        is_always_visible: false,
+        visible_from: "2026-12-21"
     }
 ];
 
@@ -206,6 +267,154 @@ const DEFAULT_RESOURCES: LearningResource[] = [
         created_at: "2026-11-02T10:00:00Z"
     }
 ];
+
+const DOMAIN_QUIZZES: Record<string, DomainQuiz[]> = {
+    "Full Stack Development": [
+        {
+            id: "fsd-quiz-01",
+            week: 1,
+            domain: "Full Stack Development",
+            title: "Week 1 Assessment: TypeScript & Next.js App Router Architecture",
+            description: "Assess your foundational knowledge of React 19 Server Components, App Router lifecycle, and TypeScript strict typings.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "q1",
+                    question: "In Next.js App Router, which directive marks a file as a Client Component?",
+                    options: ["use client", "use server", "client side", "enable client"],
+                    correctIndex: 0,
+                    explanation: "Placing 'use client' at the top of a file declares the component and its imports as client-side code."
+                },
+                {
+                    id: "q2",
+                    question: "Which hook should be used to read query parameters in Next.js App Router Client Components?",
+                    options: ["useRouter()", "useSearchParams()", "useParams()", "useQuery()"],
+                    correctIndex: 1,
+                    explanation: "useSearchParams() from next/navigation returns read-only URL query parameters."
+                },
+                {
+                    id: "q3",
+                    question: "What is the primary benefit of React Server Components (RSC)?",
+                    options: [
+                        "Reduces client JavaScript bundle size by rendering on the server",
+                        "Enables local browser state to persist across tabs",
+                        "Replaces the need for CSS preprocessors",
+                        "Automatically compiles to WebAssembly"
+                    ],
+                    correctIndex: 0,
+                    explanation: "RSCs execute entirely on the server and transmit rendered JSX to the client without adding heavy dependencies to the bundle."
+                },
+                {
+                    id: "q4",
+                    question: "What does the SQL command 'ON CONFLICT DO UPDATE' accomplish in PostgreSQL (Supabase)?",
+                    options: [
+                        "Deletes conflicting rows",
+                        "Performs an idempotent upsert (update if exists, insert if not)",
+                        "Rolls back the entire transaction",
+                        "Locks the table against concurrent writes"
+                    ],
+                    correctIndex: 1,
+                    explanation: "ON CONFLICT DO UPDATE performs an atomic upsert operation when a unique or primary key constraint conflict arises."
+                }
+            ]
+        },
+        {
+            id: "fsd-quiz-02",
+            week: 2,
+            domain: "Full Stack Development",
+            title: "Week 2 Assessment: REST APIs, Supabase Auth & Row Level Security",
+            description: "Test your understanding of token authentication, PostgreSQL RLS policies, and relational database constraints.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "q5",
+                    question: "What is Row Level Security (RLS) in PostgreSQL?",
+                    options: [
+                        "A database policy engine that restricts which rows users can query or mutate",
+                        "An encryption algorithm applied to columns",
+                        "A network firewall rule for database ports",
+                        "A browser-side storage encryption system"
+                    ],
+                    correctIndex: 0,
+                    explanation: "RLS enables fine-grained access control on database tables based on the authenticated user ID (auth.uid())."
+                },
+                {
+                    id: "q6",
+                    question: "Which HTTP status code should be returned when an authentication token is missing or expired?",
+                    options: ["200 OK", "401 Unauthorized", "404 Not Found", "500 Server Error"],
+                    correctIndex: 1,
+                    explanation: "HTTP 401 Unauthorized indicates that the request lacks valid authentication credentials."
+                }
+            ]
+        }
+    ],
+    "Cybersecurity": [
+        {
+            id: "cyber-quiz-01",
+            week: 1,
+            domain: "Cybersecurity",
+            title: "Week 1 Assessment: Network Security, OWASP Top 10 & Threat Vectors",
+            description: "Evaluate your comprehension of web vulnerabilities, injection flaws, and defensive security baselines.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "cq1",
+                    question: "Which of the following is the most effective mitigation against SQL Injection?",
+                    options: [
+                        "Parameterized queries and prepared statements",
+                        "Storing passwords in base64",
+                        "Disabling JavaScript in the client",
+                        "Using HTTP instead of HTTPS"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Parameterized queries ensure the database engine treats input as data rather than executable code."
+                },
+                {
+                    id: "cq2",
+                    question: "What does the 'SameSite' cookie attribute protect against?",
+                    options: [
+                        "Cross-Site Request Forgery (CSRF)",
+                        "Distributed Denial of Service (DDoS)",
+                        "Physical server theft",
+                        "DNS Poisoning"
+                    ],
+                    correctIndex: 0,
+                    explanation: "SameSite=Lax or Strict prevents the browser from sending cookies on cross-origin requests, mitigating CSRF."
+                }
+            ]
+        }
+    ],
+    "Digital Marketing": [
+        {
+            id: "dm-quiz-01",
+            week: 1,
+            domain: "Digital Marketing",
+            title: "Week 1 Assessment: Technical SEO, GA4 & Funnel Tracking",
+            description: "Test your mastery of technical SEO, keyword research, meta schemas, and conversion tracking.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "dq1",
+                    question: "Which meta tag is essential for preventing duplicate content issues across URL variations?",
+                    options: ["rel='canonical'", "rel='nofollow'", "robots='noindex'", "meta name='keywords'"],
+                    correctIndex: 0,
+                    explanation: "A canonical link element specifies the authoritative source URL for search engines."
+                },
+                {
+                    id: "dq2",
+                    question: "In Google Analytics 4 (GA4), how are user interactions tracked?",
+                    options: ["As Events", "Only as Pageviews", "Through session cookies only", "Through server log files only"],
+                    correctIndex: 0,
+                    explanation: "GA4 is an event-based data model where every interaction is captured as a distinct event."
+                }
+            ]
+        }
+    ]
+};
 
 export const studentService = {
     /**
@@ -598,9 +807,11 @@ export const studentService = {
                     if (idx + 1 === payload.milestoneIndex) {
                         return {
                             ...m,
-                            completed: true,
+                            completed: false, // Remains under review until mentor explicitly approves
                             status: "Under Review",
-                            submissionUrl: payload.submissionUrl
+                            submissionUrl: payload.submissionUrl,
+                            notes: payload.notes || "",
+                            submittedAt: new Date().toISOString()
                         };
                     }
                     return m;
@@ -612,8 +823,7 @@ export const studentService = {
                 const updatePayload: any = {
                     milestones: updatedMilestones,
                     progress_percent: progressPercent,
-                    current_milestone: Math.min(4, payload.milestoneIndex + 1),
-                    status: progressPercent === 100 ? "Completed" : "Needs Review",
+                    status: "Needs Review",
                     updated_at: new Date().toISOString()
                 };
 
@@ -623,7 +833,6 @@ export const studentService = {
                     .eq("id", payload.projectId);
 
                 if (updateErr) {
-                    // Retry with status Completed or Needs Review
                     await supabase
                         .from("student_projects")
                         .update({ ...updatePayload, status: "Needs Review" })
@@ -636,6 +845,94 @@ export const studentService = {
             console.error("Milestone submission error:", e);
             return { success: false, error: e.message || "Failed to submit milestone" };
         }
+    },
+
+    /**
+     * Mentor/Admin explicitly approves a milestone (Unlocks next milestone)
+     */
+    async approveMilestone(payload: {
+        projectId: string;
+        applicationId: string;
+        milestoneIndex: number;
+        feedback?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        if (!isSupabaseConfigured) return { success: true };
+        try {
+            const { data: project } = await supabase
+                .from("student_projects")
+                .select("milestones, progress_percent")
+                .eq("id", payload.projectId)
+                .single();
+
+            if (project) {
+                const milestones = project.milestones || [];
+                const updatedMilestones = milestones.map((m: any, idx: number) => {
+                    if (idx + 1 === payload.milestoneIndex) {
+                        return {
+                            ...m,
+                            completed: true,
+                            status: "Approved",
+                            feedback: payload.feedback || "Approved by Technical Mentor",
+                            approvedAt: new Date().toISOString()
+                        };
+                    }
+                    return m;
+                });
+
+                const completedCount = updatedMilestones.filter((m: any) => m.completed).length;
+                const progressPercent = Math.min(100, Math.round((completedCount / updatedMilestones.length) * 100));
+                const nextMilestone = Math.min(4, payload.milestoneIndex + 1);
+
+                await supabase
+                    .from("student_projects")
+                    .update({
+                        milestones: updatedMilestones,
+                        progress_percent: progressPercent,
+                        current_milestone: nextMilestone,
+                        status: progressPercent === 100 ? "Completed" : "In Development",
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("id", payload.projectId);
+            }
+            return { success: true };
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
+    },
+
+    /**
+     * Update candidate profile picture
+     */
+    async updateProfilePicture(appId: string, photoUrl: string): Promise<boolean> {
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_active_student");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    parsed.profile_picture_url = photoUrl;
+                    localStorage.setItem("vx_active_student", JSON.stringify(parsed));
+                }
+            } catch (ignore) {}
+        }
+
+        if (isSupabaseConfigured) {
+            try {
+                await supabase
+                    .from("internship_applications")
+                    .update({ profile_picture_url: photoUrl, updated_at: new Date().toISOString() })
+                    .eq("application_id", appId);
+            } catch (err) {
+                console.warn("Supabase profile photo update:", err);
+            }
+        }
+        return true;
+    },
+
+    /**
+     * Quizzes for the domain
+     */
+    getDomainQuizzes(domain: string): DomainQuiz[] {
+        return DOMAIN_QUIZZES[domain] || DOMAIN_QUIZZES["Full Stack Development"];
     },
 
     /**

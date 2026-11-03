@@ -24,8 +24,16 @@ export const Sidebar = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
+            if (typeof window !== "undefined") {
+                sessionStorage.clear();
+                localStorage.removeItem("admin_token");
+                window.location.replace("/login");
+            }
         } catch (error) {
             console.error("Logout error", error);
+            if (typeof window !== "undefined") {
+                window.location.replace("/login");
+            }
         }
     };
 

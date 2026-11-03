@@ -111,10 +111,46 @@ export const allocationService = {
             }
 
             const standardMilestones = [
-                { title: "Milestone 1: Project Proposal & Architecture Design", completed: false, status: "Pending" },
-                { title: "Milestone 2: Core Engineering & Implementation", completed: false, status: "Pending" },
-                { title: "Milestone 3: Integration, Testing & Optimization", completed: false, status: "Pending" },
-                { title: "Milestone 4: Final Deployment & Documentation", completed: false, status: "Pending" }
+                {
+                    index: 1,
+                    title: "Milestone 1: Architectural Blueprint, Schema & Foundation Setup",
+                    completed: false,
+                    status: "In Progress",
+                    startDate: "2026-11-26",
+                    endDate: "2026-12-02",
+                    reviewDate: "2026-12-02",
+                    submissionOpenDate: "2026-12-02"
+                },
+                {
+                    index: 2,
+                    title: "Milestone 2: Core Engineering, Business Logic & API Development",
+                    completed: false,
+                    status: "Locked",
+                    startDate: "2026-12-03",
+                    endDate: "2026-12-09",
+                    reviewDate: "2026-12-09",
+                    submissionOpenDate: "2026-12-09"
+                },
+                {
+                    index: 3,
+                    title: "Milestone 3: Advanced Integration, Automated Testing & Security Hardening",
+                    completed: false,
+                    status: "Locked",
+                    startDate: "2026-12-10",
+                    endDate: "2026-12-16",
+                    reviewDate: "2026-12-16",
+                    submissionOpenDate: "2026-12-16"
+                },
+                {
+                    index: 4,
+                    title: "Milestone 4: Cloud Deployment, Comprehensive Documentation & Final Presentation",
+                    completed: false,
+                    status: "Locked",
+                    startDate: "2026-12-17",
+                    endDate: "2026-12-23",
+                    reviewDate: "2026-12-23",
+                    submissionOpenDate: "2026-12-23"
+                }
             ];
 
             const batchId = payload.batchId || "wi26";

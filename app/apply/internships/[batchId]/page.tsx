@@ -976,12 +976,69 @@ export default function InternshipApplyPage() {
                                 </p>
                             </div>
 
-                            {/* Selectable Pricing Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* PACKAGE 1: STANDARD */}
+                            {/* Selectable Pricing Cards - 3 Tiered Options */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                {/* PACKAGE 1: 100% FREE */}
+                                <div
+                                    onClick={() => setFormData({ ...formData, packageName: "Free" })}
+                                    className={`relative rounded-2xl p-5 border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                        formData.packageName === "Free"
+                                            ? "border-emerald-600 bg-emerald-50/20 shadow-lg ring-2 ring-emerald-500/20"
+                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                    }`}
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                                                100% Free Internship
+                                            </span>
+                                            <input
+                                                type="radio"
+                                                name="package"
+                                                checked={formData.packageName === "Free"}
+                                                onChange={() => setFormData({ ...formData, packageName: "Free" })}
+                                                className="text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                                            />
+                                        </div>
+                                        <div className="mt-3 flex items-baseline gap-1">
+                                            <span className="text-3xl font-extrabold text-slate-900">₹0</span>
+                                            <span className="text-xs text-slate-500 font-medium">/ 100% Free</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                            Learn, build and gain practical project experience with full mentor support.
+                                        </p>
+
+                                        <div className="mt-3 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800">
+                                            No Certificate Included
+                                        </div>
+
+                                        <ul className="mt-4 space-y-2 text-xs text-slate-700 border-t border-slate-100 pt-3">
+                                            {PACKAGES_CONFIG.Free.features.map((item, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <CheckCircle2 className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 ${item.includes("No") ? "text-slate-400" : "text-emerald-500"}`} />
+                                                    <span className={item.includes("No") ? "text-slate-500 italic" : ""}>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="mt-5 pt-3 border-t border-slate-100">
+                                        <span
+                                            className={`block text-center py-2 rounded-xl text-xs font-semibold ${
+                                                formData.packageName === "Free"
+                                                    ? "bg-emerald-600 text-white"
+                                                    : "bg-slate-100 text-slate-700"
+                                            }`}
+                                        >
+                                            {formData.packageName === "Free" ? "Selected Free" : "Select Free (₹0)"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* PACKAGE 2: STANDARD */}
                                 <div
                                     onClick={() => setFormData({ ...formData, packageName: "Standard" })}
-                                    className={`relative rounded-2xl p-6 border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                    className={`relative rounded-2xl p-5 border-2 transition-all cursor-pointer flex flex-col justify-between ${
                                         formData.packageName === "Standard"
                                             ? "border-indigo-600 bg-indigo-50/20 shadow-lg ring-2 ring-indigo-500/20"
                                             : "border-slate-200 bg-white hover:border-slate-300"
@@ -990,7 +1047,7 @@ export default function InternshipApplyPage() {
                                     <div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                                Standard Package
+                                                Standard Certificate
                                             </span>
                                             <input
                                                 type="radio"
@@ -1002,23 +1059,23 @@ export default function InternshipApplyPage() {
                                         </div>
                                         <div className="mt-3 flex items-baseline gap-1">
                                             <span className="text-3xl font-extrabold text-slate-900">₹749</span>
-                                            <span className="text-xs text-slate-500 font-medium">/ complete internship</span>
+                                            <span className="text-xs text-slate-500 font-medium">/ complete cohort</span>
                                         </div>
                                         <p className="text-xs text-slate-500 mt-2">
-                                            Comprehensive program access, hands-on tasks, and verified certification.
+                                            Comprehensive program access, hands-on tasks, and verified industry certificate.
                                         </p>
 
-                                        <ul className="mt-5 space-y-2.5 text-xs text-slate-700 border-t border-slate-100 pt-4">
+                                        <ul className="mt-4 space-y-2 text-xs text-slate-700 border-t border-slate-100 pt-3">
                                             {PACKAGES_CONFIG.Standard.features.map((item, idx) => (
                                                 <li key={idx} className="flex items-start gap-2">
-                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
                                                     <span>{item}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
 
-                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                    <div className="mt-5 pt-3 border-t border-slate-100">
                                         <span
                                             className={`block text-center py-2 rounded-xl text-xs font-semibold ${
                                                 formData.packageName === "Standard"
@@ -1026,22 +1083,22 @@ export default function InternshipApplyPage() {
                                                     : "bg-slate-100 text-slate-700"
                                             }`}
                                         >
-                                            {formData.packageName === "Standard" ? "Selected Package" : "Select Standard"}
+                                            {formData.packageName === "Standard" ? "Selected Package" : "Select Standard (₹749)"}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* PACKAGE 2: PREMIUM (MOST POPULAR) */}
+                                {/* PACKAGE 3: PREMIUM (MOST POPULAR) */}
                                 <div
                                     onClick={() => setFormData({ ...formData, packageName: "Premium" })}
-                                    className={`relative rounded-2xl p-6 border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                    className={`relative rounded-2xl p-5 border-2 transition-all cursor-pointer flex flex-col justify-between ${
                                         formData.packageName === "Premium"
                                             ? "border-indigo-600 bg-indigo-50/30 shadow-xl ring-2 ring-indigo-500/20"
                                             : "border-slate-200 bg-white hover:border-slate-300"
                                     }`}
                                 >
                                     {/* Most Popular Badge */}
-                                    <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold tracking-wider uppercase shadow-md flex items-center gap-1">
+                                    <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-extrabold tracking-wider uppercase shadow-md flex items-center gap-1">
                                         <Sparkles className="h-3 w-3" />
                                         Most Popular
                                     </div>
@@ -1049,7 +1106,7 @@ export default function InternshipApplyPage() {
                                     <div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
-                                                Premium Package
+                                                Premium + Kit
                                             </span>
                                             <input
                                                 type="radio"
@@ -1061,23 +1118,23 @@ export default function InternshipApplyPage() {
                                         </div>
                                         <div className="mt-3 flex items-baseline gap-1">
                                             <span className="text-3xl font-extrabold text-slate-900">₹999</span>
-                                            <span className="text-xs text-slate-500 font-medium">/ complete internship</span>
+                                            <span className="text-xs text-slate-500 font-medium">/ complete cohort</span>
                                         </div>
                                         <p className="text-xs text-slate-500 mt-2">
-                                            Includes full curriculum access plus the physical Vectonix branded welcome kit delivered to your doorstep.
+                                            Full curriculum + digital certificate + physical framed certificate & welcome kit delivered.
                                         </p>
 
-                                        <ul className="mt-5 space-y-2.5 text-xs text-slate-700 border-t border-slate-100 pt-4">
+                                        <ul className="mt-4 space-y-2 text-xs text-slate-700 border-t border-slate-100 pt-3">
                                             {PACKAGES_CONFIG.Premium.features.map((item, idx) => (
                                                 <li key={idx} className="flex items-start gap-2">
-                                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
                                                     <span className={idx === 0 ? "font-semibold text-slate-900" : ""}>{item}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
 
-                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                    <div className="mt-5 pt-3 border-t border-slate-100">
                                         <span
                                             className={`block text-center py-2 rounded-xl text-xs font-semibold ${
                                                 formData.packageName === "Premium"
@@ -1085,7 +1142,7 @@ export default function InternshipApplyPage() {
                                                     : "bg-slate-100 text-slate-700"
                                             }`}
                                         >
-                                            {formData.packageName === "Premium" ? "Selected Package" : "Select Premium"}
+                                            {formData.packageName === "Premium" ? "Selected Package" : "Select Premium (₹999)"}
                                         </span>
                                     </div>
                                 </div>

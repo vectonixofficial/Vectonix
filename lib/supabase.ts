@@ -86,7 +86,7 @@ export interface DatabaseInternshipBatch {
 }
 
 export type InternshipApplicationStatus = "pending" | "under_review" | "accepted" | "rejected" | "waitlisted";
-export type InternshipPackageType = "Standard" | "Premium";
+export type InternshipPackageType = "Free" | "Standard" | "Premium";
 export type GenderType = "Male" | "Female" | "Other" | "Prefer not to say";
 
 export interface DatabaseInternshipApplication {
@@ -123,6 +123,7 @@ export interface DatabaseInternshipApplication {
     linkedin_url?: string | null;
     github_url?: string | null;
     portfolio_url?: string | null;
+    profile_picture_url?: string | null;
     // Address fields
     house_number: string;
     street_name: string;

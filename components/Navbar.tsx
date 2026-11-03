@@ -33,8 +33,17 @@ const Navbar = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("vx_active_student");
+                localStorage.removeItem("vx_active_student_token");
+                sessionStorage.clear();
+                window.location.replace(isAdminRoute ? "/login" : "/internship/login");
+            }
         } catch (error) {
             console.error("Logout error", error);
+            if (typeof window !== "undefined") {
+                window.location.replace("/login");
+            }
         }
     };
 
