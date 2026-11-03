@@ -36,13 +36,14 @@ import {
     Layers,
     CheckSquare,
     Bell,
-    Plus
+    Plus,
+    Send
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/context/AuthContext";
 import { internshipService, INTERNSHIP_DOMAINS, PACKAGES_CONFIG } from "@/lib/services/internshipService";
-import { studentService, StudentAnnouncement } from "@/lib/services/studentService";
+import { studentService, StudentAnnouncement, SupportTicket } from "@/lib/services/studentService";
 import {
     DatabaseInternshipBatch,
     DatabaseInternshipApplication,
@@ -63,7 +64,14 @@ export default function AdminInternshipsBatchPage() {
     // Applications & Analytics
     const [applications, setApplications] = useState<DatabaseInternshipApplication[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports" | "announcements">("applications");
+    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports" | "announcements" | "support">("applications");
+
+    // Support Tickets & Mentor Queries State
+    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+    const [supportFilter, setSupportFilter] = useState<"all" | "open" | "resolved">("all");
+    const [supportSearch, setSupportSearch] = useState("");
+    const [ticketReplies, setTicketReplies] = useState<Record<string, string>>({});
+    const [replyingTicketId, setReplyingTicketId] = useState<string | null>(null);
 
     // Filter & Search
     const [searchTerm, setSearchTerm] = useState("");
@@ -126,6 +134,9 @@ export default function AdminInternshipsBatchPage() {
 
             const anns = await studentService.getAnnouncements(batchId);
             setAnnouncementsList(anns);
+
+            const tickets = await studentService.getAllSupportTickets();
+            setSupportTickets(tickets);
         } catch (error) {
             console.error("Error loading internship admin data:", error);
         } finally {
@@ -269,6 +280,30 @@ export default function AdminInternshipsBatchPage() {
         setAnnouncementsList((prev) => prev.filter((a) => a.id !== id));
     };
 
+    const handleSendTicketReply = async (ticketId: string) => {
+        const text = ticketReplies[ticketId]?.trim();
+        if (!text) {
+            alert("Please type a mentor reply message before sending.");
+            return;
+        }
+        setReplyingTicketId(ticketId);
+        try {
+            const res = await studentService.replySupportTicket(ticketId, text);
+            if (res.success) {
+                alert("Mentor reply sent successfully to the student!");
+                setTicketReplies((prev) => ({ ...prev, [ticketId]: "" }));
+                const refreshed = await studentService.getAllSupportTickets();
+                setSupportTickets(refreshed);
+            } else {
+                alert("Failed to send reply: " + res.error);
+            }
+        } catch (err: any) {
+            alert("Error sending reply: " + err.message);
+        } finally {
+            setReplyingTicketId(null);
+        }
+    };
+
     // Export to Excel with all address & package fields
     const handleExportExcel = (exportType: "all" | "standard" | "premium" | "accepted") => {
         let exportData = applications;
@@ -335,6 +370,24 @@ export default function AdminInternshipsBatchPage() {
             (app.city && app.city.toLowerCase().includes(s));
 
         return matchesDomain && matchesPackage && matchesStatus && matchesSearch;
+    });
+
+    // Filter support tickets
+    const filteredSupportTickets = supportTickets.filter((ticket) => {
+        const isResolved = ticket.status === "Resolved" || ticket.status === "Answered" || !!(ticket.admin_response || ticket.reply);
+        if (supportFilter === "open" && isResolved) return false;
+        if (supportFilter === "resolved" && !isResolved) return false;
+
+        if (supportSearch.trim()) {
+            const query = supportSearch.toLowerCase();
+            const matchName = (ticket.student_name || "").toLowerCase().includes(query);
+            const matchEmail = (ticket.student_email || "").toLowerCase().includes(query);
+            const matchId = (ticket.application_id || "").toLowerCase().includes(query);
+            const matchSub = (ticket.subject || "").toLowerCase().includes(query);
+            const matchMsg = (ticket.message || "").toLowerCase().includes(query);
+            return matchName || matchEmail || matchId || matchSub || matchMsg;
+        }
+        return true;
     });
 
     return (
@@ -501,6 +554,7 @@ export default function AdminInternshipsBatchPage() {
                 <div className="flex items-center gap-2">
                     {[
                         { id: "applications", label: "Manage Applications", icon: Users, badge: applications.length },
+                        { id: "support", label: "Mentor Support & Queries", icon: MessageCircle, badge: supportTickets.filter((t) => t.status === "Open").length },
                         { id: "announcements", label: "Cohort Announcements", icon: Bell, badge: announcementsList.length },
                         { id: "analytics", label: "Cohort Analytics", icon: TrendingUp },
                         { id: "reports", label: "Export Reports", icon: FileSpreadsheet },
@@ -1039,6 +1093,176 @@ export default function AdminInternshipsBatchPage() {
                                         </Button>
                                     </div>
                                 ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB 5: MENTOR SUPPORT & QUERIES */}
+            {activeTab === "support" && (
+                <div className="space-y-4">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                                    <MessageCircle className="h-5 w-5 text-indigo-600" />
+                                    Mentor Technical Support Desk
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Review and answer technical doubts, blockers, and questions submitted by students across all domains.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                    {supportTickets.filter((t) => t.status === "Open").length} Awaiting Reply
+                                </span>
+                                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    {supportTickets.filter((t) => t.status === "Resolved" || t.status === "Answered" || !!(t.admin_response || t.reply)).length} Resolved
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Search & Filter Bar */}
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="relative flex-1 w-full">
+                                <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by student name, email, application ID, or subject..."
+                                    value={supportSearch}
+                                    onChange={(e) => setSupportSearch(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs w-full sm:w-auto">
+                                <button
+                                    onClick={() => setSupportFilter("all")}
+                                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                                        supportFilter === "all" ? "bg-white text-indigo-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                                >
+                                    All ({supportTickets.length})
+                                </button>
+                                <button
+                                    onClick={() => setSupportFilter("open")}
+                                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                                        supportFilter === "open" ? "bg-white text-indigo-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                                >
+                                    Open ({supportTickets.filter((t) => t.status === "Open").length})
+                                </button>
+                                <button
+                                    onClick={() => setSupportFilter("resolved")}
+                                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                                        supportFilter === "resolved" ? "bg-white text-indigo-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                                >
+                                    Resolved ({supportTickets.filter((t) => t.status === "Resolved" || t.status === "Answered" || !!(t.admin_response || t.reply)).length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Ticket Cards */}
+                        <div className="space-y-4 pt-2">
+                            {filteredSupportTickets.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400 text-xs bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                    No support queries match the current filter.
+                                </div>
+                            ) : (
+                                filteredSupportTickets.map((ticket) => {
+                                    const isResolved = ticket.status === "Resolved" || ticket.status === "Answered" || !!(ticket.admin_response || ticket.reply);
+                                    const replyContent = ticket.admin_response || ticket.reply;
+
+                                    return (
+                                        <div
+                                            key={ticket.id}
+                                            className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3"
+                                        >
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                                <div className="space-y-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded">
+                                                            {ticket.application_id}
+                                                        </span>
+                                                        <span className="font-bold text-slate-900 text-sm">
+                                                            {ticket.student_name}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">
+                                                            ({ticket.student_email})
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-400">
+                                                        Category: <strong className="text-slate-600">{ticket.category || "Technical Support"}</strong> • Received: {new Date(ticket.created_at).toLocaleString()}
+                                                    </div>
+                                                </div>
+
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase self-start sm:self-auto ${
+                                                    isResolved
+                                                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                                        : "bg-amber-50 text-amber-800 border border-amber-200"
+                                                }`}>
+                                                    {isResolved ? "Resolved" : "Open • Needs Reply"}
+                                                </span>
+                                            </div>
+
+                                            {/* Query Subject and Message */}
+                                            <div className="space-y-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                                <h4 className="font-bold text-slate-900 text-xs">
+                                                    Subject: {ticket.subject}
+                                                </h4>
+                                                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                    {ticket.message}
+                                                </p>
+                                            </div>
+
+                                            {/* Mentor Existing Response */}
+                                            {replyContent && (
+                                                <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-100 text-xs space-y-1">
+                                                    <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                        <span>Current Mentor Reply:</span>
+                                                    </div>
+                                                    <p className="text-emerald-950 leading-relaxed pl-5 whitespace-pre-wrap">
+                                                        {replyContent}
+                                                    </p>
+                                                    {ticket.resolved_at && (
+                                                        <span className="text-[10px] text-emerald-700 pl-5 block">
+                                                            Resolved on {new Date(ticket.resolved_at).toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Reply Input Box */}
+                                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                                                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                                                    {replyContent ? "Update Mentor Response" : "Write Mentor Response"}
+                                                </label>
+                                                <textarea
+                                                    rows={3}
+                                                    placeholder="Type technical advice, guidance, code suggestions, or meet link for student..."
+                                                    value={ticketReplies[ticket.id] !== undefined ? ticketReplies[ticket.id] : (replyContent || "")}
+                                                    onChange={(e) => setTicketReplies({ ...ticketReplies, [ticket.id]: e.target.value })}
+                                                    className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                                />
+                                                <div className="flex justify-end">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleSendTicketReply(ticket.id)}
+                                                        disabled={replyingTicketId === ticket.id}
+                                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5"
+                                                    >
+                                                        <Send className="h-3.5 w-3.5" />
+                                                        <span>{replyingTicketId === ticket.id ? "Sending..." : "Send Mentor Reply"}</span>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

@@ -56,10 +56,10 @@ const MILESTONES_SCHEDULE = [
         index: 1,
         title: "Milestone 1: Architectural Blueprint, Schema & Foundation Setup",
         shortTitle: "Milestone 1 Submission",
-        startDate: "2026-11-26",
+        startDate: "2026-11-25",
         endDate: "2026-12-02",
         reviewDate: "2026-12-02",
-        submissionOpenDate: "2026-12-02",
+        submissionOpenDate: "2026-11-25",
         scope: "System architecture diagrams, database schema entity-relationships, API specifications, and repository initialization.",
         deliverables: "Design proposal document, Figma wireframes, or architecture rubric link."
     },
@@ -153,11 +153,11 @@ function StudentDashboardContent() {
 
     // Quizzes & Assessments State
     const [quizzes, setQuizzes] = useState<DomainQuiz[]>([]);
+    const [quizResults, setQuizResults] = useState<Record<string, any>>({});
     const [activeQuiz, setActiveQuiz] = useState<DomainQuiz | null>(null);
     const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
     const [quizSubmitted, setQuizSubmitted] = useState(false);
     const [quizScore, setQuizScore] = useState(0);
-    const [assignmentsSubTab, setAssignmentsSubTab] = useState<"deliverables" | "quizzes">("deliverables");
 
     useEffect(() => {
         const initDashboard = async () => {
@@ -209,6 +209,7 @@ function StudentDashboardContent() {
                 setResources(resList);
                 setSupportTickets(tickList);
                 setQuizzes(studentService.getDomainQuizzes(domain));
+                setQuizResults(studentService.getQuizResults(appId));
             } catch (err) {
                 console.error("Dashboard data load error:", err);
             } finally {
@@ -264,16 +265,48 @@ function StudentDashboardContent() {
         setQuizAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
     };
 
+    const handleOpenQuiz = (quiz: DomainQuiz) => {
+        setActiveQuiz(quiz);
+        const existing = quizResults[quiz.id];
+        if (existing) {
+            setQuizAnswers(existing.answers || {});
+            setQuizScore(existing.score || 0);
+            setQuizSubmitted(true);
+        } else {
+            setQuizAnswers({});
+            setQuizScore(0);
+            setQuizSubmitted(false);
+        }
+    };
+
     const handleSubmitQuiz = () => {
-        if (!activeQuiz) return;
+        if (!activeQuiz || !student) return;
         let score = 0;
         activeQuiz.questions.forEach((q) => {
             if (quizAnswers[q.id] === q.correctIndex) {
                 score += activeQuiz.totalMarks / activeQuiz.questions.length;
             }
         });
-        setQuizScore(Math.round(score));
+        const roundedScore = Math.round(score);
+        setQuizScore(roundedScore);
         setQuizSubmitted(true);
+
+        const appId = student.application_id || student.application_number || "";
+        studentService.saveQuizResult(appId, activeQuiz.id, {
+            score: roundedScore,
+            totalMarks: activeQuiz.totalMarks,
+            answers: quizAnswers
+        });
+
+        setQuizResults((prev) => ({
+            ...prev,
+            [activeQuiz.id]: {
+                score: roundedScore,
+                totalMarks: activeQuiz.totalMarks,
+                answers: quizAnswers,
+                completedAt: new Date().toISOString()
+            }
+        }));
     };
 
     const handleSubmitAssignment = async (e: React.FormEvent) => {
@@ -406,8 +439,8 @@ function StudentDashboardContent() {
 
     if (!student) return null;
 
-    const completedAssignmentsCount = assignments.filter((a) => a.submission && (a.submission.status === "Completed" || a.submission.status === "Submitted")).length;
-    const progressPercent = assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0;
+    const completedQuizzesCount = quizzes.filter((q) => !!quizResults[q.id]).length;
+    const progressPercent = quizzes.length > 0 ? Math.round((completedQuizzesCount / quizzes.length) * 100) : 0;
 
     const isApproved = student.status === "accepted";
     const isRejected = student.status === "rejected";
@@ -469,7 +502,7 @@ function StudentDashboardContent() {
                     {[
                         { id: "overview", label: "Overview", icon: LayoutDashboard },
                         { id: "announcements", label: "Announcements", icon: Bell, badge: announcements.length },
-                        { id: "assignments", label: "Assignments", icon: CheckSquare, badge: assignments.length, locked: !isApproved },
+                        { id: "assignments", label: "Quizzes & Assessments", icon: CheckSquare, badge: quizzes.length, locked: !isApproved },
                         { id: "project", label: "Project Workspace", icon: FolderGit2, locked: !isApproved },
                         { id: "reviews", label: "Weekly Reviews", icon: Calendar, badge: reviews.length, locked: !isApproved },
                         { id: "resources", label: "Learning Resources", icon: BookOpen },
@@ -626,7 +659,7 @@ function StudentDashboardContent() {
                                     <div className="flex items-baseline justify-between mb-2">
                                         <span className="text-2xl font-extrabold text-slate-900">{progressPercent}%</span>
                                         <span className="text-xs text-slate-500">
-                                            {completedAssignmentsCount} of {assignments.length} completed
+                                            {completedQuizzesCount} of {quizzes.length} completed
                                         </span>
                                     </div>
                                     <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -767,174 +800,87 @@ function StudentDashboardContent() {
                                 <div className="space-y-6">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                         <div>
-                                            <h2 className="text-xl font-bold text-slate-900">Assignments & Assessments</h2>
+                                            <h2 className="text-xl font-bold text-slate-900">Weekly Quizzes & Assessments</h2>
                                             <p className="text-xs text-slate-500">
-                                                Independent domain tasks and knowledge quizzes separated from your capstone project workspace.
+                                                Technical knowledge assessments for {student.domain}. Complete all 4 weekly quizzes to demonstrate curriculum mastery.
                                             </p>
                                         </div>
 
-                                        {/* Sub-tab switcher */}
-                                        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
-                                            <button
-                                                onClick={() => setAssignmentsSubTab("deliverables")}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                                    assignmentsSubTab === "deliverables"
-                                                        ? "bg-white text-indigo-700 shadow-xs"
-                                                        : "text-slate-600 hover:text-slate-900"
-                                                }`}
-                                            >
-                                                Practical Deliverables ({assignments.length})
-                                            </button>
-                                            <button
-                                                onClick={() => setAssignmentsSubTab("quizzes")}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                                    assignmentsSubTab === "quizzes"
-                                                        ? "bg-white text-indigo-700 shadow-xs"
-                                                        : "text-slate-600 hover:text-slate-900"
-                                                }`}
-                                            >
-                                                Domain Quizzes ({quizzes.length})
-                                            </button>
+                                        <div className="px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1.5 w-fit">
+                                            <BookOpen className="h-3.5 w-3.5" />
+                                            <span>{completedQuizzesCount} / {quizzes.length} Completed</span>
                                         </div>
                                     </div>
 
-                                    {/* SUB-TAB 1: PRACTICAL TASKS */}
-                                    {assignmentsSubTab === "deliverables" && (
-                                        <div className="space-y-4">
-                                            {assignments.map((asg) => {
-                                                const submission = asg.submission;
-                                                const isCompleted = submission && (submission.status === "Completed" || submission.status === "Submitted");
+                                    {/* Quizzes List */}
+                                    <div className="space-y-4">
+                                        {quizzes.map((quiz) => {
+                                            const result = quizResults[quiz.id];
+                                            const isDone = !!result;
 
-                                                return (
-                                                    <div
-                                                        key={asg.id}
-                                                        className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3"
-                                                    >
-                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                                                            <div>
-                                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600 mr-2">
-                                                                    {asg.difficulty}
-                                                                </span>
-                                                                <span className="text-xs text-slate-400">
-                                                                    Max Marks: <strong>{asg.max_marks}</strong>
-                                                                </span>
-                                                                <h3 className="font-bold text-slate-900 text-base mt-1">{asg.title}</h3>
-                                                            </div>
-
-                                                            <div>
-                                                                <span
-                                                                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                                        isCompleted
-                                                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                                            : "bg-amber-50 text-amber-800 border border-amber-200"
-                                                                    }`}
-                                                                >
-                                                                    {submission ? submission.status : "Pending Submission"}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        <p className="text-xs text-slate-600 leading-relaxed">{asg.description}</p>
-                                                        {asg.instructions && (
-                                                            <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-700">
-                                                                <strong>Instructions:</strong> {asg.instructions}
-                                                            </div>
-                                                        )}
-
-                                                        {/* Submission Details if submitted */}
-                                                        {submission && (
-                                                            <div className="p-3 rounded-xl border border-indigo-100 bg-indigo-50/30 text-xs space-y-1">
-                                                                <span className="font-bold text-indigo-900 block">Your Submission:</span>
-                                                                {submission.github_url && (
-                                                                    <p>
-                                                                        GitHub: <a href={submission.github_url} target="_blank" className="text-indigo-600 underline">{submission.github_url}</a>
-                                                                    </p>
-                                                                )}
-                                                                {submission.project_url && (
-                                                                    <p>
-                                                                        Hosted Demo: <a href={submission.project_url} target="_blank" className="text-indigo-600 underline">{submission.project_url}</a>
-                                                                    </p>
-                                                                )}
-                                                                {submission.mentor_feedback && (
-                                                                    <p className="pt-1 text-slate-800">
-                                                                        <strong>Mentor Feedback:</strong> {submission.mentor_feedback}
-                                                                    </p>
-                                                                )}
-                                                                {submission.marks !== undefined && (
-                                                                    <p className="font-bold text-emerald-700">
-                                                                        Score: {submission.marks} / {asg.max_marks}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        <div className="flex items-center justify-between pt-2">
-                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                                                <Clock className="h-3.5 w-3.5 text-amber-600" />
-                                                                <span>Deadline: {asg.deadline ? new Date(asg.deadline).toLocaleDateString() : "Dec 05, 2026"}</span>
-                                                            </div>
-
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setSelectedAssignment(asg);
-                                                                    setSubmissionForm({
-                                                                        description: submission?.description || "",
-                                                                        githubUrl: submission?.github_url || "",
-                                                                        projectUrl: submission?.project_url || ""
-                                                                    });
-                                                                }}
-                                                                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-                                                            >
-                                                                {submission ? "Update Submission" : "Submit Work"}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* SUB-TAB 2: DOMAIN KNOWLEDGE QUIZZES */}
-                                    {assignmentsSubTab === "quizzes" && (
-                                        <div className="space-y-4">
-                                            {quizzes.map((quiz) => (
+                                            return (
                                                 <div
                                                     key={quiz.id}
                                                     className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3"
                                                 >
                                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                                         <div>
-                                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 mr-2">
-                                                                Week {quiz.week} Quiz
-                                                            </span>
-                                                            <span className="text-xs text-slate-400">
-                                                                {quiz.durationMinutes} Minutes • Total Marks: {quiz.totalMarks}
-                                                            </span>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                                    Week {quiz.week} Assessment
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600">
+                                                                    {quiz.domain}
+                                                                </span>
+                                                            </div>
                                                             <h3 className="font-bold text-slate-900 text-base mt-1">{quiz.title}</h3>
+                                                            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                                                                <span>Duration: <strong>{quiz.durationMinutes} mins</strong></span>
+                                                                <span>•</span>
+                                                                <span>Total: <strong>{quiz.totalMarks} Marks</strong></span>
+                                                                <span>•</span>
+                                                                <span>Questions: <strong>{quiz.questions.length} MCQs</strong></span>
+                                                            </div>
                                                         </div>
 
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setActiveQuiz(quiz);
-                                                                setQuizAnswers({});
-                                                                setQuizSubmitted(false);
-                                                                setQuizScore(0);
-                                                            }}
-                                                            className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white self-start sm:self-auto"
-                                                        >
-                                                            Take Assessment
-                                                        </Button>
+                                                        <div className="flex items-center gap-2">
+                                                            {isDone ? (
+                                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                    Score: {result.score} / {quiz.totalMarks} ({Math.round((result.score / quiz.totalMarks) * 100)}%)
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                                                    <Clock className="h-3.5 w-3.5" />
+                                                                    Pending Assessment
+                                                                </span>
+                                                            )}
+
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleOpenQuiz(quiz)}
+                                                                className={`text-xs ${
+                                                                    isDone
+                                                                        ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                                                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                                }`}
+                                                            >
+                                                                {isDone ? "Review Answers" : "Start Assessment"}
+                                                            </Button>
+                                                        </div>
                                                     </div>
-                                                    <p className="text-xs text-slate-600">{quiz.description}</p>
-                                                    <div className="text-[11px] text-slate-400">
-                                                        Questions: <strong>{quiz.questions.length} MCQs</strong> • Pass Criteria: 70%
+
+                                                    <p className="text-xs text-slate-600 leading-relaxed">{quiz.description}</p>
+                                                    <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                                                        <span>Passing benchmark: <strong>70%</strong></span>
+                                                        {isDone && result.completedAt && (
+                                                            <span>• Submitted on {new Date(result.completedAt).toLocaleDateString()}</span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1460,7 +1406,10 @@ function StudentDashboardContent() {
                                     <div className="space-y-3">
                                         {reviews.map((rev) => {
                                             const todayStr = new Date().toISOString().split("T")[0];
-                                            const isVisible = rev.is_always_visible || (rev.visible_from && todayStr >= rev.visible_from);
+                                            const revDate = new Date(rev.review_date);
+                                            const revDateStr = rev.review_date.split("T")[0];
+                                            const isVisible = (rev.visible_from && todayStr >= rev.visible_from) || todayStr >= revDateStr;
+                                            const formattedDate = revDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
                                             return (
                                                 <div
@@ -1498,8 +1447,9 @@ function StudentDashboardContent() {
                                                                 <ExternalLink className="h-3.5 w-3.5" />
                                                             </a>
                                                         ) : (
-                                                            <span className="text-[11px] text-amber-700 font-semibold bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg">
-                                                                Meeting link activates on Nov 30, 2026
+                                                            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                                                <Clock className="h-3.5 w-3.5 text-amber-600" />
+                                                                <span>Meeting link activates on {formattedDate}</span>
                                                             </span>
                                                         )}
                                                     </div>
@@ -1631,24 +1581,36 @@ function StudentDashboardContent() {
                                                 No questions raised yet. Feel free to reach out anytime!
                                             </div>
                                         ) : (
-                                            supportTickets.map((t) => (
-                                                <div key={t.id} className="p-4 bg-white border border-slate-200 rounded-2xl space-y-2 text-xs">
-                                                    <div className="flex justify-between items-center">
-                                                        <h4 className="font-bold text-slate-900">{t.subject}</h4>
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                                            t.status === "Answered" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                                                        }`}>
-                                                            {t.status}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-slate-600">{t.message}</p>
-                                                    {t.reply && (
-                                                        <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-slate-800">
-                                                            <strong>Mentor Reply:</strong> {t.reply}
+                                            supportTickets.map((t) => {
+                                                const isResolved = t.status === "Resolved" || t.status === "Answered" || !!(t.admin_response || t.reply);
+                                                const replyText = t.admin_response || t.reply;
+
+                                                return (
+                                                    <div key={t.id} className="p-4 bg-white border border-slate-200 rounded-2xl space-y-2 text-xs">
+                                                        <div className="flex justify-between items-center">
+                                                            <h4 className="font-bold text-slate-900">{t.subject}</h4>
+                                                            <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                isResolved ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                                                            }`}>
+                                                                {isResolved ? "Answered" : t.status || "Open"}
+                                                            </span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))
+                                                        <p className="text-slate-600">{t.message}</p>
+                                                        {replyText && (
+                                                            <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-slate-800 space-y-1">
+                                                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-900">
+                                                                    <CheckCircle2 className="h-3.5 w-3.5 text-indigo-600" />
+                                                                    <span>Mentor Technical Reply:</span>
+                                                                </div>
+                                                                <p className="text-xs text-slate-700 leading-relaxed pl-5">{replyText}</p>
+                                                                {t.resolved_at && (
+                                                                    <p className="text-[10px] text-slate-400 pl-5">Resolved on {new Date(t.resolved_at).toLocaleString()}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>
@@ -1822,15 +1784,15 @@ function StudentDashboardContent() {
                                     <div>
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
-                                                (assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
-                                                (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false)
+                                                progressPercent >= 75 &&
+                                                (project ? project.progress_percent >= 75 || project.status === "Approved" || project.status === "Completed" : false)
                                                     ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                                     : "bg-amber-50 text-amber-800 border border-amber-200"
                                             }`}
                                         >
                                             Status:{" "}
-                                            {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
-                                            (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false)
+                                            {progressPercent >= 75 &&
+                                            (project ? project.progress_percent >= 75 || project.status === "Approved" || project.status === "Completed" : false)
                                                 ? "Eligible for Certification"
                                                 : "Cohort In Progress"}
                                         </span>
@@ -1838,7 +1800,7 @@ function StudentDashboardContent() {
                                             Vectonix Certificate of Internship
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                                            Certificates are issued at the conclusion of the cohort (after December 25, 2026) following evaluation of your milestone assignments and capstone project.
+                                            Certificates are issued at the conclusion of the cohort (after December 25, 2026) following evaluation of your milestone submissions and domain quizzes.
                                         </p>
                                     </div>
 
@@ -1848,22 +1810,22 @@ function StudentDashboardContent() {
                                             <span className="text-emerald-600 font-bold">✓</span> Registration confirmed ({student.application_id || student.application_number})
                                         </p>
                                         <p className="flex items-center gap-2 text-slate-600">
-                                            <span className={(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
-                                                {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 ? "✓" : "○"}
+                                            <span className={progressPercent >= 75 ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                                                {progressPercent >= 75 ? "✓" : "○"}
                                             </span>{" "}
-                                            Complete at least 80% of milestone assignments (Current: {assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0}%)
+                                            Complete at least 75% of weekly domain quizzes (Current: {progressPercent}%)
                                         </p>
                                         <p className="flex items-center gap-2 text-slate-600">
-                                            <span className={(project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
-                                                {(project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? "✓" : "○"}
+                                            <span className={(project ? project.progress_percent >= 75 || project.status === "Approved" || project.status === "Completed" : false) ? "text-emerald-600 font-bold" : "text-amber-600 font-bold"}>
+                                                {(project ? project.progress_percent >= 75 || project.status === "Approved" || project.status === "Completed" : false) ? "✓" : "○"}
                                             </span>{" "}
-                                            Deliver capstone project in {student.domain} (Current: {project?.progress_percent || 0}%)
+                                            Deliver capstone project milestones in {student.domain} (Current: {project?.progress_percent || 0}%)
                                         </p>
                                     </div>
 
                                     <div className="pt-2">
-                                        {(assignments.length > 0 ? Math.round((completedAssignmentsCount / assignments.length) * 100) : 0) >= 80 &&
-                                        (project ? project.progress_percent >= 80 || project.status === "Approved" || project.status === "Completed" : false) ? (
+                                        {progressPercent >= 75 &&
+                                        (project ? project.progress_percent >= 75 || project.status === "Approved" || project.status === "Completed" : false) ? (
                                             <Link
                                                 href={`/verify/${student.application_id || student.application_number}`}
                                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"

@@ -142,12 +142,15 @@ export interface SupportTicket {
     application_id: string;
     student_name: string;
     student_email: string;
-    domain: string;
+    domain?: string;
+    category?: string;
     subject: string;
     message: string;
+    status: "Open" | "In Progress" | "Resolved" | "Closed" | "Answered";
+    admin_response?: string;
     reply?: string;
-    status: "Open" | "Answered" | "Closed";
     created_at: string;
+    resolved_at?: string;
 }
 
 const DEFAULT_ANNOUNCEMENTS: StudentAnnouncement[] = [
@@ -182,8 +185,8 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
         assigned_mentor: "Senior Vectonix Engineering Team",
         meeting_link: "https://meet.google.com/rub-omic-zqn",
         status: "Upcoming",
-        is_always_visible: true,
-        visible_from: "2026-11-01"
+        is_always_visible: false,
+        visible_from: "2026-11-25"
     },
     {
         id: "rev-m1-02",
@@ -195,7 +198,7 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
         meeting_link: "https://meet.google.com/gim-dtax-fsq",
         status: "Upcoming",
         is_always_visible: false,
-        visible_from: "2026-11-30"
+        visible_from: "2026-12-02"
     },
     {
         id: "rev-m2-03",
@@ -207,7 +210,7 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
         meeting_link: "https://meet.google.com/gim-dtax-fsq",
         status: "Upcoming",
         is_always_visible: false,
-        visible_from: "2026-12-07"
+        visible_from: "2026-12-09"
     },
     {
         id: "rev-m3-04",
@@ -219,7 +222,7 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
         meeting_link: "https://meet.google.com/gim-dtax-fsq",
         status: "Upcoming",
         is_always_visible: false,
-        visible_from: "2026-12-14"
+        visible_from: "2026-12-16"
     },
     {
         id: "rev-m4-05",
@@ -231,7 +234,7 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
         meeting_link: "https://meet.google.com/gim-dtax-fsq",
         status: "Upcoming",
         is_always_visible: false,
-        visible_from: "2026-12-21"
+        visible_from: "2026-12-23"
     }
 ];
 
@@ -348,6 +351,76 @@ const DOMAIN_QUIZZES: Record<string, DomainQuiz[]> = {
                     explanation: "HTTP 401 Unauthorized indicates that the request lacks valid authentication credentials."
                 }
             ]
+        },
+        {
+            id: "fsd-quiz-03",
+            week: 3,
+            domain: "Full Stack Development",
+            title: "Week 3 Assessment: State Management, Database Indexing & Optimizations",
+            description: "Assess your expertise in query optimization, indexing strategies, caching layers, and client-side state reconciliation.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "q7",
+                    question: "When should a B-Tree index be applied on a PostgreSQL database column?",
+                    options: [
+                        "On columns frequently used in WHERE filters, JOIN conditions, and ORDER BY clauses",
+                        "On every single column in the table regardless of query patterns",
+                        "Only on columns storing binary blob data",
+                        "Indices are deprecated in modern PostgreSQL"
+                    ],
+                    correctIndex: 0,
+                    explanation: "B-Tree indices provide O(log n) lookup times for equality and range queries on frequently filtered columns."
+                },
+                {
+                    id: "q8",
+                    question: "What is the primary purpose of Next.js 'revalidatePath' or 'revalidateTag'?",
+                    options: [
+                        "Purge and invalidate stale cached data on the server",
+                        "Force a complete browser hard reload on the client",
+                        "Delete the database table schema",
+                        "Restart the Node.js server container"
+                    ],
+                    correctIndex: 0,
+                    explanation: "revalidatePath and revalidateTag purge on-demand cached data in the Next.js Data Cache."
+                }
+            ]
+        },
+        {
+            id: "fsd-quiz-04",
+            week: 4,
+            domain: "Full Stack Development",
+            title: "Week 4 Assessment: Production Deployment, CI/CD & Cloud Architecture",
+            description: "Demonstrate readiness in Docker containerization, edge functions, SSL/TLS termination, and production error monitoring.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "q9",
+                    question: "Why should sensitive API credentials never be prefixed with 'NEXT_PUBLIC_' in a Next.js application?",
+                    options: [
+                        "NEXT_PUBLIC_ variables are inlined into the browser JavaScript bundle and exposed to anyone inspecting the site",
+                        "They prevent the build from compiling",
+                        "They cause the server to crash under heavy load",
+                        "PostgreSQL cannot parse variables starting with NEXT_PUBLIC_"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Prefixing an env variable with NEXT_PUBLIC_ embeds it into the client-side JavaScript bundle, leaking secrets."
+                },
+                {
+                    id: "q10",
+                    question: "What is the advantage of multi-stage Docker builds for Next.js applications?",
+                    options: [
+                        "Significantly shrinks final production image size by discarding build-time tooling and dependencies",
+                        "Enables Next.js to run without Node.js",
+                        "Automatically provisions a free Kubernetes cluster",
+                        "Allows running both Linux and Windows in one container"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Multi-stage builds copy only the standalone build output and runtime files, yielding tiny production containers."
+                }
+            ]
         }
     ],
     "Cybersecurity": [
@@ -385,6 +458,87 @@ const DOMAIN_QUIZZES: Record<string, DomainQuiz[]> = {
                     explanation: "SameSite=Lax or Strict prevents the browser from sending cookies on cross-origin requests, mitigating CSRF."
                 }
             ]
+        },
+        {
+            id: "cyber-quiz-02",
+            week: 2,
+            domain: "Cybersecurity",
+            title: "Week 2 Assessment: Cryptography, JWT Authentication & Session Security",
+            description: "Test your understanding of asymmetric key pairs, hash algorithms, salt generation, and secure session management.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "cq3",
+                    question: "Why should bcrypt or Argon2 be used for password hashing instead of MD5 or SHA-256?",
+                    options: [
+                        "They incorporate work factors and salts, making them computationally slow and resistant to GPU rainbow tables",
+                        "They produce shorter strings that save database disk space",
+                        "MD5 is patent-protected and requires a commercial license",
+                        "Argon2 allows passwords to be decrypted by administrators"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Key derivation functions like bcrypt and Argon2 are intentionally computationally expensive and salted."
+                },
+                {
+                    id: "cq4",
+                    question: "Where is the most secure place to store a JWT authentication token in a web application?",
+                    options: [
+                        "In an HttpOnly, Secure, SameSite cookie",
+                        "In browser localStorage",
+                        "In sessionStorage",
+                        "In a public URL query parameter"
+                    ],
+                    correctIndex: 0,
+                    explanation: "HttpOnly cookies cannot be accessed by client-side JavaScript, protecting against XSS token exfiltration."
+                }
+            ]
+        },
+        {
+            id: "cyber-quiz-03",
+            week: 3,
+            domain: "Cybersecurity",
+            title: "Week 3 Assessment: Penetration Testing, Vulnerability Scanning & XSS Defense",
+            description: "Assess your capability in identifying Cross-Site Scripting (XSS), Security Headers, and vulnerability remediations.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "cq5",
+                    question: "Which HTTP response header is crucial for restricting the origins of scripts, images, and styles?",
+                    options: [
+                        "Content-Security-Policy (CSP)",
+                        "X-Powered-By",
+                        "Access-Control-Allow-Origin: *",
+                        "Server: Apache"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Content-Security-Policy restricts script execution and resource loading to trusted domains."
+                }
+            ]
+        },
+        {
+            id: "cyber-quiz-04",
+            week: 4,
+            domain: "Cybersecurity",
+            title: "Week 4 Assessment: Incident Response, Cloud Security & Zero Trust Architecture",
+            description: "Demonstrate proficiency in Zero Trust architecture, SIEM event correlation, and forensic incident workflows.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "cq6",
+                    question: "What is the core philosophy of a Zero Trust Architecture (ZTA)?",
+                    options: [
+                        "Never trust, always verify — assume breach and verify every request explicitly",
+                        "Trust all devices within the internal corporate VPN",
+                        "Disable all external internet access completely",
+                        "Require passwords to be changed every 24 hours"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Zero Trust treats every user, device, and network transaction as potentially untrusted."
+                }
+            ]
         }
     ],
     "Digital Marketing": [
@@ -410,6 +564,75 @@ const DOMAIN_QUIZZES: Record<string, DomainQuiz[]> = {
                     options: ["As Events", "Only as Pageviews", "Through session cookies only", "Through server log files only"],
                     correctIndex: 0,
                     explanation: "GA4 is an event-based data model where every interaction is captured as a distinct event."
+                }
+            ]
+        },
+        {
+            id: "dm-quiz-02",
+            week: 2,
+            domain: "Digital Marketing",
+            title: "Week 2 Assessment: Performance Marketing, Meta Ads & SEM",
+            description: "Evaluate your skills in ad targeting, Return on Ad Spend (ROAS), click-through rate (CTR), and bidding strategies.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "dq3",
+                    question: "What metric is calculated by dividing Total Revenue Generated by Total Ad Spend?",
+                    options: [
+                        "ROAS (Return on Ad Spend)",
+                        "CTR (Click-Through Rate)",
+                        "CPC (Cost Per Click)",
+                        "CPM (Cost Per Mille)"
+                    ],
+                    correctIndex: 0,
+                    explanation: "ROAS measures gross revenue generated for every dollar or rupee spent on advertising campaigns."
+                }
+            ]
+        },
+        {
+            id: "dm-quiz-03",
+            week: 3,
+            domain: "Digital Marketing",
+            title: "Week 3 Assessment: Content Strategy, Email Nurturing & A/B Testing",
+            description: "Test your ability to design drip sequences, measure open rates, and execute statistically significant split tests.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "dq4",
+                    question: "In A/B testing a landing page, what is the single most important rule?",
+                    options: [
+                        "Isolate and test only one key variable at a time (e.g., headline or CTA button)",
+                        "Change all copy, images, colors, and layout simultaneously",
+                        "Stop the test as soon as the first conversion happens",
+                        "Run the test on only internal team members"
+                    ],
+                    correctIndex: 0,
+                    explanation: "Testing one variable at a time ensures you know exactly which element influenced the conversion rate."
+                }
+            ]
+        },
+        {
+            id: "dm-quiz-04",
+            week: 4,
+            domain: "Digital Marketing",
+            title: "Week 4 Assessment: Marketing Attribution, Analytics Reporting & ROI",
+            description: "Demonstrate understanding of multi-touch attribution, customer lifetime value (LTV), and growth reporting.",
+            durationMinutes: 15,
+            totalMarks: 20,
+            questions: [
+                {
+                    id: "dq5",
+                    question: "What does the LTV:CAC ratio measure in SaaS and product growth?",
+                    options: [
+                        "Customer Lifetime Value compared to Customer Acquisition Cost",
+                        "Logarithmic Traffic Velocity",
+                        "Lead Time Versus Cost Accounting",
+                        "Landing Total Views per Campaign"
+                    ],
+                    correctIndex: 0,
+                    explanation: "A healthy LTV:CAC ratio (typically 3:1 or higher) demonstrates sustainable and scalable customer acquisition economics."
                 }
             ]
         }
@@ -605,33 +828,9 @@ export const studentService = {
             if (sData) submissions = sData;
         }
 
-        if (assignments.length === 0) {
-            assignments = [
-                {
-                    id: "asg-01",
-                    batch_id: batchId,
-                    domain: domain,
-                    title: `Milestone 1: Applied ${domain} Architecture & Setup`,
-                    description: "Set up the foundational workspace, implement primary functional modules, and document project structure in a README.",
-                    instructions: "Fork starter template, configure environment keys, write clean modular code with git commits, and submit repository link.",
-                    deadline: "2026-12-05T23:59:59+05:30",
-                    max_marks: 100,
-                    difficulty: "Beginner",
-                    is_active: true
-                },
-                {
-                    id: "asg-02",
-                    batch_id: batchId,
-                    domain: domain,
-                    title: `Milestone 2: Core Engineering & Testing Implementation`,
-                    description: "Develop primary business logic, database queries or model inference, and execute unit tests.",
-                    instructions: "Deploy on staging server or provide verifiable demo with recorded screen walkthrough.",
-                    deadline: "2026-12-15T23:59:59+05:30",
-                    max_marks: 100,
-                    difficulty: "Intermediate",
-                    is_active: true
-                }
-            ];
+        // Empty fallback if no custom assignments found
+        if (!assignments) {
+            assignments = [];
         }
 
         // Attach submissions
@@ -984,11 +1183,42 @@ export const studentService = {
         return data as SupportTicket[];
     },
 
+    async getAllSupportTickets(): Promise<SupportTicket[]> {
+        if (!isSupabaseConfigured) return [];
+
+        const { data, error } = await supabase
+            .from("support_tickets")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+        if (error || !data) return [];
+        return data as SupportTicket[];
+    },
+
+    async replySupportTicket(ticketId: string, replyText: string): Promise<{ success: boolean; error?: string }> {
+        if (!isSupabaseConfigured) return { success: true };
+
+        const { error } = await supabase
+            .from("support_tickets")
+            .update({
+                admin_response: replyText,
+                status: "Resolved",
+                resolved_at: new Date().toISOString()
+            })
+            .eq("id", ticketId);
+
+        if (error) {
+            console.error("Support ticket reply error:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
     async createSupportTicket(payload: {
         applicationId: string;
         studentName: string;
         studentEmail: string;
-        domain: string;
+        domain?: string;
         subject: string;
         message: string;
     }): Promise<boolean> {
@@ -998,13 +1228,48 @@ export const studentService = {
             application_id: payload.applicationId,
             student_name: payload.studentName,
             student_email: payload.studentEmail,
-            domain: payload.domain,
+            category: "Technical Support",
             subject: payload.subject,
             message: payload.message,
             status: "Open"
         });
 
-        return !error;
+        if (error) {
+            console.error("Support ticket creation error:", error);
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Quiz results persistence
+     */
+    saveQuizResult(appId: string, quizId: string, result: { score: number; totalMarks: number; answers: Record<string, number> }) {
+        if (typeof window !== "undefined") {
+            try {
+                const key = `vx_quiz_results_${appId}`;
+                const existing = JSON.parse(localStorage.getItem(key) || "{}");
+                existing[quizId] = {
+                    ...result,
+                    completedAt: new Date().toISOString()
+                };
+                localStorage.setItem(key, JSON.stringify(existing));
+            } catch (e) {
+                console.error("Save quiz result error:", e);
+            }
+        }
+    },
+
+    getQuizResults(appId: string): Record<string, { score: number; totalMarks: number; answers: Record<string, number>; completedAt: string }> {
+        if (typeof window !== "undefined") {
+            try {
+                const key = `vx_quiz_results_${appId}`;
+                return JSON.parse(localStorage.getItem(key) || "{}");
+            } catch (e) {
+                return {};
+            }
+        }
+        return {};
     }
 };
 

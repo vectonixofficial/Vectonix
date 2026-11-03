@@ -116,10 +116,10 @@ export const allocationService = {
                     title: "Milestone 1: Architectural Blueprint, Schema & Foundation Setup",
                     completed: false,
                     status: "In Progress",
-                    startDate: "2026-11-26",
+                    startDate: "2026-11-25",
                     endDate: "2026-12-02",
                     reviewDate: "2026-12-02",
-                    submissionOpenDate: "2026-12-02"
+                    submissionOpenDate: "2026-11-25"
                 },
                 {
                     index: 2,
