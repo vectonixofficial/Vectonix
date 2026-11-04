@@ -26,6 +26,8 @@ import Footer from "@/components/Footer";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import GoogleAdSense from "@/components/GoogleAdSense";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function RootLayout({
   children,
@@ -61,6 +63,8 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <Analytics />
+          <SpeedInsights />
         </AuthProvider>
       </body>
     </html>
