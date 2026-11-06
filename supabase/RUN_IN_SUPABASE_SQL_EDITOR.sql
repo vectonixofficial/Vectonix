@@ -397,19 +397,23 @@ ALTER TABLE public.learning_resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public Read Announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Public Manage Announcements" ON public.announcements;
 DROP POLICY IF EXISTS "Public Read Assignments" ON public.assignments;
+DROP POLICY IF EXISTS "Public Manage Assignments" ON public.assignments;
 DROP POLICY IF EXISTS "Student Submissions Manage" ON public.assignment_submissions;
 DROP POLICY IF EXISTS "Student Projects Manage" ON public.student_projects;
 DROP POLICY IF EXISTS "Public Read Reviews" ON public.weekly_reviews;
+DROP POLICY IF EXISTS "Public Manage Reviews" ON public.weekly_reviews;
 DROP POLICY IF EXISTS "Public Read Resources" ON public.learning_resources;
+DROP POLICY IF EXISTS "Public Manage Resources" ON public.learning_resources;
 DROP POLICY IF EXISTS "Student Support Tickets" ON public.support_tickets;
 
-CREATE POLICY "Public Read Announcements" ON public.announcements FOR SELECT USING (true);
-CREATE POLICY "Public Read Assignments" ON public.assignments FOR SELECT USING (true);
+CREATE POLICY "Public Manage Announcements" ON public.announcements FOR ALL USING (true);
+CREATE POLICY "Public Manage Assignments" ON public.assignments FOR ALL USING (true);
 CREATE POLICY "Student Submissions Manage" ON public.assignment_submissions FOR ALL USING (true);
 CREATE POLICY "Student Projects Manage" ON public.student_projects FOR ALL USING (true);
-CREATE POLICY "Public Read Reviews" ON public.weekly_reviews FOR SELECT USING (true);
-CREATE POLICY "Public Read Resources" ON public.learning_resources FOR SELECT USING (true);
+CREATE POLICY "Public Manage Reviews" ON public.weekly_reviews FOR ALL USING (true);
+CREATE POLICY "Public Manage Resources" ON public.learning_resources FOR ALL USING (true);
 CREATE POLICY "Student Support Tickets" ON public.support_tickets FOR ALL USING (true);
 
 -- 8. RELOAD SCHEMA CACHE IMMEDIATELY

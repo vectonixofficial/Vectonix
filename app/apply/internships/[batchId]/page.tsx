@@ -107,6 +107,61 @@ export default function InternshipApplyPage() {
     });
     const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Live Phone Validation State
+    const [phoneValidation, setPhoneValidation] = useState<{
+        checking: boolean;
+        status: "idle" | "checking" | "valid" | "invalid_format" | "duplicate" | "unable_to_check";
+        message: string;
+    }>({
+        checking: false,
+        status: "idle",
+        message: ""
+    });
+    const phoneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Debounced Live Phone Verification Handler
+    const handlePhoneChange = (val: string) => {
+        // Strip non-digits and cap at 10 digits
+        const clean = val.replace(/\D/g, "").slice(0, 10);
+        setFormData((prev) => ({ ...prev, phone: clean }));
+
+        if (phoneTimeoutRef.current) clearTimeout(phoneTimeoutRef.current);
+
+        if (!clean) {
+            setPhoneValidation({ checking: false, status: "idle", message: "" });
+            return;
+        }
+
+        if (clean.length < 10) {
+            setPhoneValidation({
+                checking: false,
+                status: "invalid_format",
+                message: `Please enter 10 digits (${clean.length}/10 entered).`
+            });
+            return;
+        }
+
+        setPhoneValidation({ checking: true, status: "checking", message: "Verifying mobile number..." });
+
+        phoneTimeoutRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/validate-phone?phone=${encodeURIComponent(clean)}&batchId=${encodeURIComponent(batchId)}`);
+                const data = await res.json();
+                setPhoneValidation({
+                    checking: false,
+                    status: data.status || (data.valid ? "valid" : "invalid_format"),
+                    message: data.message
+                });
+            } catch (err) {
+                setPhoneValidation({
+                    checking: false,
+                    status: "unable_to_check",
+                    message: "Unable to verify phone availability right now."
+                });
+            }
+        }, 400);
+    };
+
     // Debounced Live Email Verification Handler
     const handleEmailChange = (val: string) => {
         setFormData((prev) => ({ ...prev, email: val }));
@@ -218,6 +273,8 @@ export default function InternshipApplyPage() {
         if (!formData.fullName.trim()) return "Full name is required";
         if (!formData.email.trim() || !formData.email.includes("@")) return "A valid email is required";
         if (!formData.phone.trim() || formData.phone.length < 10) return "A valid 10-digit mobile number is required";
+        if (phoneValidation.status === "duplicate") return "This mobile number is already registered for this internship batch.";
+        if (phoneValidation.status === "invalid_format") return phoneValidation.message || "Please enter a valid 10-digit Indian mobile number.";
         if (!formData.gender) return "Please select your gender";
 
         // College
@@ -514,14 +571,48 @@ export default function InternshipApplyPage() {
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                                         Mobile / Phone Number *
                                     </label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        placeholder="10-digit mobile number"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type="tel"
+                                            required
+                                            maxLength={10}
+                                            placeholder="10-digit mobile number (e.g. 9876543210)"
+                                            value={formData.phone}
+                                            onChange={(e) => handlePhoneChange(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        {phoneValidation.checking && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
+                                        )}
+                                    </div>
+                                    {/* Live Phone Availability State Indicators */}
+                                    {phoneValidation.status !== "idle" && (
+                                        <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                                            {phoneValidation.status === "checking" && (
+                                                <span className="text-slate-500 flex items-center gap-1">
+                                                    <Loader2 className="h-3 w-3 animate-spin" /> Checking mobile number...
+                                                </span>
+                                            )}
+                                            {phoneValidation.status === "valid" && (
+                                                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <Check className="h-3 w-3 text-emerald-600" />
+                                                    {phoneValidation.message || "Valid mobile number."}
+                                                </span>
+                                            )}
+                                            {(phoneValidation.status === "invalid_format" || phoneValidation.status === "duplicate") && (
+                                                <span className="text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <AlertCircle className="h-3 w-3 text-red-600" />
+                                                    {phoneValidation.message}
+                                                </span>
+                                            )}
+                                            {phoneValidation.status === "unable_to_check" && (
+                                                <span className="text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
+                                                    <AlertCircle className="h-3 w-3 text-amber-600" />
+                                                    {phoneValidation.message}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>

@@ -123,6 +123,8 @@ export interface DomainQuiz {
     description: string;
     durationMinutes: number;
     totalMarks: number;
+    openDate?: string;
+    closeDate?: string;
     questions: QuizQuestion[];
 }
 
@@ -240,33 +242,43 @@ const DEFAULT_REVIEWS: WeeklyReview[] = [
 
 const DEFAULT_RESOURCES: LearningResource[] = [
     {
-        id: "res-01",
+        id: "res-general",
         batch_id: "wi26",
         domain: "All",
-        title: "Vectonix Internship Developer Handbook 2026",
-        description: "Official guide on Git conventions, milestone rubrics, and submission requirements.",
+        title: "Vectonix Winter Internship 2026 – General Program Handbook",
+        description: "Official program guide covering internship structure, code review protocols, weekly meeting schedules, milestone deliverables, and evaluation criteria.",
         category: "PDF Notes",
-        resource_url: "https://vectonix.in/about",
+        resource_url: "/handbooks/Vectonix_General_Handbook.pdf",
         created_at: "2026-11-02T10:00:00Z"
     },
     {
-        id: "res-02",
+        id: "res-fsd",
         batch_id: "wi26",
         domain: "Full Stack Development",
-        title: "Modern Next.js & TypeScript Architecture Primer",
-        description: "Production guide to App Router, server actions, and PostgreSQL integration.",
-        category: "Starter Code",
-        resource_url: "https://github.com/vectonixofficial",
+        title: "Full Stack Web & Cloud Engineering Technical Handbook",
+        description: "In-depth engineering curriculum covering React 19, Next.js App Router, TypeScript, PostgreSQL schema modeling, RESTful API design, and Vercel cloud deployments.",
+        category: "PDF Notes",
+        resource_url: "/handbooks/Vectonix_FSD_Handbook.pdf",
         created_at: "2026-11-02T10:00:00Z"
     },
     {
-        id: "res-03",
+        id: "res-cyber",
         batch_id: "wi26",
-        domain: "AI / Machine Learning",
-        title: "Machine Learning Engineering Best Practices",
-        description: "Tutorial notes on feature pipelines, hyperparameter tuning, and model evaluation.",
-        category: "Tutorial",
-        resource_url: "https://vectonix.in/learning",
+        domain: "Cybersecurity",
+        title: "Cybersecurity & Ethical Defense Practical Handbook",
+        description: "Practical curriculum covering OWASP Top 10 web security auditing, pen-testing workflows, cryptographic protocols, network defense, and secure coding standards.",
+        category: "PDF Notes",
+        resource_url: "/handbooks/Vectonix_Cybersecurity_Handbook.pdf",
+        created_at: "2026-11-02T10:00:00Z"
+    },
+    {
+        id: "res-marketing",
+        batch_id: "wi26",
+        domain: "Digital Marketing",
+        title: "Digital Marketing & Growth Engineering Handbook",
+        description: "Applied playbook covering Technical SEO, funnel architecture, web analytics telemetry, conversion rate optimization (CRO), and paid acquisition strategies.",
+        category: "PDF Notes",
+        resource_url: "/handbooks/Vectonix_DigitalMarketing_Handbook.pdf",
         created_at: "2026-11-02T10:00:00Z"
     }
 ];
@@ -786,21 +798,106 @@ export const studentService = {
      * Get announcements for student domain
      */
     async getAnnouncements(batchId: string = "wi26", domain: string = "All"): Promise<StudentAnnouncement[]> {
-        if (!isSupabaseConfigured) {
-            return DEFAULT_ANNOUNCEMENTS;
+        let dbAnnouncements: StudentAnnouncement[] = [];
+
+        if (isSupabaseConfigured) {
+            try {
+                const { data, error } = await supabase
+                    .from("announcements")
+                    .select("*")
+                    .eq("batch_id", batchId)
+                    .or(`domain.eq.All,domain.eq.${domain}`)
+                    .order("created_at", { ascending: false });
+
+                if (!error && data && data.length > 0) {
+                    dbAnnouncements = data as StudentAnnouncement[];
+                }
+            } catch (ignore) {}
         }
 
-        const { data, error } = await supabase
-            .from("announcements")
-            .select("*")
-            .eq("batch_id", batchId)
-            .or(`domain.eq.All,domain.eq.${domain}`)
-            .order("created_at", { ascending: false });
-
-        if (error || !data || data.length === 0) {
-            return DEFAULT_ANNOUNCEMENTS;
+        let localAnnouncements: StudentAnnouncement[] = [];
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_cohort_announcements");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    localAnnouncements = parsed.filter(
+                        (a: any) => !domain || domain === "All" || a.domain === "All" || a.domain === domain
+                    );
+                }
+            } catch (ignore) {}
         }
-        return data as StudentAnnouncement[];
+
+        // Deduplicate by ID
+        const all = [...localAnnouncements, ...dbAnnouncements, ...DEFAULT_ANNOUNCEMENTS];
+        const seen = new Set<string>();
+        return all.filter((a) => {
+            if (seen.has(a.id)) return false;
+            seen.add(a.id);
+            return true;
+        });
+    },
+
+    /**
+     * Create an announcement (saves to Supabase & local cache)
+     */
+    async createAnnouncement(ann: Omit<StudentAnnouncement, "id" | "created_at">): Promise<StudentAnnouncement> {
+        const newAnn: StudentAnnouncement = {
+            id: `ann-${Date.now()}`,
+            ...ann,
+            created_at: new Date().toISOString()
+        };
+
+        if (isSupabaseConfigured) {
+            try {
+                const { data, error } = await supabase.from("announcements").insert(newAnn).select().single();
+                if (!error && data) {
+                    // Also mirror in local cache
+                    if (typeof window !== "undefined") {
+                        const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
+                        const list = JSON.parse(stored);
+                        localStorage.setItem("vx_cohort_announcements", JSON.stringify([data, ...list]));
+                    }
+                    return data as StudentAnnouncement;
+                }
+            } catch (err) {
+                console.warn("Supabase announcement insert:", err);
+            }
+        }
+
+        // Cache locally
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
+                const list = JSON.parse(stored);
+                localStorage.setItem("vx_cohort_announcements", JSON.stringify([newAnn, ...list]));
+            } catch (ignore) {}
+        }
+
+        return newAnn;
+    },
+
+    /**
+     * Delete an announcement (deletes from Supabase & local cache)
+     */
+    async deleteAnnouncement(id: string): Promise<boolean> {
+        if (isSupabaseConfigured) {
+            try {
+                await supabase.from("announcements").delete().eq("id", id);
+            } catch (err) {
+                console.warn("Supabase announcement delete:", err);
+            }
+        }
+
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
+                const list = JSON.parse(stored).filter((a: any) => a.id !== id);
+                localStorage.setItem("vx_cohort_announcements", JSON.stringify(list));
+            } catch (ignore) {}
+        }
+
+        return true;
     },
 
     /**
@@ -1131,7 +1228,11 @@ export const studentService = {
      * Quizzes for the domain
      */
     getDomainQuizzes(domain: string): DomainQuiz[] {
-        return DOMAIN_QUIZZES[domain] || DOMAIN_QUIZZES["Full Stack Development"];
+        const list = DOMAIN_QUIZZES[domain] || DOMAIN_QUIZZES["Full Stack Development"];
+        return list.map((q) => ({
+            ...q,
+            openDate: q.openDate || (q.week === 1 ? "2026-12-01T00:00:00" : q.week === 2 ? "2026-12-08T00:00:00" : q.week === 3 ? "2026-12-15T00:00:00" : "2026-12-22T00:00:00")
+        }));
     },
 
     /**
@@ -1154,7 +1255,14 @@ export const studentService = {
      * Get learning resources
      */
     async getLearningResources(batchId: string = "wi26", domain: string = "All"): Promise<LearningResource[]> {
-        if (!isSupabaseConfigured) return DEFAULT_RESOURCES;
+        const getFallbackResources = () => {
+            if (!domain || domain === "All") return DEFAULT_RESOURCES;
+            return DEFAULT_RESOURCES.filter(
+                (r) => r.domain === "All" || r.domain.toLowerCase() === domain.toLowerCase()
+            );
+        };
+
+        if (!isSupabaseConfigured) return getFallbackResources();
 
         const { data, error } = await supabase
             .from("learning_resources")
@@ -1163,7 +1271,7 @@ export const studentService = {
             .or(`domain.eq.All,domain.eq.${domain}`)
             .order("created_at", { ascending: false });
 
-        if (error || !data || data.length === 0) return DEFAULT_RESOURCES;
+        if (error || !data || data.length === 0) return getFallbackResources();
         return data as LearningResource[];
     },
 

@@ -37,7 +37,9 @@ import {
     CheckSquare,
     Bell,
     Plus,
-    Send
+    Send,
+    BarChart3,
+    Edit3
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
@@ -64,7 +66,18 @@ export default function AdminInternshipsBatchPage() {
     // Applications & Analytics
     const [applications, setApplications] = useState<DatabaseInternshipApplication[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports" | "announcements" | "support">("applications");
+    const [activeTab, setActiveTab] = useState<"applications" | "analytics" | "reports" | "announcements" | "support" | "quiz-analytics">("applications");
+
+    // Quiz Results & Analytics State
+    const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
+    const [quizSearch, setQuizSearch] = useState("");
+    const [quizDomainFilter, setQuizDomainFilter] = useState("all");
+    const [quizWeekFilter, setQuizWeekFilter] = useState("all");
+    const [quizStatusFilter, setQuizStatusFilter] = useState<"all" | "pass" | "fail">("all");
+    const [selectedAttemptForSheet, setSelectedAttemptForSheet] = useState<any | null>(null);
+    const [selectedAttemptForAdjustment, setSelectedAttemptForAdjustment] = useState<any | null>(null);
+    const [adjustScore, setAdjustScore] = useState<number>(0);
+    const [adjustFeedback, setAdjustFeedback] = useState<string>("");
 
     // Support Tickets & Mentor Queries State
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
@@ -137,6 +150,46 @@ export default function AdminInternshipsBatchPage() {
 
             const tickets = await studentService.getAllSupportTickets();
             setSupportTickets(tickets);
+
+            // Populate Quiz Attempts across candidates
+            const attemptsList: any[] = [];
+            apps.forEach((app) => {
+                const appId = app.application_id || app.application_number || app.id;
+                const localResults = studentService.getQuizResults(appId);
+                const domainQuizzes = studentService.getDomainQuizzes(app.domain || "Full Stack Development");
+
+                Object.entries(localResults).forEach(([quizId, res]: [string, any]) => {
+                    const quizMeta = domainQuizzes.find((q) => q.id === quizId) || {
+                        title: `Week Assessment (${quizId})`,
+                        week: 1,
+                        totalMarks: 20,
+                        questions: []
+                    };
+                    const percentage = Math.round((res.score / (res.totalMarks || quizMeta.totalMarks || 20)) * 100);
+                    attemptsList.push({
+                        id: `${appId}-${quizId}`,
+                        application_id: appId,
+                        full_name: app.full_name,
+                        email: app.email,
+                        phone: app.phone,
+                        domain: app.domain,
+                        college_name: app.college_name,
+                        package_name: app.package_name || "Free",
+                        quiz_id: quizId,
+                        quiz_title: quizMeta.title,
+                        week: quizMeta.week,
+                        score: res.score,
+                        total_marks: res.totalMarks || quizMeta.totalMarks || 20,
+                        percentage,
+                        status: percentage >= 50 ? "Pass" : "Needs Review",
+                        submitted_at: res.completedAt || new Date().toISOString(),
+                        answers: res.answers || {},
+                        mentor_feedback: res.mentorFeedback || "",
+                        questions: quizMeta.questions || []
+                    });
+                });
+            });
+            setQuizAttempts(attemptsList);
         } catch (error) {
             console.error("Error loading internship admin data:", error);
         } finally {
@@ -247,18 +300,16 @@ export default function AdminInternshipsBatchPage() {
 
         setActionLoading(true);
         try {
-            const newAnn: StudentAnnouncement = {
-                id: `ann-${Date.now()}`,
+            const created = await studentService.createAnnouncement({
                 batch_id: batchId,
                 title: annForm.title.trim(),
                 message: annForm.message.trim(),
                 priority: annForm.priority,
                 domain: annForm.domain,
-                reference_url: annForm.reference_url.trim() || undefined,
-                created_at: new Date().toISOString()
-            };
+                reference_url: annForm.reference_url.trim() || undefined
+            });
 
-            setAnnouncementsList((prev) => [newAnn, ...prev]);
+            setAnnouncementsList((prev) => [created, ...prev.filter((a) => a.id !== created.id)]);
             setShowAnnouncementModal(false);
             setAnnForm({
                 title: "",
@@ -267,17 +318,100 @@ export default function AdminInternshipsBatchPage() {
                 domain: "All",
                 reference_url: ""
             });
-            alert("Batch announcement published!");
-        } catch (err) {
+            alert("Cohort announcement published and broadcasted successfully!");
+        } catch (err: any) {
             console.error("Error creating announcement:", err);
+            alert(`Failed to create announcement: ${err.message || "Unknown error"}`);
         } finally {
             setActionLoading(false);
         }
     };
 
-    const handleDeleteAnnouncement = (id: string) => {
-        if (!window.confirm("Delete this cohort announcement?")) return;
-        setAnnouncementsList((prev) => prev.filter((a) => a.id !== id));
+    const handleDeleteAnnouncement = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this cohort announcement? This will remove it from all student dashboards.")) return;
+        try {
+            await studentService.deleteAnnouncement(id);
+            setAnnouncementsList((prev) => prev.filter((a) => a.id !== id));
+        } catch (err: any) {
+            console.error("Error deleting announcement:", err);
+            alert(`Failed to delete announcement: ${err.message}`);
+        }
+    };
+
+    const handleExportQuizResultsCSV = () => {
+        if (quizAttempts.length === 0) {
+            alert("No quiz results available to export.");
+            return;
+        }
+
+        const headers = [
+            "Application ID",
+            "Student Name",
+            "Email",
+            "Phone",
+            "Domain",
+            "College",
+            "Package",
+            "Quiz Title",
+            "Week",
+            "Score",
+            "Total Marks",
+            "Percentage (%)",
+            "Result Status",
+            "Submitted Date"
+        ];
+
+        const rows = quizAttempts.map((q) => [
+            q.application_id,
+            `"${q.full_name.replace(/"/g, '""')}"`,
+            q.email,
+            q.phone,
+            `"${q.domain}"`,
+            `"${(q.college_name || "").replace(/"/g, '""')}"`,
+            q.package_name,
+            `"${q.quiz_title.replace(/"/g, '""')}"`,
+            `Week ${q.week}`,
+            q.score,
+            q.total_marks,
+            `${q.percentage}%`,
+            q.status,
+            new Date(q.submitted_at).toLocaleDateString()
+        ]);
+
+        const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `vectonix_quiz_results_${batchId}_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleSaveAdjustedMarks = () => {
+        if (!selectedAttemptForAdjustment) return;
+        const updated = quizAttempts.map((item) => {
+            if (item.id === selectedAttemptForAdjustment.id) {
+                const percentage = Math.round((adjustScore / item.total_marks) * 100);
+                return {
+                    ...item,
+                    score: adjustScore,
+                    percentage,
+                    status: percentage >= 50 ? "Pass" : "Needs Review",
+                    mentor_feedback: adjustFeedback
+                };
+            }
+            return item;
+        });
+        setQuizAttempts(updated);
+        studentService.saveQuizResult(selectedAttemptForAdjustment.application_id, selectedAttemptForAdjustment.quiz_id, {
+            score: adjustScore,
+            totalMarks: selectedAttemptForAdjustment.total_marks,
+            answers: selectedAttemptForAdjustment.answers
+        });
+        setSelectedAttemptForAdjustment(null);
+        alert("Quiz marks and mentor feedback updated successfully!");
     };
 
     const handleSendTicketReply = async (ticketId: string) => {
@@ -555,6 +689,7 @@ export default function AdminInternshipsBatchPage() {
                     {[
                         { id: "applications", label: "Manage Applications", icon: Users, badge: applications.length },
                         { id: "support", label: "Mentor Support & Queries", icon: MessageCircle, badge: supportTickets.filter((t) => t.status === "Open").length },
+                        { id: "quiz-analytics", label: "Quiz Results & Analytics", icon: BarChart3, badge: quizAttempts.length },
                         { id: "announcements", label: "Cohort Announcements", icon: Bell, badge: announcementsList.length },
                         { id: "analytics", label: "Cohort Analytics", icon: TrendingUp },
                         { id: "reports", label: "Export Reports", icon: FileSpreadsheet },
@@ -1268,6 +1403,452 @@ export default function AdminInternshipsBatchPage() {
                     </div>
                 </div>
             )}
+
+            {/* TAB 6: QUIZ RESULTS & ANALYTICS */}
+            {activeTab === "quiz-analytics" && (
+                <div className="space-y-6">
+                    {/* Top KPI Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                                Total Quiz Submissions
+                            </span>
+                            <div className="text-2xl font-extrabold text-slate-900">{quizAttempts.length}</div>
+                            <span className="text-xs text-indigo-600 font-medium">Across all domains</span>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                                Cohort Average Score
+                            </span>
+                            <div className="text-2xl font-extrabold text-slate-900">
+                                {quizAttempts.length > 0
+                                    ? Math.round(quizAttempts.reduce((acc, q) => acc + q.percentage, 0) / quizAttempts.length)
+                                    : 0}%
+                            </div>
+                            <span className="text-xs text-emerald-600 font-medium">Passing benchmark: 50%</span>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                                Overall Pass Rate
+                            </span>
+                            <div className="text-2xl font-extrabold text-slate-900">
+                                {quizAttempts.length > 0
+                                    ? Math.round((quizAttempts.filter((q) => q.percentage >= 50).length / quizAttempts.length) * 100)
+                                    : 0}%
+                            </div>
+                            <span className="text-xs text-slate-500 font-medium">
+                                {quizAttempts.filter((q) => q.percentage >= 50).length} of {quizAttempts.length} passed
+                            </span>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                                Highest Score Recorded
+                            </span>
+                            <div className="text-2xl font-extrabold text-slate-900">
+                                {quizAttempts.length > 0 ? Math.max(...quizAttempts.map((q) => q.percentage)) : 0}%
+                            </div>
+                            <span className="text-xs text-indigo-600 font-medium">Top candidate result</span>
+                        </div>
+                    </div>
+
+                    {/* Controls & Export Header */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-base">Candidate Assessment Results</h3>
+                                <p className="text-xs text-slate-500">
+                                    Review individual MCQ submissions, inspect answer sheets, adjust scores, and download reports.
+                                </p>
+                            </div>
+                            <Button
+                                onClick={handleExportQuizResultsCSV}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                <span>Export Quiz Results (CSV)</span>
+                            </Button>
+                        </div>
+
+                        {/* Search & Filter Bar */}
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100">
+                            <div className="relative">
+                                <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                <input
+                                    type="text"
+                                    placeholder="Search student, App ID, email..."
+                                    value={quizSearch}
+                                    onChange={(e) => setQuizSearch(e.target.value)}
+                                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                />
+                            </div>
+
+                            <select
+                                value={quizDomainFilter}
+                                onChange={(e) => setQuizDomainFilter(e.target.value)}
+                                className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="all">All Domains</option>
+                                <option value="Full Stack Development">Full Stack Development</option>
+                                <option value="Cybersecurity">Cybersecurity</option>
+                                <option value="Digital Marketing">Digital Marketing</option>
+                            </select>
+
+                            <select
+                                value={quizWeekFilter}
+                                onChange={(e) => setQuizWeekFilter(e.target.value)}
+                                className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="all">All Weeks</option>
+                                <option value="1">Week 1 Assessment</option>
+                                <option value="2">Week 2 Assessment</option>
+                                <option value="3">Week 3 Assessment</option>
+                                <option value="4">Week 4 Assessment</option>
+                            </select>
+
+                            <select
+                                value={quizStatusFilter}
+                                onChange={(e) => setQuizStatusFilter(e.target.value as any)}
+                                className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="all">All Result Statuses</option>
+                                <option value="pass">Passed (&gt;= 50%)</option>
+                                <option value="fail">Needs Review (&lt; 50%)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Results Table */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
+                                    <tr>
+                                        <th className="py-3.5 px-4">Student &amp; Application ID</th>
+                                        <th className="py-3.5 px-4">Contact</th>
+                                        <th className="py-3.5 px-4">Domain &amp; Package</th>
+                                        <th className="py-3.5 px-4">Assessment</th>
+                                        <th className="py-3.5 px-4">Score &amp; %</th>
+                                        <th className="py-3.5 px-4">Status</th>
+                                        <th className="py-3.5 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {quizAttempts.filter((q) => {
+                                        const matchesSearch =
+                                            !quizSearch ||
+                                            q.full_name?.toLowerCase().includes(quizSearch.toLowerCase()) ||
+                                            q.application_id?.toLowerCase().includes(quizSearch.toLowerCase()) ||
+                                            q.email?.toLowerCase().includes(quizSearch.toLowerCase());
+                                        const matchesDomain = quizDomainFilter === "all" || q.domain === quizDomainFilter;
+                                        const matchesWeek = quizWeekFilter === "all" || String(q.week) === quizWeekFilter;
+                                        const matchesStatus =
+                                            quizStatusFilter === "all" ||
+                                            (quizStatusFilter === "pass" && q.percentage >= 50) ||
+                                            (quizStatusFilter === "fail" && q.percentage < 50);
+                                        return matchesSearch && matchesDomain && matchesWeek && matchesStatus;
+                                    }).length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="text-center py-12 text-slate-400">
+                                                No quiz attempts match the selected criteria.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        quizAttempts
+                                            .filter((q) => {
+                                                const matchesSearch =
+                                                    !quizSearch ||
+                                                    q.full_name?.toLowerCase().includes(quizSearch.toLowerCase()) ||
+                                                    q.application_id?.toLowerCase().includes(quizSearch.toLowerCase()) ||
+                                                    q.email?.toLowerCase().includes(quizSearch.toLowerCase());
+                                                const matchesDomain = quizDomainFilter === "all" || q.domain === quizDomainFilter;
+                                                const matchesWeek = quizWeekFilter === "all" || String(q.week) === quizWeekFilter;
+                                                const matchesStatus =
+                                                    quizStatusFilter === "all" ||
+                                                    (quizStatusFilter === "pass" && q.percentage >= 50) ||
+                                                    (quizStatusFilter === "fail" && q.percentage < 50);
+                                                return matchesSearch && matchesDomain && matchesWeek && matchesStatus;
+                                            })
+                                            .map((q) => (
+                                                <tr key={q.id} className="hover:bg-slate-50/70 transition-colors">
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-bold text-slate-900">{q.full_name}</div>
+                                                        <span className="font-mono text-[11px] text-indigo-600 font-semibold">
+                                                            {q.application_id}
+                                                        </span>
+                                                        {q.college_name && (
+                                                            <div className="text-[10px] text-slate-400 line-clamp-1">{q.college_name}</div>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="text-slate-800">{q.email}</div>
+                                                        <div className="text-slate-400 text-[11px]">{q.phone}</div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                            {q.domain}
+                                                        </span>
+                                                        <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                                            {q.package_name} Track
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-semibold text-slate-800">{q.quiz_title}</div>
+                                                        <div className="text-[10px] text-slate-400">
+                                                            Week {q.week} • Submitted {new Date(q.submitted_at).toLocaleDateString()}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-extrabold text-slate-900">
+                                                            {q.score} / {q.total_marks}
+                                                        </div>
+                                                        <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden mt-1">
+                                                            <div
+                                                                className={`h-full rounded-full ${
+                                                                    q.percentage >= 70
+                                                                        ? "bg-emerald-500"
+                                                                        : q.percentage >= 50
+                                                                        ? "bg-amber-500"
+                                                                        : "bg-rose-500"
+                                                                }`}
+                                                                style={{ width: `${q.percentage}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-slate-500">
+                                                            {q.percentage}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span
+                                                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                                q.percentage >= 50
+                                                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                    : "bg-rose-50 text-rose-700 border border-rose-200"
+                                                            }`}
+                                                        >
+                                                            {q.percentage >= 50 ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                                                            {q.status}
+                                                        </span>
+                                                        {q.mentor_feedback && (
+                                                            <div className="text-[10px] text-slate-500 italic mt-0.5 line-clamp-1">
+                                                                &ldquo;{q.mentor_feedback}&rdquo;
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => setSelectedAttemptForSheet(q)}
+                                                            className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-[11px] cursor-pointer inline-flex items-center gap-1"
+                                                        >
+                                                            <Eye className="h-3 w-3" />
+                                                            <span>Answer Sheet</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedAttemptForAdjustment(q);
+                                                                setAdjustScore(q.score);
+                                                                setAdjustFeedback(q.mentor_feedback || "");
+                                                            }}
+                                                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-[11px] cursor-pointer inline-flex items-center gap-1"
+                                                        >
+                                                            <Edit3 className="h-3 w-3" />
+                                                            <span>Adjust</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Answer Sheet Modal */}
+            <AnimatePresence>
+                {selectedAttemptForSheet && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-900 text-base">
+                                        Answer Sheet: {selectedAttemptForSheet.full_name}
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        {selectedAttemptForSheet.quiz_title} • Score: {selectedAttemptForSheet.score} / {selectedAttemptForSheet.total_marks} ({selectedAttemptForSheet.percentage}%)
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedAttemptForSheet(null)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto space-y-4 pr-1 flex-1 text-xs">
+                                {selectedAttemptForSheet.questions.length === 0 ? (
+                                    <p className="text-center py-8 text-slate-400">
+                                        Detailed question sheet was completed in a legacy format. Total score recorded: {selectedAttemptForSheet.score} marks.
+                                    </p>
+                                ) : (
+                                    selectedAttemptForSheet.questions.map((q: any, idx: number) => {
+                                        const studentChoiceIndex = selectedAttemptForSheet.answers[q.id];
+                                        const isCorrect = studentChoiceIndex === q.correctIndex;
+
+                                        return (
+                                            <div
+                                                key={q.id || idx}
+                                                className={`p-4 rounded-2xl border space-y-2.5 ${
+                                                    isCorrect
+                                                        ? "bg-emerald-50/40 border-emerald-200"
+                                                        : studentChoiceIndex !== undefined
+                                                        ? "bg-rose-50/40 border-rose-200"
+                                                        : "bg-slate-50 border-slate-200"
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <span className="font-bold text-slate-900 leading-snug">
+                                                        Q{idx + 1}. {q.question}
+                                                    </span>
+                                                    <span
+                                                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                            isCorrect
+                                                                ? "bg-emerald-100 text-emerald-800"
+                                                                : "bg-rose-100 text-rose-800"
+                                                        }`}
+                                                    >
+                                                        {isCorrect ? "Correct (+5)" : "Incorrect (0)"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="space-y-1 pl-1">
+                                                    {q.options.map((opt: string, optIdx: number) => {
+                                                        const isSelected = studentChoiceIndex === optIdx;
+                                                        const isAnswer = q.correctIndex === optIdx;
+
+                                                        return (
+                                                            <div
+                                                                key={optIdx}
+                                                                className={`p-2 rounded-xl text-xs flex items-center justify-between ${
+                                                                    isAnswer
+                                                                        ? "bg-emerald-100/70 text-emerald-900 font-semibold border border-emerald-300"
+                                                                        : isSelected
+                                                                        ? "bg-rose-100/70 text-rose-900 font-semibold border border-rose-300"
+                                                                        : "text-slate-600 bg-white border border-slate-100"
+                                                                }`}
+                                                            >
+                                                                <span>{opt}</span>
+                                                                {isAnswer && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                                                                {isSelected && !isAnswer && <XCircle className="h-3.5 w-3.5 text-rose-600" />}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {q.explanation && (
+                                                    <div className="p-2.5 rounded-xl bg-white/80 border border-slate-200 text-[11px] text-slate-600">
+                                                        <strong>Technical Explanation:</strong> {q.explanation}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex justify-end">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setSelectedAttemptForSheet(null)}
+                                    className="text-xs cursor-pointer"
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Adjust Marks Modal */}
+            <AnimatePresence>
+                {selectedAttemptForAdjustment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-900 text-base">Adjust Quiz Score</h3>
+                                    <p className="text-xs text-slate-500">
+                                        {selectedAttemptForAdjustment.full_name} ({selectedAttemptForAdjustment.application_id})
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedAttemptForAdjustment(null)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3 text-xs">
+                                <div>
+                                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                        Assigned Score (Max: {selectedAttemptForAdjustment.total_marks})
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={selectedAttemptForAdjustment.total_marks}
+                                        value={adjustScore}
+                                        onChange={(e) => setAdjustScore(Math.max(0, Math.min(selectedAttemptForAdjustment.total_marks, parseInt(e.target.value) || 0)))}
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                        Mentor Evaluation &amp; Feedback Notes
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Add mentor feedback or reason for marks adjustment..."
+                                        value={adjustFeedback}
+                                        onChange={(e) => setAdjustFeedback(e.target.value)}
+                                        className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setSelectedAttemptForAdjustment(null)}
+                                    className="text-xs cursor-pointer"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleSaveAdjustedMarks}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs cursor-pointer"
+                                >
+                                    Save Changes
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Create Announcement Modal */}
             <AnimatePresence>

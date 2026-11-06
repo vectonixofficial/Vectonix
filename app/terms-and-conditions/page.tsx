@@ -87,36 +87,109 @@ export default function TermsAndConditionsPage() {
                     </section>
 
                     {/* 5. Package Selection */}
-                    <section className="space-y-3">
+                    <section className="space-y-4">
                         <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            5. Internship Packages & Entitlements
+                            5. Internship Tracks, Packages & Entitlements
                         </h2>
                         <p>
-                            Participants select one of two structured packages upon enrollment:
+                            Participants may enroll under either the <strong>₹0 Free Learning Track</strong> or one of our structured verified packages upon registration:
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
-                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
-                                <h3 className="font-bold text-slate-900 text-sm">Standard Package — ₹749</h3>
-                                <ul className="mt-2 space-y-1 text-slate-600">
-                                    <li>• Complete Winter Internship Participation</li>
-                                    <li>• Live curriculum & course materials access</li>
-                                    <li>• Practical task-based activities</li>
-                                    <li>• Weekly project evaluations & reviews</li>
-                                    <li>• 24/7 technical mentor support</li>
-                                    <li>• Access to available teaching classes</li>
-                                    <li>• Verified Internship Completion Certificate</li>
-                                </ul>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2">
+                            {/* Free Track */}
+                            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 flex flex-col justify-between">
+                                <div>
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 mb-2">
+                                        Free Learning Track
+                                    </span>
+                                    <h3 className="font-bold text-slate-900 text-sm">Free Option — ₹0</h3>
+                                    <ul className="mt-3 space-y-1.5 text-slate-700">
+                                        <li>• 100% Free Internship Participation (Batch WI26)</li>
+                                        <li>• Zero payment required to access free course content</li>
+                                        <li>• Full access to domain learning resources &amp; PDF handbooks</li>
+                                        <li>• Individual practical project assignment &amp; 4 milestones</li>
+                                        <li>• Weekly live project review meetings with industry mentors</li>
+                                        <li>• 24/7 technical mentor support for project queries</li>
+                                        <li>• Access to available teaching classes &amp; learning support</li>
+                                        <li className="pt-2 text-amber-800 font-semibold border-t border-emerald-200">
+                                            ✕ No verified certificate included
+                                        </li>
+                                        <li className="text-amber-800 font-semibold">
+                                            ✕ No physical welcome kit included
+                                        </li>
+                                    </ul>
+                                </div>
+                                <p className="mt-4 text-[11px] text-slate-500 italic">
+                                    Ideal for self-motivated students seeking technical knowledge, practical development experience, and live mentorship.
+                                </p>
                             </div>
-                            <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40">
-                                <h3 className="font-bold text-indigo-950 text-sm">Premium Package — ₹999</h3>
-                                <ul className="mt-2 space-y-1 text-slate-700">
-                                    <li>• <strong>All benefits included in Standard</strong></li>
-                                    <li>• Vectonix Branded Stainless Steel Bottle</li>
-                                    <li>• Vectonix Branded Executive Pen</li>
-                                    <li>• Vectonix Branded Metallic Badge</li>
-                                    <li>• Free Internship Welcome Kit dispatched to residential address</li>
-                                </ul>
+
+                            {/* Standard Package */}
+                            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+                                <div>
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-800 mb-2">
+                                        Verified Tier
+                                    </span>
+                                    <h3 className="font-bold text-slate-900 text-sm">Standard Package — ₹749</h3>
+                                    <ul className="mt-3 space-y-1.5 text-slate-600">
+                                        <li>• All Free Learning Track features included</li>
+                                        <li>• Complete live curriculum &amp; domain materials</li>
+                                        <li>• Practical task-based activities &amp; assessments</li>
+                                        <li>• Weekly project evaluations &amp; code reviews</li>
+                                        <li>• 24/7 technical mentor support desk</li>
+                                        <li>• Access to all available teaching sessions</li>
+                                        <li className="pt-2 text-indigo-700 font-bold border-t border-slate-200">
+                                            ✓ Verified Internship Completion Certificate
+                                        </li>
+                                        <li className="text-indigo-700 font-bold">
+                                            ✓ Digital verification portal credentials
+                                        </li>
+                                        <li className="text-slate-400 italic">
+                                            ✕ Physical welcome kit not included
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
+
+                            {/* Premium Package */}
+                            <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 flex flex-col justify-between">
+                                <div>
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800 mb-2">
+                                        Comprehensive
+                                    </span>
+                                    <h3 className="font-bold text-indigo-950 text-sm">Premium Package — ₹999</h3>
+                                    <ul className="mt-3 space-y-1.5 text-slate-700">
+                                        <li>• <strong>All benefits included in Standard</strong></li>
+                                        <li>• Verified Internship Completion Certificate</li>
+                                        <li>• Digital verification portal credentials</li>
+                                        <li className="pt-2 text-indigo-900 font-bold border-t border-indigo-200">
+                                            ✓ Vectonix Branded Stainless Steel Bottle
+                                        </li>
+                                        <li className="text-indigo-900 font-bold">
+                                            ✓ Vectonix Branded Executive Pen
+                                        </li>
+                                        <li className="text-indigo-900 font-bold">
+                                            ✓ Vectonix Branded Metallic Badge
+                                        </li>
+                                        <li className="text-indigo-900 font-bold">
+                                            ✓ Free Physical Kit delivery to doorstep
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Explicit Certificate and Kit Conditions */}
+                        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 space-y-2 mt-4">
+                            <h4 className="font-bold text-amber-900 flex items-center gap-1.5">
+                                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                                Important Policy: Certificate &amp; Physical Kit Eligibility
+                            </h4>
+                            <p>
+                                <strong>Free Course Track Participants:</strong> Enrollment in the ₹0 track provides full access to course curriculum, projects, and mentorship. However, <strong>it does not include a verified digital certificate or physical kit</strong>. A verified certificate represents formal Vectonix technical credentialing and is exclusively awarded to students enrolled in the Standard or Premium packages who satisfy the 70%+ milestone completion criteria.
+                            </p>
+                            <p>
+                                <strong>Package Upgrade Policy:</strong> ₹0 track participants may request an upgrade to the Standard or Premium tier at any point prior to the final evaluation deadline (December 23, 2026) by reaching out to program support or through the student dashboard.
+                            </p>
                         </div>
                     </section>
 

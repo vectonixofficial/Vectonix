@@ -36,7 +36,13 @@ import {
     Target,
     Layers,
     FileCheck,
-    X
+    X,
+    ZoomIn,
+    ZoomOut,
+    RotateCw,
+    Crop,
+    Check,
+    Download
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -147,9 +153,20 @@ function StudentDashboardContent() {
     const [milestoneSubmitNotes, setMilestoneSubmitNotes] = useState("");
     const [isSubmittingMilestone, setIsSubmittingMilestone] = useState(false);
 
-    // Profile Picture Upload State
+    // Profile Picture Upload & Crop State
     const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
     const [isSavingProfilePic, setIsSavingProfilePic] = useState(false);
+    const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
+    const [cropZoom, setCropZoom] = useState(1);
+    const [cropPan, setCropPan] = useState({ x: 0, y: 0 });
+    const [cropRotation, setCropRotation] = useState(0);
+    const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    // Notification Bell Dropdown State
+    const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+    const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+    const [lockedQuizNotice, setLockedQuizNotice] = useState<{ openDate: string; title: string } | null>(null);
 
     // Quizzes & Assessments State
     const [quizzes, setQuizzes] = useState<DomainQuiz[]>([]);
@@ -231,16 +248,81 @@ function StudentDashboardContent() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            alert("File size exceeds 2MB limit. Please select an image under 2MB.");
+        if (file.size > 5 * 1024 * 1024) {
+            alert("File size exceeds 5MB limit. Please select an image under 5MB.");
             return;
         }
 
         const reader = new FileReader();
         reader.onloadend = () => {
-            setProfileImagePreview(reader.result as string);
+            setRawImageForCrop(reader.result as string);
+            setCropZoom(1);
+            setCropPan({ x: 0, y: 0 });
+            setCropRotation(0);
         };
         reader.readAsDataURL(file);
+    };
+
+    const handleApplyCropAndSave = async () => {
+        if (!rawImageForCrop || !student) return;
+        setIsSavingProfilePic(true);
+
+        try {
+            const img = new Image();
+            img.src = rawImageForCrop;
+            await new Promise((resolve, reject) => {
+                img.onload = () => resolve(true);
+                img.onerror = reject;
+            });
+
+            const canvas = document.createElement("canvas");
+            const size = 400;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) throw new Error("Could not initialize canvas context");
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, size, size);
+
+            ctx.save();
+            ctx.translate(size / 2, size / 2);
+            ctx.rotate((cropRotation * Math.PI) / 180);
+            ctx.scale(cropZoom, cropZoom);
+
+            const aspect = img.width / img.height;
+            let drawWidth = size;
+            let drawHeight = size;
+            if (aspect > 1) {
+                drawWidth = size * aspect;
+            } else {
+                drawHeight = size / aspect;
+            }
+
+            ctx.drawImage(
+                img,
+                -drawWidth / 2 + cropPan.x,
+                -drawHeight / 2 + cropPan.y,
+                drawWidth,
+                drawHeight
+            );
+            ctx.restore();
+
+            const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+            const appId = student.application_id || student.application_number || student.id;
+            await studentService.updateProfilePicture(appId, croppedDataUrl);
+
+            setStudent({ ...student, profile_picture_url: croppedDataUrl });
+            setRawImageForCrop(null);
+            setProfileImagePreview(null);
+            alert("Profile photo cropped and updated successfully!");
+        } catch (err: any) {
+            console.error("Profile picture upload failure:", err);
+            alert("Failed to save cropped profile picture: " + (err.message || "Unknown error"));
+        } finally {
+            setIsSavingProfilePic(false);
+        }
     };
 
     const handleSaveProfilePic = async () => {
@@ -266,8 +348,21 @@ function StudentDashboardContent() {
     };
 
     const handleOpenQuiz = (quiz: DomainQuiz) => {
-        setActiveQuiz(quiz);
         const existing = quizResults[quiz.id];
+        const isDone = !!existing;
+        const now = new Date();
+        const openDate = quiz.openDate ? new Date(quiz.openDate) : new Date("2026-12-01T00:00:00");
+        const isOpen = now >= openDate;
+
+        if (!isDone && !isOpen) {
+            setLockedQuizNotice({
+                openDate: quiz.openDate || "2026-12-01T00:00:00",
+                title: quiz.title
+            });
+            return;
+        }
+
+        setActiveQuiz(quiz);
         if (existing) {
             setQuizAnswers(existing.answers || {});
             setQuizScore(existing.score || 0);
@@ -439,12 +534,65 @@ function StudentDashboardContent() {
 
     if (!student) return null;
 
+    const approvedMilestonesCount = project?.milestones
+        ? project.milestones.filter((m: any) => !m._meta && (m.completed === true || m.status === "Approved")).length
+        : 0;
+    const totalMilestones = 4;
+    const progressPercent = Math.min(100, approvedMilestonesCount * 25);
     const completedQuizzesCount = quizzes.filter((q) => !!quizResults[q.id]).length;
-    const progressPercent = quizzes.length > 0 ? Math.round((completedQuizzesCount / quizzes.length) * 100) : 0;
 
     const isApproved = student.status === "accepted";
     const isRejected = student.status === "rejected";
     const isPending = !isApproved && !isRejected;
+
+    const notifications = [
+        ...announcements.map((a) => ({
+            id: `ann-${a.id}`,
+            title: a.title,
+            description: a.message,
+            date: a.created_at,
+            targetSection: "announcements" as const
+        })),
+        {
+            id: "notif-orientation",
+            title: "Winter Internship 2026 Orientation",
+            description: "Live Orientation & Onboarding Meeting on November 25, 2026 at 6:00 PM IST.",
+            date: "2026-11-25T18:00:00+05:30",
+            targetSection: "reviews" as const
+        },
+        {
+            id: "notif-milestone1",
+            title: "Milestone 1 Kickoff",
+            description: "Milestone 1 opens on November 25, 2026. Workspace access begins.",
+            date: "2026-11-25T00:00:00+05:30",
+            targetSection: "project" as const
+        },
+        {
+            id: "notif-quiz1",
+            title: "Week 1 Assessment Scheduled",
+            description: "Week 1 Quiz opens on December 1, 2026 at 00:00 IST (1 day prior to Review 1).",
+            date: "2026-12-01T00:00:00+05:30",
+            targetSection: "assignments" as const
+        }
+    ];
+
+    const unreadNotifications = notifications.filter((n) => !readNotificationIds.includes(n.id));
+
+    const handleMarkAsRead = (id: string) => {
+        const updated = Array.from(new Set([...readNotificationIds, id]));
+        setReadNotificationIds(updated);
+        if (typeof window !== "undefined" && student?.application_id) {
+            localStorage.setItem(`read_notifs_${student.application_id}`, JSON.stringify(updated));
+        }
+    };
+
+    const handleMarkAllAsRead = () => {
+        const allIds = notifications.map((n) => n.id);
+        setReadNotificationIds(allIds);
+        if (typeof window !== "undefined" && student?.application_id) {
+            localStorage.setItem(`read_notifs_${student.application_id}`, JSON.stringify(allIds));
+        }
+    };
 
     const activeMilestone = MILESTONES_SCHEDULE.find((m) => {
         const existing = project?.milestones?.[m.index - 1];
@@ -478,13 +626,94 @@ function StudentDashboardContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Notification Bell Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                            className="relative p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
+                            aria-label="Notifications"
+                        >
+                            <Bell className="h-4 w-4" />
+                            {unreadNotifications.length > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-rose-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse">
+                                    {unreadNotifications.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {showNotificationsDropdown && (
+                            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Bell className="h-4 w-4 text-indigo-600" />
+                                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                            Notifications
+                                        </h3>
+                                        {unreadNotifications.length > 0 && (
+                                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700">
+                                                {unreadNotifications.length} new
+                                            </span>
+                                        )}
+                                    </div>
+                                    {unreadNotifications.length > 0 && (
+                                        <button
+                                            onClick={handleMarkAllAsRead}
+                                            className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
+                                        >
+                                            Mark all as read
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                                    {notifications.length === 0 ? (
+                                        <p className="text-xs text-slate-400 text-center py-6">
+                                            You&apos;re all caught up! No notifications.
+                                        </p>
+                                    ) : (
+                                        notifications.map((n) => {
+                                            const isUnread = !readNotificationIds.includes(n.id);
+                                            return (
+                                                <div
+                                                    key={n.id}
+                                                    onClick={() => {
+                                                        handleMarkAsRead(n.id);
+                                                        setActiveSection(n.targetSection);
+                                                        setShowNotificationsDropdown(false);
+                                                    }}
+                                                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-colors ${
+                                                        isUnread
+                                                            ? "bg-indigo-50/50 border-indigo-200 hover:bg-indigo-50"
+                                                            : "bg-white border-slate-100 hover:bg-slate-50 text-slate-600"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <h4 className="font-bold text-slate-900 leading-tight">
+                                                            {n.title}
+                                                        </h4>
+                                                        {isUnread && (
+                                                            <span className="h-2 w-2 rounded-full bg-indigo-600 shrink-0 mt-1" />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                                                        {n.description}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 font-mono">
                         {student.application_id || student.application_number}
                     </span>
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-red-50 hover:text-red-600 text-xs font-semibold text-slate-600 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-red-50 hover:text-red-600 text-xs font-semibold text-slate-600 transition-colors cursor-pointer"
                     >
                         <LogOut className="h-3.5 w-3.5" />
                         <span>Logout</span>
@@ -659,7 +888,7 @@ function StudentDashboardContent() {
                                     <div className="flex items-baseline justify-between mb-2">
                                         <span className="text-2xl font-extrabold text-slate-900">{progressPercent}%</span>
                                         <span className="text-xs text-slate-500">
-                                            {completedQuizzesCount} of {quizzes.length} completed
+                                            {approvedMilestonesCount} of {totalMilestones} completed
                                         </span>
                                     </div>
                                     <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -817,6 +1046,7 @@ function StudentDashboardContent() {
                                         {quizzes.map((quiz) => {
                                             const result = quizResults[quiz.id];
                                             const isDone = !!result;
+                                            const isOpen = new Date() >= new Date(quiz.openDate || "2026-12-01T00:00:00");
 
                                             return (
                                                 <div
@@ -849,23 +1079,39 @@ function StudentDashboardContent() {
                                                                     <CheckCircle2 className="h-3.5 w-3.5" />
                                                                     Score: {result.score} / {quiz.totalMarks} ({Math.round((result.score / quiz.totalMarks) * 100)}%)
                                                                 </span>
+                                                            ) : !isOpen ? (
+                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                    <Lock className="h-3.5 w-3.5 text-slate-500" />
+                                                                    Opens {new Date(quiz.openDate || "2026-12-01T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                                                </span>
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                                                                     <Clock className="h-3.5 w-3.5" />
-                                                                    Pending Assessment
+                                                                    Available Now
                                                                 </span>
                                                             )}
 
                                                             <Button
                                                                 size="sm"
+                                                                disabled={!isDone && !isOpen}
                                                                 onClick={() => handleOpenQuiz(quiz)}
                                                                 className={`text-xs ${
                                                                     isDone
-                                                                        ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                                                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                                        ? "bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                                                                        : !isOpen
+                                                                        ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                                                        : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
                                                                 }`}
                                                             >
-                                                                {isDone ? "Review Answers" : "Start Assessment"}
+                                                                {isDone ? (
+                                                                    "Review Answers"
+                                                                ) : !isOpen ? (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Lock className="h-3 w-3" /> Locked
+                                                                    </span>
+                                                                ) : (
+                                                                    "Start Assessment"
+                                                                )}
                                                             </Button>
                                                         </div>
                                                     </div>
@@ -1471,29 +1717,59 @@ function StudentDashboardContent() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {resources.map((res) => (
-                                    <div
-                                        key={res.id}
-                                        className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 flex flex-col justify-between"
-                                    >
-                                        <div>
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
-                                                {res.category}
-                                            </span>
-                                            <h3 className="font-bold text-slate-900 text-sm mt-2">{res.title}</h3>
-                                            <p className="text-xs text-slate-500 mt-1">{res.description}</p>
-                                        </div>
+                                {resources.map((res) => {
+                                    const isPdf = res.resource_url?.endsWith(".pdf");
+                                    const fileSize = res.id === "res-general" ? "~71 KB" : res.id === "res-fsd" ? "~115 KB" : res.id === "res-cyber" ? "~87 KB" : res.id === "res-marketing" ? "~86 KB" : "PDF";
 
-                                        <a
-                                            href={res.resource_url}
-                                            target="_blank"
-                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline pt-2"
+                                    return (
+                                        <div
+                                            key={res.id}
+                                            className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between hover:border-indigo-200 transition-all"
                                         >
-                                            <span>Open Resource</span>
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                        </a>
-                                    </div>
-                                ))}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1">
+                                                        <FileText className="h-3 w-3" />
+                                                        {res.category}
+                                                    </span>
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
+                                                        {res.domain === "All" ? "All Cohorts" : res.domain}
+                                                    </span>
+                                                    {isPdf && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                            {fileSize}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h3 className="font-bold text-slate-900 text-sm leading-snug">{res.title}</h3>
+                                                <p className="text-xs text-slate-500 leading-relaxed">{res.description}</p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                                <a
+                                                    href={res.resource_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-colors"
+                                                >
+                                                    <ExternalLink className="h-3.5 w-3.5" />
+                                                    <span>View PDF</span>
+                                                </a>
+
+                                                {isPdf && (
+                                                    <a
+                                                        href={res.resource_url}
+                                                        download
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors"
+                                                    >
+                                                        <Download className="h-3.5 w-3.5" />
+                                                        <span>Download</span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -1648,7 +1924,7 @@ function StudentDashboardContent() {
                                     </div>
                                     <div className="space-y-2 text-xs text-slate-600 text-center sm:text-left">
                                         <p className="font-medium text-slate-800">Upload a professional headshot</p>
-                                        <p className="text-[11px] text-slate-400">Supported formats: JPG, JPEG, PNG, WEBP (Max: 2MB)</p>
+                                        <p className="text-[11px] text-slate-400">Supported formats: JPG, JPEG, PNG, WEBP (Interactive crop, zoom &amp; pan)</p>
                                         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
                                             <input
                                                 type="file"
@@ -1659,9 +1935,10 @@ function StudentDashboardContent() {
                                             />
                                             <label
                                                 htmlFor="profile-pic-input"
-                                                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 font-semibold cursor-pointer text-slate-700 inline-block"
+                                                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 font-semibold cursor-pointer text-slate-700 inline-flex items-center gap-1.5"
                                             >
-                                                Choose Photo
+                                                <Crop className="h-3.5 w-3.5 text-indigo-600" />
+                                                <span>Upload &amp; Crop Photo</span>
                                             </label>
                                             {profileImagePreview && (
                                                 <Button
@@ -2135,7 +2412,7 @@ function StudentDashboardContent() {
                                 <Button
                                     variant="outline"
                                     onClick={() => setActiveQuiz(null)}
-                                    className="text-xs"
+                                    className="text-xs cursor-pointer"
                                 >
                                     {quizSubmitted ? "Close" : "Cancel"}
                                 </Button>
@@ -2143,11 +2420,192 @@ function StudentDashboardContent() {
                                     <Button
                                         onClick={handleSubmitQuiz}
                                         disabled={Object.keys(quizAnswers).length === 0}
-                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold cursor-pointer"
                                     >
                                         Submit Assessment
                                     </Button>
                                 )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* Profile Picture Crop & Zoom Modal */}
+                {rawImageForCrop && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div className="flex items-center gap-2">
+                                    <Crop className="h-5 w-5 text-indigo-600" />
+                                    <h3 className="font-bold text-slate-900 text-base">Crop Profile Picture</h3>
+                                </div>
+                                <button
+                                    onClick={() => setRawImageForCrop(null)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            {/* Viewport & Canvas Area */}
+                            <div className="flex flex-col items-center justify-center">
+                                <div
+                                    className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-indigo-500 shadow-inner bg-slate-900 cursor-grab active:cursor-grabbing select-none"
+                                    onMouseDown={(e) => {
+                                        setIsDraggingCrop(true);
+                                        setDragStart({ x: e.clientX - cropPan.x, y: e.clientY - cropPan.y });
+                                    }}
+                                    onMouseMove={(e) => {
+                                        if (!isDraggingCrop) return;
+                                        setCropPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+                                    }}
+                                    onMouseUp={() => setIsDraggingCrop(false)}
+                                    onMouseLeave={() => setIsDraggingCrop(false)}
+                                    onTouchStart={(e) => {
+                                        if (e.touches[0]) {
+                                            setIsDraggingCrop(true);
+                                            setDragStart({ x: e.touches[0].clientX - cropPan.x, y: e.touches[0].clientY - cropPan.y });
+                                        }
+                                    }}
+                                    onTouchMove={(e) => {
+                                        if (!isDraggingCrop || !e.touches[0]) return;
+                                        setCropPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+                                    }}
+                                    onTouchEnd={() => setIsDraggingCrop(false)}
+                                >
+                                    <img
+                                        src={rawImageForCrop}
+                                        alt="Crop target"
+                                        draggable={false}
+                                        className="max-w-none pointer-events-none transition-transform duration-75"
+                                        style={{
+                                            transform: `translate(${cropPan.x}px, ${cropPan.y}px) rotate(${cropRotation}deg) scale(${cropZoom})`,
+                                            transformOrigin: "center center",
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "contain"
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 rounded-full border-2 border-white/60 pointer-events-none shadow-2xs" />
+                                </div>
+                                <span className="text-[11px] text-slate-400 mt-2">
+                                    Click &amp; drag to reposition headshot within circle
+                                </span>
+                            </div>
+
+                            {/* Controls: Zoom & Rotate */}
+                            <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                                <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                    <span className="flex items-center gap-1.5">
+                                        <ZoomIn className="h-3.5 w-3.5 text-indigo-600" />
+                                        Zoom: {cropZoom.toFixed(1)}x
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCropZoom((z) => Math.max(1, +(z - 0.2).toFixed(1)))}
+                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer"
+                                        >
+                                            -
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCropZoom((z) => Math.min(3, +(z + 0.2).toFixed(1)))}
+                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="3"
+                                    step="0.05"
+                                    value={cropZoom}
+                                    onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                                    className="w-full accent-indigo-600 cursor-pointer"
+                                />
+
+                                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCropRotation((r) => (r + 90) % 360)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-700 cursor-pointer"
+                                    >
+                                        <RotateCw className="h-3.5 w-3.5 text-slate-600" />
+                                        Rotate 90°
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setCropZoom(1); setCropPan({ x: 0, y: 0 }); setCropRotation(0); }}
+                                        className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                                    >
+                                        Reset Position
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-end gap-3 pt-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setRawImageForCrop(null)}
+                                    className="text-xs cursor-pointer"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleApplyCropAndSave}
+                                    disabled={isSavingProfilePic}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs cursor-pointer"
+                                >
+                                    {isSavingProfilePic ? "Applying..." : "Apply & Save Avatar"}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* Locked Quiz Notice Modal */}
+                {lockedQuizNotice && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl text-center"
+                        >
+                            <div className="h-14 w-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+                                <Lock className="h-7 w-7" />
+                            </div>
+                            <div className="space-y-1">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 tracking-wider">
+                                    Assessment Locked
+                                </span>
+                                <h3 className="text-lg font-bold text-slate-900">
+                                    {lockedQuizNotice.title}
+                                </h3>
+                                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed pt-2">
+                                    This assessment is scheduled to open on{" "}
+                                    <strong className="text-slate-800 font-bold">
+                                        {new Date(lockedQuizNotice.openDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} at 00:00 IST
+                                    </strong>{" "}
+                                    (1 day prior to the milestone review). Questions remain strictly sealed until the opening date.
+                                </p>
+                            </div>
+                            <div className="pt-3 border-t border-slate-100">
+                                <Button
+                                    onClick={() => setLockedQuizNotice(null)}
+                                    className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer"
+                                >
+                                    Understood
+                                </Button>
                             </div>
                         </motion.div>
                     </div>

@@ -25,13 +25,13 @@ export const PACKAGES_CONFIG = {
         price: 0,
         popular: false,
         features: [
-            "Full Access to Domain Learning",
-            "Live Capstone Project Assignment",
-            "Milestone Tracking & Mentor Feedback",
-            "Full Project Workspace Access",
-            "Weekly Review Meetings & Mentorship",
-            "No Certificate Included",
-            "No Welcome Kit"
+            "Full Access to Domain Curriculum & Handbooks",
+            "Live Capstone Project & 4-Milestone Workspace",
+            "Weekly Project Review Meetings with Mentors",
+            "24/7 Technical Mentor Support Desk",
+            "Access to Available Teaching Classes",
+            "No Certificate Included (Upgrade Available)",
+            "No Physical Welcome Kit"
         ]
     },
     Standard: {
