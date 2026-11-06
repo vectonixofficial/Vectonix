@@ -797,27 +797,44 @@ export const studentService = {
     /**
      * Get announcements for student domain
      */
-    async getAnnouncements(batchId: string = "wi26", domain: string = "All"): Promise<StudentAnnouncement[]> {
+    /**
+     * Get announcements for student domain or entire cohort
+     */
+    async getAnnouncements(batchId: string = "wi26", domain?: string): Promise<StudentAnnouncement[]> {
         let dbAnnouncements: StudentAnnouncement[] = [];
 
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from("announcements")
                     .select("*")
-                    .eq("batch_id", batchId)
-                    .or(`domain.eq.All,domain.eq.${domain}`)
-                    .order("created_at", { ascending: false });
+                    .eq("batch_id", batchId);
+
+                // Only filter domain if a specific non-All domain is requested by a student
+                if (domain && domain !== "All") {
+                    query = query.or(`domain.eq.All,domain.eq.${domain}`);
+                }
+
+                const { data, error } = await query.order("created_at", { ascending: false });
 
                 if (!error && data && data.length > 0) {
                     dbAnnouncements = data as StudentAnnouncement[];
                 }
-            } catch (ignore) {}
+            } catch (err) {
+                console.warn("Supabase getAnnouncements:", err);
+            }
         }
 
         let localAnnouncements: StudentAnnouncement[] = [];
+        let deletedIds = new Set<string>();
+
         if (typeof window !== "undefined") {
             try {
+                const delStored = localStorage.getItem("vx_deleted_announcement_ids");
+                if (delStored) {
+                    deletedIds = new Set(JSON.parse(delStored));
+                }
+
                 const stored = localStorage.getItem("vx_cohort_announcements");
                 if (stored) {
                     const parsed = JSON.parse(stored);
@@ -828,31 +845,51 @@ export const studentService = {
             } catch (ignore) {}
         }
 
-        // Deduplicate by ID
-        const all = [...localAnnouncements, ...dbAnnouncements, ...DEFAULT_ANNOUNCEMENTS];
+        // Only include default announcements if DB is empty and they haven't been deleted
+        const defaults = dbAnnouncements.length === 0
+            ? DEFAULT_ANNOUNCEMENTS.filter((a) => !deletedIds.has(a.id))
+            : [];
+
+        // Combine DB, local and defaults
+        const all = [...dbAnnouncements, ...localAnnouncements, ...defaults];
         const seen = new Set<string>();
-        return all.filter((a) => {
-            if (seen.has(a.id)) return false;
-            seen.add(a.id);
-            return true;
-        });
+        const result: StudentAnnouncement[] = [];
+
+        for (const item of all) {
+            if (!item || seen.has(item.id) || deletedIds.has(item.id)) continue;
+            if (domain && domain !== "All" && item.domain && item.domain !== "All" && item.domain !== domain) {
+                continue;
+            }
+            seen.add(item.id);
+            result.push(item);
+        }
+
+        return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
 
     /**
      * Create an announcement (saves to Supabase & local cache)
      */
     async createAnnouncement(ann: Omit<StudentAnnouncement, "id" | "created_at">): Promise<StudentAnnouncement> {
-        const newAnn: StudentAnnouncement = {
-            id: `ann-${Date.now()}`,
-            ...ann,
-            created_at: new Date().toISOString()
+        const payload: any = {
+            batch_id: ann.batch_id || "wi26",
+            title: ann.title.trim(),
+            message: ann.message.trim(),
+            priority: ann.priority || "normal",
+            domain: ann.domain || "All",
+            reference_url: ann.reference_url ? ann.reference_url.trim() : null
         };
 
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase.from("announcements").insert(newAnn).select().single();
+                // Do NOT pass custom string id so Postgres automatically generates valid UUID
+                const { data, error } = await supabase
+                    .from("announcements")
+                    .insert(payload)
+                    .select()
+                    .single();
+
                 if (!error && data) {
-                    // Also mirror in local cache
                     if (typeof window !== "undefined") {
                         const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
                         const list = JSON.parse(stored);
@@ -860,12 +897,22 @@ export const studentService = {
                     }
                     return data as StudentAnnouncement;
                 }
+                if (error) {
+                    console.error("Supabase announcement insert error:", error);
+                }
             } catch (err) {
-                console.warn("Supabase announcement insert:", err);
+                console.warn("Supabase announcement insert exception:", err);
             }
         }
 
-        // Cache locally
+        // Fallback for offline / demo mode
+        const fallbackId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ann-${Date.now()}`;
+        const newAnn: StudentAnnouncement = {
+            id: fallbackId,
+            ...payload,
+            created_at: new Date().toISOString()
+        };
+
         if (typeof window !== "undefined") {
             try {
                 const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
@@ -878,23 +925,108 @@ export const studentService = {
     },
 
     /**
-     * Delete an announcement (deletes from Supabase & local cache)
+     * Update an announcement (updates in Supabase & local cache)
      */
-    async deleteAnnouncement(id: string): Promise<boolean> {
-        if (isSupabaseConfigured) {
+    async updateAnnouncement(id: string, updates: Partial<StudentAnnouncement>): Promise<StudentAnnouncement> {
+        const payload: any = {};
+        if (updates.title !== undefined) payload.title = updates.title.trim();
+        if (updates.message !== undefined) payload.message = updates.message.trim();
+        if (updates.priority !== undefined) payload.priority = updates.priority;
+        if (updates.domain !== undefined) payload.domain = updates.domain;
+        if (updates.reference_url !== undefined) payload.reference_url = updates.reference_url ? updates.reference_url.trim() : null;
+
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        if (isSupabaseConfigured && isUUID) {
             try {
-                await supabase.from("announcements").delete().eq("id", id);
+                const { data, error } = await supabase
+                    .from("announcements")
+                    .update(payload)
+                    .eq("id", id)
+                    .select()
+                    .single();
+
+                if (!error && data) {
+                    if (typeof window !== "undefined") {
+                        const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
+                        const list: StudentAnnouncement[] = JSON.parse(stored);
+                        const updatedList = list.map((a: any) => (a.id === id ? { ...a, ...data } : a));
+                        localStorage.setItem("vx_cohort_announcements", JSON.stringify(updatedList));
+                    }
+                    return data as StudentAnnouncement;
+                }
+                if (error) {
+                    console.error("Supabase announcement update error:", error);
+                }
             } catch (err) {
-                console.warn("Supabase announcement delete:", err);
+                console.warn("Supabase announcement update exception:", err);
             }
         }
+
+        // Fallback for offline / local state
+        let updatedItem: StudentAnnouncement = {
+            id,
+            batch_id: "wi26",
+            domain: "All",
+            title: "",
+            message: "",
+            priority: "normal",
+            created_at: new Date().toISOString(),
+            ...updates
+        } as StudentAnnouncement;
 
         if (typeof window !== "undefined") {
             try {
                 const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
+                const list: StudentAnnouncement[] = JSON.parse(stored);
+                let found = false;
+                const updatedList = list.map((a) => {
+                    if (a.id === id) {
+                        found = true;
+                        updatedItem = { ...a, ...payload };
+                        return updatedItem;
+                    }
+                    return a;
+                });
+                if (!found) {
+                    updatedList.unshift(updatedItem);
+                }
+                localStorage.setItem("vx_cohort_announcements", JSON.stringify(updatedList));
+            } catch (ignore) {}
+        }
+
+        return updatedItem;
+    },
+
+    /**
+     * Delete an announcement (deletes from Supabase & local cache)
+     */
+    async deleteAnnouncement(id: string): Promise<boolean> {
+        // Record in deleted announcement IDs so hardcoded defaults won't reappear
+        if (typeof window !== "undefined") {
+            try {
+                const deletedIds: string[] = JSON.parse(localStorage.getItem("vx_deleted_announcement_ids") || "[]");
+                if (!deletedIds.includes(id)) {
+                    deletedIds.push(id);
+                    localStorage.setItem("vx_deleted_announcement_ids", JSON.stringify(deletedIds));
+                }
+
+                const stored = localStorage.getItem("vx_cohort_announcements") || "[]";
                 const list = JSON.parse(stored).filter((a: any) => a.id !== id);
                 localStorage.setItem("vx_cohort_announcements", JSON.stringify(list));
             } catch (ignore) {}
+        }
+
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isSupabaseConfigured && isUUID) {
+            try {
+                const { error } = await supabase.from("announcements").delete().eq("id", id);
+                if (error) {
+                    console.error("Supabase announcement delete error:", error);
+                }
+            } catch (err) {
+                console.warn("Supabase announcement delete exception:", err);
+            }
         }
 
         return true;

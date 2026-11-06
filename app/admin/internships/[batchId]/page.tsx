@@ -103,6 +103,7 @@ export default function AdminInternshipsBatchPage() {
     // Announcements Management State
     const [announcementsList, setAnnouncementsList] = useState<StudentAnnouncement[]>([]);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState<StudentAnnouncement | null>(null);
     const [annForm, setAnnForm] = useState({
         title: "",
         message: "",
@@ -294,23 +295,68 @@ export default function AdminInternshipsBatchPage() {
         }
     };
 
-    const handleCreateAnnouncement = async (e: React.FormEvent) => {
+    const handleOpenCreateAnnouncement = () => {
+        setEditingAnnouncement(null);
+        setAnnForm({
+            title: "",
+            message: "",
+            priority: "normal",
+            domain: "All",
+            reference_url: ""
+        });
+        setShowAnnouncementModal(true);
+    };
+
+    const handleOpenEditAnnouncement = (ann: StudentAnnouncement) => {
+        setEditingAnnouncement(ann);
+        setAnnForm({
+            title: ann.title || "",
+            message: ann.message || "",
+            priority: ann.priority || "normal",
+            domain: ann.domain || "All",
+            reference_url: ann.reference_url || ""
+        });
+        setShowAnnouncementModal(true);
+    };
+
+    const handleSaveAnnouncement = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!annForm.title.trim() || !annForm.message.trim()) return;
+        if (!annForm.title.trim() || !annForm.message.trim()) {
+            alert("Please provide both a title and message body for the announcement.");
+            return;
+        }
 
         setActionLoading(true);
         try {
-            const created = await studentService.createAnnouncement({
-                batch_id: batchId,
-                title: annForm.title.trim(),
-                message: annForm.message.trim(),
-                priority: annForm.priority,
-                domain: annForm.domain,
-                reference_url: annForm.reference_url.trim() || undefined
-            });
+            if (editingAnnouncement) {
+                const updated = await studentService.updateAnnouncement(editingAnnouncement.id, {
+                    title: annForm.title.trim(),
+                    message: annForm.message.trim(),
+                    priority: annForm.priority,
+                    domain: annForm.domain,
+                    reference_url: annForm.reference_url.trim() || undefined
+                });
 
-            setAnnouncementsList((prev) => [created, ...prev.filter((a) => a.id !== created.id)]);
+                setAnnouncementsList((prev) =>
+                    prev.map((a) => (a.id === editingAnnouncement.id ? { ...a, ...updated } : a))
+                );
+                alert("Cohort announcement updated successfully!");
+            } else {
+                const created = await studentService.createAnnouncement({
+                    batch_id: batchId,
+                    title: annForm.title.trim(),
+                    message: annForm.message.trim(),
+                    priority: annForm.priority,
+                    domain: annForm.domain,
+                    reference_url: annForm.reference_url.trim() || undefined
+                });
+
+                setAnnouncementsList((prev) => [created, ...prev.filter((a) => a.id !== created.id)]);
+                alert("Cohort announcement published and broadcasted successfully!");
+            }
+
             setShowAnnouncementModal(false);
+            setEditingAnnouncement(null);
             setAnnForm({
                 title: "",
                 message: "",
@@ -318,10 +364,9 @@ export default function AdminInternshipsBatchPage() {
                 domain: "All",
                 reference_url: ""
             });
-            alert("Cohort announcement published and broadcasted successfully!");
         } catch (err: any) {
-            console.error("Error creating announcement:", err);
-            alert(`Failed to create announcement: ${err.message || "Unknown error"}`);
+            console.error("Error saving announcement:", err);
+            alert(`Failed to save announcement: ${err.message || "Unknown error"}`);
         } finally {
             setActionLoading(false);
         }
@@ -332,9 +377,10 @@ export default function AdminInternshipsBatchPage() {
         try {
             await studentService.deleteAnnouncement(id);
             setAnnouncementsList((prev) => prev.filter((a) => a.id !== id));
+            alert("Announcement removed successfully.");
         } catch (err: any) {
             console.error("Error deleting announcement:", err);
-            alert(`Failed to delete announcement: ${err.message}`);
+            alert(`Failed to delete announcement: ${err.message || "Unknown error"}`);
         }
     };
 
@@ -1180,7 +1226,7 @@ export default function AdminInternshipsBatchPage() {
                             </div>
 
                             <Button
-                                onClick={() => setShowAnnouncementModal(true)}
+                                onClick={handleOpenCreateAnnouncement}
                                 className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 self-start sm:self-auto"
                             >
                                 <Plus className="h-4 w-4" />
@@ -1217,15 +1263,37 @@ export default function AdminInternshipsBatchPage() {
                                             <p className="text-slate-600 max-w-2xl">{ann.message}</p>
                                         </div>
 
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleDeleteAnnouncement(ann.id)}
-                                            className="text-xs text-rose-600 hover:bg-rose-50 border-rose-200 self-end sm:self-center"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                            Delete
-                                        </Button>
+                                        <div className="flex items-center gap-2 self-end sm:self-center">
+                                            {ann.reference_url && (
+                                                <a
+                                                    href={ann.reference_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                    title="Open Reference Link"
+                                                >
+                                                    <ExternalLink className="h-4 w-4" />
+                                                </a>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleOpenEditAnnouncement(ann)}
+                                                className="text-xs text-indigo-600 hover:bg-indigo-50 border-indigo-200"
+                                            >
+                                                <Edit3 className="h-3.5 w-3.5 mr-1" />
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleDeleteAnnouncement(ann.id)}
+                                                className="text-xs text-rose-600 hover:bg-rose-50 border-rose-200"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                Delete
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -1850,7 +1918,7 @@ export default function AdminInternshipsBatchPage() {
                 )}
             </AnimatePresence>
 
-            {/* Create Announcement Modal */}
+            {/* Create / Edit Announcement Modal */}
             <AnimatePresence>
                 {showAnnouncementModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -1863,17 +1931,20 @@ export default function AdminInternshipsBatchPage() {
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                                     <Bell className="h-4 w-4 text-indigo-600" />
-                                    Publish Cohort Announcement
+                                    {editingAnnouncement ? "Edit Cohort Announcement" : "Publish Cohort Announcement"}
                                 </h3>
                                 <button
-                                    onClick={() => setShowAnnouncementModal(false)}
-                                    className="text-slate-400 hover:text-slate-600 text-sm"
+                                    onClick={() => {
+                                        setShowAnnouncementModal(false);
+                                        setEditingAnnouncement(null);
+                                    }}
+                                    className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
                                 >
                                     ✕
                                 </button>
                             </div>
 
-                            <form onSubmit={handleCreateAnnouncement} className="space-y-4 text-xs">
+                            <form onSubmit={handleSaveAnnouncement} className="space-y-4 text-xs">
                                 <div>
                                     <label className="block font-semibold text-slate-700 mb-1">
                                         Announcement Title *
@@ -1952,17 +2023,22 @@ export default function AdminInternshipsBatchPage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => setShowAnnouncementModal(false)}
-                                        className="text-xs"
+                                        onClick={() => {
+                                            setShowAnnouncementModal(false);
+                                            setEditingAnnouncement(null);
+                                        }}
+                                        className="text-xs cursor-pointer"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         type="submit"
                                         disabled={actionLoading}
-                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold cursor-pointer"
                                     >
-                                        {actionLoading ? "Publishing..." : "Broadcast Announcement"}
+                                        {actionLoading
+                                            ? (editingAnnouncement ? "Saving Changes..." : "Publishing...")
+                                            : (editingAnnouncement ? "Save Changes" : "Broadcast Announcement")}
                                     </Button>
                                 </div>
                             </form>
