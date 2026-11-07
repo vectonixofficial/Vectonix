@@ -58,7 +58,7 @@ export default function InternshipApplyPage() {
         isManualCollege: false,
         degree: "B.Tech",
         department: "",
-        yearOfStudy: "3rd Year",
+        yearOfStudy: "",
         graduationYear: "2027",
 
         // Residential Address
@@ -280,6 +280,7 @@ export default function InternshipApplyPage() {
         // College
         if (!formData.collegeName.trim()) return "Please select or enter your college/university name";
         if (!formData.department.trim()) return "Department/Branch is required";
+        if (!formData.yearOfStudy) return "Please choose your Year of Study";
 
         // Address
         if (!formData.houseNumber.trim()) return "Door / House Number is required";
@@ -781,15 +782,19 @@ export default function InternshipApplyPage() {
                                             Year of Study *
                                         </label>
                                         <select
+                                            required
                                             value={formData.yearOfStudy}
                                             onChange={(e) => setFormData({ ...formData, yearOfStudy: e.target.value })}
-                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            className={`w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white ${
+                                                !formData.yearOfStudy ? "text-slate-400" : "text-slate-900"
+                                            }`}
                                         >
-                                            <option value="1st Year">1st Year</option>
-                                            <option value="2nd Year">2nd Year</option>
-                                            <option value="3rd Year">3rd Year</option>
-                                            <option value="4th Year">4th Year (Final Year)</option>
-                                            <option value="Graduated">Recent Graduate</option>
+                                            <option value="" disabled>Choose Year</option>
+                                            <option value="1st Year" className="text-slate-900">1st Year</option>
+                                            <option value="2nd Year" className="text-slate-900">2nd Year</option>
+                                            <option value="3rd Year" className="text-slate-900">3rd Year</option>
+                                            <option value="4th Year" className="text-slate-900">4th Year (Final Year)</option>
+                                            <option value="Graduated" className="text-slate-900">Recent Graduate</option>
                                         </select>
                                     </div>
                                 </div>
