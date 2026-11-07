@@ -47,7 +47,7 @@ export default function AdminDashboardPage() {
 
                 // Calculate projected revenue from internship applications
                 const totalRevenue = internshipApps.reduce(
-                    (sum, app) => sum + (Number(app.package_amount) || (app.package_name === "Premium" ? 999 : 749)),
+                    (sum, app) => sum + (app.package_name === "Free" ? 0 : (Number(app.package_amount) || (app.package_name === "Premium" ? 999 : 749))),
                     0
                 );
 

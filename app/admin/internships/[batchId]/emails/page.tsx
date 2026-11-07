@@ -774,7 +774,7 @@ Managing Director, Vectonix Technologies`
                                                                 : "bg-indigo-50 text-indigo-700 border-indigo-200"
                                                         }`}
                                                     >
-                                                        {app.package_name} (₹{app.package_amount || (app.package_name === "Premium" ? 999 : 749)})
+                                                        {app.package_name} (₹{app.package_name === "Free" ? 0 : (app.package_amount || (app.package_name === "Premium" ? 999 : 749))})
                                                     </span>
                                                 </td>
                                             </tr>

@@ -511,7 +511,7 @@ export default function AdminInternshipsBatchPage() {
             "Year of Study": app.year_of_study,
             "Internship Domain": app.domain,
             "Package Selected": app.package_name,
-            "Package Amount (INR)": app.package_amount || (app.package_name === "Premium" ? 999 : 749),
+            "Package Amount (INR)": app.package_name === "Free" ? 0 : (app.package_amount || (app.package_name === "Premium" ? 999 : 749)),
             "Application Status": app.status.toUpperCase(),
             "Door / House No": app.house_number || "N/A",
             "Street Name": app.street_name || "N/A",
@@ -2104,7 +2104,7 @@ export default function AdminInternshipsBatchPage() {
                                 <div>
                                     <span className="text-slate-400 uppercase font-semibold block">Package Chosen</span>
                                     <span className="font-bold text-amber-700">
-                                        {selectedApp.package_name} (₹{selectedApp.package_amount || (selectedApp.package_name === "Premium" ? 999 : 749)})
+                                        {selectedApp.package_name} (₹{selectedApp.package_name === "Free" ? 0 : (selectedApp.package_amount || (selectedApp.package_name === "Premium" ? 999 : 749))})
                                     </span>
                                 </div>
                             </div>

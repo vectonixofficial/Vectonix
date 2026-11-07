@@ -342,7 +342,7 @@ export default function InternshipApplyPage() {
         setIsSubmitting(true);
         try {
             const selectedPkg = PACKAGES_CONFIG[formData.packageName];
-            const verifiedPrice = selectedPkg?.price || 749;
+            const verifiedPrice = selectedPkg?.price !== undefined ? selectedPkg.price : (formData.packageName === "Free" ? 0 : 749);
 
             const result = await internshipService.submitApplication({
                 batchId: batch?.id || batchId,
@@ -1368,7 +1368,7 @@ export default function InternshipApplyPage() {
                                 <div className="flex justify-between py-1 border-b border-slate-200">
                                     <span className="text-slate-500 font-medium">Chosen Package</span>
                                     <span className="font-semibold text-indigo-700">
-                                        {submittedApplication.package_name} (₹{submittedApplication.package_amount})
+                                        {submittedApplication.package_name} (₹{submittedApplication.package_name === "Free" ? 0 : (submittedApplication.package_amount ?? 0)})
                                     </span>
                                 </div>
                                 <div className="flex justify-between py-1 border-b border-slate-200">

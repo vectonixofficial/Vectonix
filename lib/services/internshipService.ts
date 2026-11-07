@@ -95,15 +95,23 @@ export function hydrateApplication(row: any): DatabaseInternshipApplication {
         }
     }
 
-    return {
-        ...meta,
-        ...row,
-        application_id: row.application_id || meta.application_id || meta.application_number || row.id,
-        application_number: row.application_number || meta.application_number || row.application_id || meta.application_id,
-        gender: row.gender || meta.gender || "Prefer not to say",
-        package_name: row.package_name || meta.package_name || "Standard",
-        package_amount: row.package_amount || meta.package_amount || (meta.package_name === "Premium" ? 999 : 749),
-        graduation_year: row.graduation_year || meta.graduation_year || "",
+        const resolvedPkgName = row.package_name || meta.package_name || "Standard";
+        const rawPkgAmount = (row.package_amount !== undefined && row.package_amount !== null)
+            ? row.package_amount
+            : meta.package_amount;
+        const resolvedPkgAmount = (rawPkgAmount !== undefined && rawPkgAmount !== null && !isNaN(Number(rawPkgAmount)))
+            ? Number(rawPkgAmount)
+            : (resolvedPkgName === "Free" ? 0 : resolvedPkgName === "Premium" ? 999 : 749);
+
+        return {
+            ...meta,
+            ...row,
+            application_id: row.application_id || meta.application_id || meta.application_number || row.id,
+            application_number: row.application_number || meta.application_number || row.application_id || meta.application_id,
+            gender: row.gender || meta.gender || "Prefer not to say",
+            package_name: resolvedPkgName,
+            package_amount: resolvedPkgAmount,
+            graduation_year: row.graduation_year || meta.graduation_year || "",
         house_number: row.house_number || meta.house_number || "",
         street_name: row.street_name || meta.street_name || "",
         locality: row.locality || meta.locality || "",
@@ -248,7 +256,7 @@ export const internshipService = {
         const timestamp = Date.now();
 
         // Validate package amount server-side/service-side
-        const expectedPrice = PACKAGES_CONFIG[payload.packageName]?.price ?? 749;
+        const expectedPrice = PACKAGES_CONFIG[payload.packageName]?.price ?? (payload.packageName === "Free" ? 0 : 749);
         const verifiedAmount = expectedPrice;
 
         // Guaranteed Unique Sequential Application ID generator: VTX-WI26-0001, VTX-WI26-0002...
@@ -885,6 +893,9 @@ export const internshipService = {
                 premiumCount += 1;
                 packageBreakdown.Premium += 1;
                 totalProjectedRevenue += 999;
+            } else if (app.package_name === "Free") {
+                packageBreakdown.Free = (packageBreakdown.Free || 0) + 1;
+                totalProjectedRevenue += 0;
             } else {
                 standardCount += 1;
                 packageBreakdown.Standard += 1;
