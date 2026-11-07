@@ -1251,7 +1251,7 @@ export const studentService = {
                 const updatePayload: any = {
                     milestones: updatedMilestones,
                     progress_percent: progressPercent,
-                    status: "Needs Review",
+                    status: "Under Review",
                     updated_at: new Date().toISOString()
                 };
 
@@ -1260,7 +1260,7 @@ export const studentService = {
                     .update(updatePayload)
                     .eq("id", payload.projectId);
 
-                if (updateErr) {
+                if (updateErr && (updateErr.message.includes("student_projects_status_check") || updateErr.message.toLowerCase().includes("check constraint"))) {
                     await supabase
                         .from("student_projects")
                         .update({ ...updatePayload, status: "Needs Review" })
@@ -1311,16 +1311,30 @@ export const studentService = {
                 const progressPercent = Math.min(100, Math.round((completedCount / updatedMilestones.length) * 100));
                 const nextMilestone = Math.min(4, payload.milestoneIndex + 1);
 
-                await supabase
+                const targetStatus = progressPercent === 100 ? "Completed" : "In Progress";
+                const { error: approveErr } = await supabase
                     .from("student_projects")
                     .update({
                         milestones: updatedMilestones,
                         progress_percent: progressPercent,
                         current_milestone: nextMilestone,
-                        status: progressPercent === 100 ? "Completed" : "In Development",
+                        status: targetStatus,
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", payload.projectId);
+
+                if (approveErr && (approveErr.message.includes("student_projects_status_check") || approveErr.message.toLowerCase().includes("check constraint"))) {
+                    await supabase
+                        .from("student_projects")
+                        .update({
+                            milestones: updatedMilestones,
+                            progress_percent: progressPercent,
+                            current_milestone: nextMilestone,
+                            status: progressPercent === 100 ? "Completed" : "In Development",
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq("id", payload.projectId);
+                }
             }
             return { success: true };
         } catch (e: any) {
@@ -1354,6 +1368,96 @@ export const studentService = {
             }
         }
         return true;
+    },
+
+    /**
+     * Update full candidate profile information
+     */
+    async updateStudentProfile(appId: string, updates: Partial<DatabaseInternshipApplication>): Promise<DatabaseInternshipApplication> {
+        let updated: any = null;
+
+        // 1. Update active student in localStorage
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("vx_active_student");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    updated = { ...parsed, ...updates, updated_at: new Date().toISOString() };
+                    localStorage.setItem("vx_active_student", JSON.stringify(updated));
+                }
+                const allAppsStr = localStorage.getItem("vx_internship_apps");
+                if (allAppsStr) {
+                    const allApps = JSON.parse(allAppsStr);
+                    const updatedApps = allApps.map((a: any) =>
+                        (a.application_id === appId || a.application_number === appId || a.id === appId)
+                            ? { ...a, ...updates, updated_at: new Date().toISOString() }
+                            : a
+                    );
+                    localStorage.setItem("vx_internship_apps", JSON.stringify(updatedApps));
+                }
+            } catch (ignore) {}
+        }
+
+        // 2. Update in Supabase
+        if (isSupabaseConfigured) {
+            try {
+                const dbPayload: any = {
+                    updated_at: new Date().toISOString()
+                };
+                if (updates.full_name !== undefined) dbPayload.full_name = updates.full_name.trim();
+                if (updates.gender !== undefined) dbPayload.gender = updates.gender;
+                if (updates.phone !== undefined) {
+                    dbPayload.phone = updates.phone.trim();
+                    dbPayload.mobile_number = updates.phone.trim();
+                }
+                if (updates.whatsapp_number !== undefined) dbPayload.whatsapp_number = updates.whatsapp_number.trim();
+                if (updates.college_name !== undefined) dbPayload.college_name = updates.college_name.trim();
+                if (updates.degree !== undefined) dbPayload.degree = updates.degree.trim();
+                if (updates.department !== undefined) dbPayload.department = updates.department.trim();
+                if (updates.year_of_study !== undefined) dbPayload.year_of_study = updates.year_of_study;
+                if (updates.graduation_year !== undefined) dbPayload.graduation_year = updates.graduation_year;
+                if (updates.house_number !== undefined) dbPayload.house_number = updates.house_number.trim();
+                if (updates.street_name !== undefined) dbPayload.street_name = updates.street_name.trim();
+                if (updates.locality !== undefined) dbPayload.locality = updates.locality.trim();
+                if (updates.city !== undefined) dbPayload.city = updates.city.trim();
+                if (updates.district !== undefined) dbPayload.district = updates.district.trim();
+                if (updates.state !== undefined) dbPayload.state = updates.state.trim();
+                if (updates.postal_code !== undefined) dbPayload.postal_code = updates.postal_code.trim();
+                if (updates.linkedin_url !== undefined) dbPayload.linkedin_url = updates.linkedin_url?.trim() || null;
+                if (updates.github_url !== undefined) dbPayload.github_url = updates.github_url?.trim() || null;
+                if (updates.portfolio_url !== undefined) dbPayload.portfolio_url = updates.portfolio_url?.trim() || null;
+
+                const { data: record } = await supabase
+                    .from("internship_applications")
+                    .select("*")
+                    .or(`application_id.eq.${appId},application_number.eq.${appId},id.eq.${appId}`)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (record) {
+                    let notes: any = {};
+                    try {
+                        notes = JSON.parse(record.internal_notes || "{}");
+                    } catch {}
+                    dbPayload.internal_notes = JSON.stringify({ ...notes, ...updates });
+
+                    const { data: resData, error: updErr } = await supabase
+                        .from("internship_applications")
+                        .update(dbPayload)
+                        .eq("id", record.id)
+                        .select()
+                        .maybeSingle();
+
+                    if (!updErr && resData) {
+                        updated = { ...updated, ...resData };
+                    }
+                }
+            } catch (err) {
+                console.warn("Supabase updateStudentProfile:", err);
+            }
+        }
+
+        return updated || updates;
     },
 
     /**

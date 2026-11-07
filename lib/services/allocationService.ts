@@ -171,32 +171,52 @@ export const allocationService = {
                 start_date: startDate,
                 deadline: deadline,
                 personalized_instructions: payload.personalizedInstructions || null,
-                status: "Planning",
+                status: "Not Started",
                 progress_percent: 0,
                 current_milestone: 1,
                 milestones: standardMilestones,
                 updated_at: new Date().toISOString()
             };
 
+            const candidateStatuses = ["Not Started", "In Progress", "Planning"];
             let resultData: any = null;
+            let lastError: any = null;
 
-            // 1. Attempt full insert/update
-            const firstAttempt = existing
-                ? await supabase.from("student_projects").update(projectRecord).eq("application_id", payload.applicationId).select().single()
-                : await supabase.from("student_projects").insert({ ...projectRecord, created_at: new Date().toISOString() }).select().single();
+            // 1. Attempt full insert/update, cycling through candidate statuses if check constraint fails
+            for (const tryStatus of candidateStatuses) {
+                const record = {
+                    ...projectRecord,
+                    status: tryStatus
+                };
 
-            if (!firstAttempt.error) {
-                resultData = firstAttempt.data;
-            } else {
+                const attempt = existing
+                    ? await supabase.from("student_projects").update(record).eq("application_id", payload.applicationId).select().single()
+                    : await supabase.from("student_projects").insert({ ...record, created_at: new Date().toISOString() }).select().single();
+
+                if (!attempt.error) {
+                    resultData = attempt.data;
+                    lastError = null;
+                    break;
+                }
+
+                lastError = attempt.error;
+                // If error is NOT a status check constraint violation (e.g. unknown column), do not test more statuses
+                const msg = attempt.error.message || "";
+                if (!msg.includes("student_projects_status_check") && !msg.toLowerCase().includes("check constraint")) {
+                    break;
+                }
+            }
+
+            if (!resultData) {
                 // 2. Fallback to base columns packing extra metadata into milestones JSON
-                console.warn("Retrying student_projects upsert with schema-compatible base columns:", firstAttempt.error.message);
+                console.warn("Retrying student_projects upsert with schema-compatible base columns:", lastError?.message);
                 const baseRecord: any = {
                     application_id: payload.applicationId,
                     batch_id: batchId,
                     domain: payload.domain,
                     project_title: template.title,
                     description: template.short_description || template.problem_statement,
-                    status: "Planning",
+                    status: "Not Started",
                     progress_percent: 0,
                     milestones: [
                         ...standardMilestones,
@@ -214,12 +234,28 @@ export const allocationService = {
                     updated_at: new Date().toISOString()
                 };
 
-                const retryAttempt = existing
-                    ? await supabase.from("student_projects").update(baseRecord).eq("application_id", payload.applicationId).select().single()
-                    : await supabase.from("student_projects").insert({ ...baseRecord, created_at: new Date().toISOString() }).select().single();
+                for (const tryStatus of candidateStatuses) {
+                    const record = { ...baseRecord, status: tryStatus };
+                    const retryAttempt = existing
+                        ? await supabase.from("student_projects").update(record).eq("application_id", payload.applicationId).select().single()
+                        : await supabase.from("student_projects").insert({ ...record, created_at: new Date().toISOString() }).select().single();
 
-                if (retryAttempt.error) throw retryAttempt.error;
-                resultData = retryAttempt.data;
+                    if (!retryAttempt.error) {
+                        resultData = retryAttempt.data;
+                        lastError = null;
+                        break;
+                    }
+
+                    lastError = retryAttempt.error;
+                    const msg = retryAttempt.error.message || "";
+                    if (!msg.includes("student_projects_status_check") && !msg.toLowerCase().includes("check constraint")) {
+                        break;
+                    }
+                }
+
+                if (!resultData) {
+                    throw lastError || new Error("Failed to allocate student project record");
+                }
             }
 
             // Sync mentor allocation table if possible
