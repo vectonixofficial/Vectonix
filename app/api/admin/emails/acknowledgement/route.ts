@@ -39,7 +39,10 @@ vectonixofficial@gmail.com
 
         const htmlBody = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #4f46e5; padding: 24px; text-align: center;">
+                <div style="background-color: #4f46e5; padding: 28px 24px; text-align: center;">
+                    <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                        <img src="https://vectonix.in/vectonix-logo.png" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
+                    </div>
                     <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Vectonix Technologies</h1>
                     <p style="color: #c7d2fe; margin: 4px 0 0 0; font-size: 13px;">VECTONIX PRIVATE LIMITED</p>
                 </div>

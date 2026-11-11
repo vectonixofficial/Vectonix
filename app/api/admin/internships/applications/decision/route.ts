@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { emailService, renderAcceptanceEmail, renderRejectionEmail } from "@/lib/services/emailService";
 
@@ -76,19 +78,30 @@ export async function POST(request: Request) {
 
         // 3. PREVIEW EMAIL MODE (For Admin "View Email" feature)
         if (previewOnly) {
+            const logoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+            let previewLogoUrl = "https://vectonix.in/vectonix-logo.png";
+            try {
+                if (fs.existsSync(logoPath)) {
+                    const b64 = fs.readFileSync(logoPath).toString("base64");
+                    previewLogoUrl = `data:image/png;base64,${b64}`;
+                }
+            } catch {}
+
             const previewData =
                 status === "accepted"
                     ? renderAcceptanceEmail({
                           studentName,
                           applicationId: officialAppId,
                           domain: studentDomain,
-                          email: studentEmail
+                          email: studentEmail,
+                          logoUrl: previewLogoUrl
                       })
                     : renderRejectionEmail({
                           studentName,
                           applicationId: officialAppId,
                           domain: studentDomain,
-                          rejectionReason: internalNotes || appRecord.internal_notes
+                          rejectionReason: internalNotes || appRecord.internal_notes,
+                          logoUrl: previewLogoUrl
                       });
 
             return NextResponse.json({
@@ -188,3 +201,4 @@ export async function POST(request: Request) {
         );
     }
 }
+

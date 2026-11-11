@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 import { supabase, isSupabaseConfigured, DatabaseInternshipApplication } from "@/lib/supabase";
 
 export interface DecisionEmailPayload {
@@ -59,8 +61,10 @@ export function renderAcceptanceEmail(data: {
     domain: string;
     email: string;
     dashboardUrl?: string;
+    logoUrl?: string;
 }) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
+    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-logo.png`;
     const dashboardUrl =
         data.dashboardUrl ||
         `${siteUrl}/internship/login?appId=${encodeURIComponent(data.applicationId)}&email=${encodeURIComponent(data.email)}`;
@@ -121,11 +125,11 @@ Learn • Build • Grow`;
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td align="center">
-                                        <div style="background-color: #ffffff; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <span style="color: #4f46e5; font-size: 20px; font-weight: 900; letter-spacing: -1px;">VX</span>
+                                        <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                            <img src="${logoUrl}" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
                                         </div>
-                                        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
-                                        <p style="color: #c7d2fe; margin: 6px 0 0 0; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
+                                        <p style="color: #c7d2fe; margin: 4px 0 0 0; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
                                     </td>
                                 </tr>
                             </table>
@@ -258,7 +262,10 @@ export function renderRejectionEmail(data: {
     applicationId: string;
     domain: string;
     rejectionReason?: string;
+    logoUrl?: string;
 }) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
+    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-logo.png`;
     const subject = "Application Update – Vectonix Winter Internship 2026";
 
     const text = `Dear ${data.studentName},
@@ -307,11 +314,11 @@ Learn • Build • Grow`;
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td align="center">
-                                        <div style="background-color: #ffffff; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <span style="color: #4f46e5; font-size: 20px; font-weight: 900; letter-spacing: -1px;">VX</span>
+                                        <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                                            <img src="${logoUrl}" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
                                         </div>
-                                        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
-                                        <p style="color: #94a3b8; margin: 6px 0 0 0; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
+                                        <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
                                     </td>
                                 </tr>
                             </table>
@@ -473,6 +480,20 @@ export const emailService = {
             }
         }
 
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
+        const logoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+        const attachments: any[] = [];
+        let emailLogoUrl = `${siteUrl}/vectonix-logo.png`;
+
+        if (fs.existsSync(logoPath)) {
+            attachments.push({
+                filename: "vectonix-logo.png",
+                path: logoPath,
+                cid: "vectonix-logo"
+            });
+            emailLogoUrl = "cid:vectonix-logo";
+        }
+
         // 3. Render email templates
         const rendered =
             payload.status === "accepted"
@@ -480,13 +501,15 @@ export const emailService = {
                       studentName,
                       applicationId: appId,
                       domain,
-                      email: recipientEmail
+                      email: recipientEmail,
+                      logoUrl: emailLogoUrl
                   })
                 : renderRejectionEmail({
                       studentName,
                       applicationId: appId,
                       domain,
-                      rejectionReason: payload.rejectionReason
+                      rejectionReason: payload.rejectionReason,
+                      logoUrl: emailLogoUrl
                   });
 
         const transporter = getEmailTransporter();
@@ -506,7 +529,8 @@ export const emailService = {
                         to: recipientEmail,
                         subject: rendered.subject,
                         text: rendered.text,
-                        html: rendered.html
+                        html: rendered.html,
+                        attachments
                     });
                     messageId = info.messageId || `msg_${Date.now()}`;
                     isSuccess = true;
@@ -629,3 +653,4 @@ export const emailService = {
         };
     }
 };
+
