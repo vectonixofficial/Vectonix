@@ -64,7 +64,7 @@ export function renderAcceptanceEmail(data: {
     logoUrl?: string;
 }) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
-    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-logo.png`;
+    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-email-logo.png`;
     const dashboardUrl =
         data.dashboardUrl ||
         `${siteUrl}/internship/login?appId=${encodeURIComponent(data.applicationId)}&email=${encodeURIComponent(data.email)}`;
@@ -121,18 +121,9 @@ Learn • Build • Grow`;
                 <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                     <!-- Brand Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); padding: 32px 28px; text-align: center;">
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                                <tr>
-                                    <td align="center">
-                                        <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                                            <img src="${logoUrl}" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
-                                        </div>
-                                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
-                                        <p style="color: #c7d2fe; margin: 4px 0 0 0; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td align="center" style="background-color: #ffffff; padding: 36px 28px 22px 28px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                            <img src="${logoUrl}" alt="Vectonix" width="185" style="display: block; width: 185px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto; pointer-events: none; -webkit-user-select: none; user-select: none;" />
+                            <p style="color: #64748b; margin: 8px 0 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;">Vectonix Technologies • Winter Internship 2026</p>
                         </td>
                     </tr>
 
@@ -265,7 +256,7 @@ export function renderRejectionEmail(data: {
     logoUrl?: string;
 }) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
-    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-logo.png`;
+    const logoUrl = data.logoUrl || `${siteUrl}/vectonix-email-logo.png`;
     const subject = "Application Update – Vectonix Winter Internship 2026";
 
     const text = `Dear ${data.studentName},
@@ -310,18 +301,9 @@ Learn • Build • Grow`;
                 <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                     <!-- Brand Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 32px 28px; text-align: center;">
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                                <tr>
-                                    <td align="center">
-                                        <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                                            <img src="${logoUrl}" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
-                                        </div>
-                                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Vectonix Technologies</h1>
-                                        <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">VECTONIX PRIVATE LIMITED</p>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td align="center" style="background-color: #ffffff; padding: 36px 28px 22px 28px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                            <img src="${logoUrl}" alt="Vectonix" width="185" style="display: block; width: 185px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto; pointer-events: none; -webkit-user-select: none; user-select: none;" />
+                            <p style="color: #64748b; margin: 8px 0 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;">Vectonix Technologies • Winter Internship 2026</p>
                         </td>
                     </tr>
 
@@ -481,17 +463,19 @@ export const emailService = {
         }
 
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
-        const logoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+        const logoPath = path.join(process.cwd(), "public/vectonix-email-logo.png");
+        const fallbackLogoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+        const actualLogoPath = fs.existsSync(logoPath) ? logoPath : fallbackLogoPath;
         const attachments: any[] = [];
-        let emailLogoUrl = `${siteUrl}/vectonix-logo.png`;
+        let emailLogoUrl = `${siteUrl}/vectonix-email-logo.png`;
 
-        if (fs.existsSync(logoPath)) {
+        if (fs.existsSync(actualLogoPath)) {
             attachments.push({
-                filename: "vectonix-logo.png",
-                path: logoPath,
-                cid: "vectonix-logo"
+                filename: "vectonix-email-logo.png",
+                path: actualLogoPath,
+                cid: "vectonix-email-logo"
             });
-            emailLogoUrl = "cid:vectonix-logo";
+            emailLogoUrl = "cid:vectonix-email-logo";
         }
 
         // 3. Render email templates

@@ -78,11 +78,13 @@ export async function POST(request: Request) {
 
         // 3. PREVIEW EMAIL MODE (For Admin "View Email" feature)
         if (previewOnly) {
-            const logoPath = path.join(process.cwd(), "public/vectonix-logo.png");
-            let previewLogoUrl = "https://vectonix.in/vectonix-logo.png";
+            const logoPath = path.join(process.cwd(), "public/vectonix-email-logo.png");
+            const fallbackLogoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+            const actualLogoPath = fs.existsSync(logoPath) ? logoPath : fallbackLogoPath;
+            let previewLogoUrl = "https://vectonix.in/vectonix-email-logo.png";
             try {
-                if (fs.existsSync(logoPath)) {
-                    const b64 = fs.readFileSync(logoPath).toString("base64");
+                if (fs.existsSync(actualLogoPath)) {
+                    const b64 = fs.readFileSync(actualLogoPath).toString("base64");
                     previewLogoUrl = `data:image/png;base64,${b64}`;
                 }
             } catch {}

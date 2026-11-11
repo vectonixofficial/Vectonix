@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getEmailTransporter } from "@/lib/services/emailService";
 
@@ -37,14 +39,27 @@ Team Vectonix Technologies
 vectonixofficial@gmail.com
 6382340278 / 7538872586`;
 
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
+        const logoPath = path.join(process.cwd(), "public/vectonix-email-logo.png");
+        const fallbackLogoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+        const actualLogoPath = fs.existsSync(logoPath) ? logoPath : fallbackLogoPath;
+        const attachments: any[] = [];
+        let emailLogoUrl = `${siteUrl}/vectonix-email-logo.png`;
+
+        if (fs.existsSync(actualLogoPath)) {
+            attachments.push({
+                filename: "vectonix-email-logo.png",
+                path: actualLogoPath,
+                cid: "vectonix-email-logo"
+            });
+            emailLogoUrl = "cid:vectonix-email-logo";
+        }
+
         const htmlBody = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #4f46e5; padding: 28px 24px; text-align: center;">
-                    <div style="background-color: #ffffff; padding: 10px 18px; border-radius: 12px; display: inline-block; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                        <img src="https://vectonix.in/vectonix-logo.png" alt="Vectonix Technologies" width="160" style="display: block; width: 160px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto;" />
-                    </div>
-                    <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Vectonix Technologies</h1>
-                    <p style="color: #c7d2fe; margin: 4px 0 0 0; font-size: 13px;">VECTONIX PRIVATE LIMITED</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
+                <div style="background-color: #ffffff; padding: 32px 24px 20px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                    <img src="${emailLogoUrl}" alt="Vectonix" width="180" style="display: block; width: 180px; max-width: 100%; height: auto; border: 0; outline: none; margin: 0 auto; pointer-events: none; -webkit-user-select: none; user-select: none;" />
+                    <p style="color: #64748b; margin: 8px 0 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;">Vectonix Technologies • Winter Internship 2026</p>
                 </div>
                 <div style="background-color: #ffffff; padding: 28px;">
                     <p style="font-size: 15px; margin-top: 0;">Hello <strong>${studentName || "Student"}</strong>,</p>
@@ -89,6 +104,7 @@ vectonixofficial@gmail.com
                     subject,
                     text: textBody,
                     html: htmlBody,
+                    attachments: attachments.length > 0 ? attachments : undefined,
                 });
                 providerMessageId = info.messageId || providerMessageId;
                 deliveryStatus = "sent";
