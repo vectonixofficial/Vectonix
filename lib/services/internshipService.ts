@@ -791,13 +791,43 @@ export const internshipService = {
 
     /**
      * Update application status (accepted, under_review, waitlisted, rejected)
+     * When status transitions to 'accepted' or 'rejected', automatically triggers the official server-side email.
      */
     async updateApplicationStatus(
         applicationId: string,
         status: InternshipApplicationStatus,
-        internalNotes?: string
-    ): Promise<boolean> {
-        if (isSupabaseConfigured) {
+        internalNotes?: string,
+        forceResend: boolean = false
+    ): Promise<{ success: boolean; emailDelivery?: any; message?: string }> {
+        let serverResult: any = null;
+
+        // 1. If transitioning to accepted or rejected, invoke server-side trigger
+        if (status === "accepted" || status === "rejected") {
+            try {
+                const res = await fetch("/api/admin/internships/applications/decision", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        applicationId,
+                        status,
+                        internalNotes,
+                        forceResend
+                    })
+                });
+
+                if (res.ok) {
+                    serverResult = await res.json();
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    console.warn("Decision API returned non-200:", errData.error);
+                }
+            } catch (netErr) {
+                console.warn("Network error reaching decision API, falling back to direct update:", netErr);
+            }
+        }
+
+        // 2. Direct Supabase update if not handled by server or for other statuses
+        if (!serverResult && isSupabaseConfigured) {
             try {
                 const updateData: any = { status, application_status: status };
                 if (internalNotes !== undefined) updateData.internal_notes = internalNotes;
@@ -811,6 +841,7 @@ export const internshipService = {
             }
         }
 
+        // 3. LocalStorage sync for offline / demo support
         if (typeof window !== "undefined") {
             try {
                 const apps: DatabaseInternshipApplication[] = JSON.parse(localStorage.getItem(LS_APPLICATIONS_KEY) || "[]");
@@ -827,7 +858,61 @@ export const internshipService = {
             }
         }
 
-        return true;
+        return {
+            success: true,
+            emailDelivery: serverResult?.emailDelivery,
+            message: serverResult?.message
+        };
+    },
+
+    /**
+     * Preview the rendered decision email for a specific student application
+     */
+    async previewDecisionEmail(applicationId: string, status: "accepted" | "rejected") {
+        try {
+            const res = await fetch("/api/admin/internships/applications/decision", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    applicationId,
+                    status,
+                    previewOnly: true
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.preview;
+            }
+        } catch (e) {
+            console.error("Failed to preview decision email:", e);
+        }
+        return null;
+    },
+
+    /**
+     * Resend an acceptance or rejection email (forceResend: true)
+     */
+    async resendDecisionEmail(applicationId: string, status: "accepted" | "rejected") {
+        return this.updateApplicationStatus(applicationId, status, undefined, true);
+    },
+
+    /**
+     * Send test email to an admin address
+     */
+    async sendTestDecisionEmail(testEmail: string, status: "accepted" | "rejected") {
+        try {
+            const res = await fetch("/api/admin/internships/applications/decision", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    testEmail,
+                    status
+                })
+            });
+            return await res.json();
+        } catch (e: any) {
+            return { success: false, error: e.message };
+        }
     },
 
     /**

@@ -1,26 +1,9 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { getEmailTransporter } from "@/lib/services/emailService";
 
 function getTransporter() {
-    const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com").trim();
-    const pass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "wxuzlwkkfamlayvz").replace(/\s+/g, "");
-
-    if (process.env.SMTP_HOST && process.env.SMTP_HOST !== "smtp.gmail.com") {
-        return nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: process.env.SMTP_SECURE === "true",
-            auth: { user, pass },
-            tls: { rejectUnauthorized: false }
-        });
-    }
-
-    // Default to Gmail transporter with provided credentials
-    return nodemailer.createTransport({
-        service: "gmail",
-        auth: { user, pass },
-    });
+    return getEmailTransporter();
 }
 
 export async function POST(request: Request) {

@@ -1,26 +1,21 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { getEmailTransporter } from "@/lib/services/emailService";
 
 export async function GET() {
-    const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "vectonixofficial@gmail.com").trim();
-    const rawPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "wxuzlwkkfamlayvz";
+    const user = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
+    const rawPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || "";
     const pass = rawPass.replace(/\s+/g, "");
 
     const isAppPasswordFormat = /^[a-z]{16}$/i.test(pass);
 
-    let transporter;
-    if (process.env.SMTP_HOST && process.env.SMTP_HOST !== "smtp.gmail.com") {
-        transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: process.env.SMTP_SECURE === "true",
-            auth: { user, pass },
-            tls: { rejectUnauthorized: false }
-        });
-    } else {
-        transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: { user, pass },
+    const transporter = getEmailTransporter();
+    if (!transporter) {
+        return NextResponse.json({
+            success: false,
+            user,
+            isAppPasswordFormat,
+            error: "SMTP credentials missing in environment variables (SMTP_USER / SMTP_PASS).",
+            guidance: "Please set SMTP_USER and SMTP_PASS in your environment configuration (.env.local / Vercel Environment Variables)."
         });
     }
 

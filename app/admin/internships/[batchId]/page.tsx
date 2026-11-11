@@ -100,6 +100,25 @@ export default function AdminInternshipsBatchPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [adminNotes, setAdminNotes] = useState("");
 
+    // Email Notification & Testing State
+    const [showTestEmailModal, setShowTestEmailModal] = useState(false);
+    const [testEmailTarget, setTestEmailTarget] = useState("");
+    const [testEmailType, setTestEmailType] = useState<"accepted" | "rejected">("accepted");
+    const [testEmailLoading, setTestEmailLoading] = useState(false);
+
+    const [showEmailPreviewModal, setShowEmailPreviewModal] = useState(false);
+    const [previewEmailData, setPreviewEmailData] = useState<{
+        subject: string;
+        html: string;
+        text: string;
+        recipient: string;
+        studentName: string;
+        domain?: string;
+        applicationId?: string;
+        type?: string;
+    } | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+
     // Announcements Management State
     const [announcementsList, setAnnouncementsList] = useState<StudentAnnouncement[]>([]);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -202,19 +221,95 @@ export default function AdminInternshipsBatchPage() {
         loadData();
     }, [batchId]);
 
-    // Handle Status Change
-    const handleUpdateStatus = async (appId: string, newStatus: InternshipApplicationStatus) => {
+    // Handle Status Change with Automatic Server-Side Email Trigger
+    const handleUpdateStatus = async (
+        appId: string,
+        newStatus: InternshipApplicationStatus,
+        customNotes?: string,
+        forceResend: boolean = false
+    ) => {
         setActionLoading(true);
         try {
-            await internshipService.updateApplicationStatus(appId, newStatus, adminNotes);
+            const res = await internshipService.updateApplicationStatus(
+                appId,
+                newStatus,
+                customNotes !== undefined ? customNotes : adminNotes,
+                forceResend
+            );
             await loadData();
             if (selectedApp && selectedApp.id === appId) {
-                setSelectedApp({ ...selectedApp, status: newStatus, internal_notes: adminNotes });
+                setSelectedApp({ ...selectedApp, status: newStatus, internal_notes: customNotes || adminNotes });
             }
-        } catch (error) {
+            if (res.message) {
+                alert(res.message);
+            }
+        } catch (error: any) {
             console.error("Status update error:", error);
+            alert(`Status update error: ${error.message || "Failed to update"}`);
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    // Preview Rendered Decision Email Modal
+    const handlePreviewEmail = async (app: DatabaseInternshipApplication, targetStatus: "accepted" | "rejected") => {
+        setPreviewLoading(true);
+        try {
+            const preview = await internshipService.previewDecisionEmail(app.application_id || app.id, targetStatus);
+            if (preview) {
+                setPreviewEmailData(preview);
+                setShowEmailPreviewModal(true);
+            } else {
+                alert("Could not render email preview.");
+            }
+        } catch (e: any) {
+            alert(`Preview error: ${e.message}`);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    // Resend Decision Email Action
+    const handleResendEmail = async (app: DatabaseInternshipApplication, targetStatus: "accepted" | "rejected") => {
+        const idDisplay = app.application_id || app.application_number || app.id;
+        if (!window.confirm(`Resend ${targetStatus.toUpperCase()} notification email to ${app.full_name} (${app.email}) for application ${idDisplay}?`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            const res = await internshipService.resendDecisionEmail(app.id, targetStatus);
+            await loadData();
+            if (res.message) {
+                alert(res.message);
+            }
+        } catch (e: any) {
+            alert(`Resend failed: ${e.message}`);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Dispatch Test Email to Admin
+    const handleSendTestDecisionEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!testEmailTarget.trim()) {
+            alert("Please provide a valid test recipient email address.");
+            return;
+        }
+        setTestEmailLoading(true);
+        try {
+            const res = await internshipService.sendTestDecisionEmail(testEmailTarget.trim(), testEmailType);
+            if (res.success) {
+                alert(`Test ${testEmailType.toUpperCase()} email successfully dispatched to ${testEmailTarget}! Please verify your inbox/spam folder.`);
+                setShowTestEmailModal(false);
+            } else {
+                alert(`Test email failed: ${res.error || res.message || "Unknown error"}`);
+            }
+        } catch (e: any) {
+            alert(`Test email execution error: ${e.message}`);
+        } finally {
+            setTestEmailLoading(false);
         }
     };
 
@@ -256,16 +351,20 @@ export default function AdminInternshipsBatchPage() {
 
     const handleBulkAccept = async () => {
         if (selectedAppIds.length === 0) return;
-        if (!window.confirm(`Accept ${selectedAppIds.length} selected candidate(s)? This will unlock their student workspace.`)) return;
+        if (!window.confirm(`Accept ${selectedAppIds.length} selected candidate(s)? This will unlock their student workspace and dispatch acceptance emails automatically.`)) return;
 
         setActionLoading(true);
+        let sentCount = 0;
+        let failCount = 0;
         try {
             for (const id of selectedAppIds) {
-                await internshipService.updateApplicationStatus(id, "accepted", "Bulk approved by administrator");
+                const res = await internshipService.updateApplicationStatus(id, "accepted", "Bulk approved by administrator");
+                if (res?.emailDelivery?.success) sentCount++;
+                else if (res?.emailDelivery?.error) failCount++;
             }
             setSelectedAppIds([]);
             await loadData();
-            alert("Selected applications approved successfully!");
+            alert(`Bulk acceptance complete! ${selectedAppIds.length} candidates accepted. Automatic decision emails: ${sentCount} sent${failCount > 0 ? `, ${failCount} failed` : ""}.`);
         } catch (err) {
             console.error("Bulk accept error:", err);
             alert("Failed to bulk approve applications.");
@@ -280,13 +379,17 @@ export default function AdminInternshipsBatchPage() {
         if (reason === null) return;
 
         setActionLoading(true);
+        let sentCount = 0;
+        let failCount = 0;
         try {
             for (const id of selectedAppIds) {
-                await internshipService.updateApplicationStatus(id, "rejected", reason);
+                const res = await internshipService.updateApplicationStatus(id, "rejected", reason);
+                if (res?.emailDelivery?.success) sentCount++;
+                else if (res?.emailDelivery?.error) failCount++;
             }
             setSelectedAppIds([]);
             await loadData();
-            alert("Selected applications marked as rejected.");
+            alert(`Bulk rejection complete! Decision emails: ${sentCount} sent${failCount > 0 ? `, ${failCount} failed` : ""}.`);
         } catch (err) {
             console.error("Bulk reject error:", err);
             alert("Failed to bulk reject applications.");
@@ -768,14 +871,28 @@ export default function AdminInternshipsBatchPage() {
                     })}
                 </div>
 
-                {/* Email management quick link */}
-                <Link
-                    href={`/admin/internships/${batchId}/emails`}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 pr-2"
-                >
-                    <Mail className="h-4 w-4" />
-                    <span>Open Email Center &rarr;</span>
-                </Link>
+                {/* Quick Actions */}
+                <div className="flex items-center gap-3 pr-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                            setTestEmailTarget("rahman.habibur2007@gmail.com");
+                            setShowTestEmailModal(true);
+                        }}
+                        className="h-8 text-xs font-semibold text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 border-indigo-200 gap-1.5"
+                    >
+                        <Send className="h-3.5 w-3.5" />
+                        <span>Test Decision Email</span>
+                    </Button>
+                    <Link
+                        href={`/admin/internships/${batchId}/emails`}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                    >
+                        <Mail className="h-4 w-4" />
+                        <span>Open Email Center &rarr;</span>
+                    </Link>
+                </div>
             </div>
 
             {/* TAB 1: APPLICATIONS LIST */}
@@ -885,13 +1002,14 @@ export default function AdminInternshipsBatchPage() {
                                         <th className="px-4 py-3.5">Domain</th>
                                         <th className="px-4 py-3.5">Package</th>
                                         <th className="px-4 py-3.5">Status</th>
+                                        <th className="px-4 py-3.5">Email Notification</th>
                                         <th className="px-4 py-3.5 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredApps.length === 0 ? (
                                         <tr>
-                                            <td colSpan={8} className="px-4 py-16 text-center">
+                                            <td colSpan={9} className="px-4 py-16 text-center">
                                                 <div className="max-w-md mx-auto">
                                                     <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
                                                         <Users className="h-6 w-6" />
@@ -988,15 +1106,84 @@ export default function AdminInternshipsBatchPage() {
                                                             {app.status.replace("_", " ")}
                                                         </span>
                                                     </td>
+                                                    <td className="px-4 py-3">
+                                                        {(() => {
+                                                            let emailNote: any = null;
+                                                            try {
+                                                                const parsed = JSON.parse(app.internal_notes || "{}");
+                                                                emailNote = parsed.email_notification;
+                                                            } catch {}
+
+                                                            if (emailNote) {
+                                                                const isSent = emailNote.status === "sent";
+                                                                const isFailed = emailNote.status === "failed";
+                                                                const dateStr = emailNote.sent_at
+                                                                    ? new Date(emailNote.sent_at).toLocaleDateString("en-US", {
+                                                                          month: "short",
+                                                                          day: "numeric",
+                                                                          hour: "2-digit",
+                                                                          minute: "2-digit"
+                                                                      })
+                                                                    : "";
+                                                                return (
+                                                                    <div className="space-y-0.5">
+                                                                        <span
+                                                                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase ${
+                                                                                isSent
+                                                                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                                                                    : isFailed
+                                                                                    ? "bg-rose-50 text-rose-800 border-rose-200"
+                                                                                    : "bg-amber-50 text-amber-800 border-amber-200"
+                                                                            }`}
+                                                                            title={emailNote.error || emailNote.message_id || ""}
+                                                                        >
+                                                                            {isSent ? (
+                                                                                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
+                                                                            ) : isFailed ? (
+                                                                                <XCircle className="h-2.5 w-2.5 text-rose-600" />
+                                                                            ) : (
+                                                                                <Clock className="h-2.5 w-2.5 text-amber-600" />
+                                                                            )}
+                                                                            {isSent
+                                                                                ? `Sent (${emailNote.type === "accepted" || emailNote.type === "acceptance" ? "Accepted" : "Rejected"})`
+                                                                                : isFailed
+                                                                                ? "Delivery Failed"
+                                                                                : "Queued"}
+                                                                        </span>
+                                                                        {dateStr && <div className="text-[10px] text-slate-400 font-mono">{dateStr}</div>}
+                                                                        {isFailed && emailNote.error && (
+                                                                            <div
+                                                                                className="text-[10px] text-rose-600 truncate max-w-[150px]"
+                                                                                title={emailNote.error}
+                                                                            >
+                                                                                {emailNote.error}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            if (app.status === "accepted" || app.status === "rejected") {
+                                                                return (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border-amber-200">
+                                                                        <Clock className="h-2.5 w-2.5 text-amber-600" />
+                                                                        Pending Dispatch
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            return <span className="text-[11px] text-slate-400 italic">No decision</span>;
+                                                        })()}
+                                                    </td>
                                                     <td className="px-4 py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-1.5">
+                                                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                                             {app.status !== "accepted" && (
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => handleUpdateStatus(app.id, "accepted")}
                                                                     disabled={actionLoading}
                                                                     className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 gap-1"
-                                                                    title="Accept Application & Unlock Portal"
+                                                                    title="Accept Application & Send Acceptance Email Automatically"
                                                                 >
                                                                     <Check className="h-3.5 w-3.5" />
                                                                     Accept
@@ -1007,18 +1194,57 @@ export default function AdminInternshipsBatchPage() {
                                                                     size="sm"
                                                                     variant="outline"
                                                                     onClick={() => {
-                                                                        const reason = window.prompt(`Enter rejection reason for ${app.full_name}:`, "Application criteria not met.");
+                                                                        const reason = window.prompt(
+                                                                            `Enter rejection note for ${app.full_name}:`,
+                                                                            "Application criteria not met for Batch WI26."
+                                                                        );
                                                                         if (reason !== null) {
-                                                                            internshipService.updateApplicationStatus(app.id, "rejected", reason).then(loadData);
+                                                                            handleUpdateStatus(app.id, "rejected", reason);
                                                                         }
                                                                     }}
                                                                     disabled={actionLoading}
                                                                     className="h-7 text-xs text-rose-600 hover:bg-rose-50 border-rose-200 font-semibold px-2.5 gap-1"
-                                                                    title="Reject Application"
+                                                                    title="Reject Application & Send Encouraging Rejection Email Automatically"
                                                                 >
                                                                     <X className="h-3.5 w-3.5" />
                                                                     Reject
                                                                 </Button>
+                                                            )}
+                                                            {(app.status === "accepted" || app.status === "rejected") && (
+                                                                <>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() =>
+                                                                            handlePreviewEmail(
+                                                                                app,
+                                                                                app.status as "accepted" | "rejected"
+                                                                            )
+                                                                        }
+                                                                        disabled={previewLoading || actionLoading}
+                                                                        className="h-7 text-xs text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 border-indigo-200 gap-1"
+                                                                        title="View Email Template Sent to Candidate"
+                                                                    >
+                                                                        <Mail className="h-3 w-3" />
+                                                                        View Email
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() =>
+                                                                            handleResendEmail(
+                                                                                app,
+                                                                                app.status as "accepted" | "rejected"
+                                                                            )
+                                                                        }
+                                                                        disabled={actionLoading}
+                                                                        className="h-7 text-xs text-slate-600 hover:bg-slate-100 border-slate-200 gap-1"
+                                                                        title="Resend Decision Notification"
+                                                                    >
+                                                                        <RefreshCw className="h-3 w-3" />
+                                                                        Resend
+                                                                    </Button>
+                                                                </>
                                                             )}
                                                             <Button
                                                                 size="sm"
@@ -2169,6 +2395,80 @@ export default function AdminInternshipsBatchPage() {
                                 )}
                             </div>
 
+                            {/* Automatic Decision Email Delivery Status Card */}
+                            <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                        <Mail className="h-4 w-4 text-indigo-600" />
+                                        Decision Email Notification
+                                    </span>
+                                    {(() => {
+                                        let note: any = null;
+                                        try {
+                                            note = JSON.parse(selectedApp.internal_notes || "{}")?.email_notification;
+                                        } catch {}
+                                        if (note?.status === "sent") {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase flex items-center gap-1">
+                                                    <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Sent ({note.type})
+                                                </span>
+                                            );
+                                        }
+                                        if (note?.status === "failed") {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 uppercase flex items-center gap-1">
+                                                    <XCircle className="h-3 w-3 text-rose-600" /> Delivery Failed
+                                                </span>
+                                            );
+                                        }
+                                        if (selectedApp.status === "accepted" || selectedApp.status === "rejected") {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 uppercase flex items-center gap-1">
+                                                    <Clock className="h-3 w-3 text-amber-600" /> Queued
+                                                </span>
+                                            );
+                                        }
+                                        return <span className="text-slate-400 text-[11px] italic">Not Dispatched</span>;
+                                    })()}
+                                </div>
+                                <p className="text-slate-500 text-[11px] leading-relaxed">
+                                    Personalized decision emails are automatically dispatched by the server whenever this application is Accepted or Rejected.
+                                </p>
+                                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                            handlePreviewEmail(
+                                                selectedApp,
+                                                selectedApp.status === "rejected" ? "rejected" : "accepted"
+                                            )
+                                        }
+                                        className="h-7 text-xs text-indigo-600 bg-white border-indigo-200 hover:bg-indigo-50 gap-1"
+                                    >
+                                        <Eye className="h-3 w-3" />
+                                        Preview Email Template
+                                    </Button>
+                                    {(selectedApp.status === "accepted" || selectedApp.status === "rejected") && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                                handleResendEmail(
+                                                    selectedApp,
+                                                    selectedApp.status as "accepted" | "rejected"
+                                                )
+                                            }
+                                            disabled={actionLoading}
+                                            className="h-7 text-xs text-slate-700 bg-white border-slate-200 hover:bg-slate-50 gap-1"
+                                        >
+                                            <RefreshCw className="h-3 w-3" />
+                                            Resend Email
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Internal Review Notes */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -2225,6 +2525,165 @@ export default function AdminInternshipsBatchPage() {
                                     </Button>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* EMAIL PREVIEW MODAL */}
+            <AnimatePresence>
+                {showEmailPreviewModal && previewEmailData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                        >
+                            {/* Header */}
+                            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                <div>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100 mb-1">
+                                        <Mail className="h-3 w-3" />
+                                        Email Preview
+                                    </span>
+                                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                                        {previewEmailData.subject}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Recipient: <strong className="text-slate-800">{previewEmailData.studentName}</strong> &lt;{previewEmailData.recipient}&gt;
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowEmailPreviewModal(false)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            {/* Email HTML Render */}
+                            <div className="flex-1 overflow-y-auto p-4 bg-slate-100/70">
+                                <iframe
+                                    srcDoc={previewEmailData.html}
+                                    title="Email Template Preview"
+                                    className="w-full h-[480px] bg-white rounded-xl border border-slate-200 shadow-sm"
+                                />
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white text-xs">
+                                <span className="text-slate-400">
+                                    Rendered with live applicant data & official Vectonix template
+                                </span>
+                                <Button
+                                    size="sm"
+                                    onClick={() => setShowEmailPreviewModal(false)}
+                                    className="bg-slate-800 hover:bg-slate-900 text-white text-xs"
+                                >
+                                    Close Preview
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* TEST DECISION EMAIL MODAL */}
+            <AnimatePresence>
+                {showTestEmailModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4"
+                        >
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                        <Send className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-900 text-sm">Send Test Decision Email</h3>
+                                        <p className="text-[11px] text-slate-400">Verify SMTP delivery and layout rendering</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowTestEmailModal(false)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSendTestDecisionEmail} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Email Template Type *
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTestEmailType("accepted")}
+                                            className={`p-2.5 rounded-lg border font-semibold text-xs text-center cursor-pointer transition-colors ${
+                                                testEmailType === "accepted"
+                                                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 ring-2 ring-emerald-200"
+                                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            ✓ Acceptance Email
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTestEmailType("rejected")}
+                                            className={`p-2.5 rounded-lg border font-semibold text-xs text-center cursor-pointer transition-colors ${
+                                                testEmailType === "rejected"
+                                                    ? "bg-rose-50 border-rose-300 text-rose-800 ring-2 ring-rose-200"
+                                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            ✕ Rejection Email
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                        Test Recipient Email Address *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="e.g. admin@vectonix.in"
+                                        value={testEmailTarget}
+                                        onChange={(e) => setTestEmailTarget(e.target.value)}
+                                        className="w-full p-2.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-1">
+                                        A live test email using sample candidate credentials will be dispatched to this inbox.
+                                    </p>
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowTestEmailModal(false)}
+                                        className="text-xs"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={testEmailLoading}
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                                    >
+                                        {testEmailLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                                        <span>{testEmailLoading ? "Sending..." : "Dispatch Test Email"}</span>
+                                    </Button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}

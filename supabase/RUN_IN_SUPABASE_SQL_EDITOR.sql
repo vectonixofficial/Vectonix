@@ -117,7 +117,11 @@ ALTER TABLE public.internship_applications
     ADD COLUMN IF NOT EXISTS email_validation_status TEXT DEFAULT 'valid',
     ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT true,
     ADD COLUMN IF NOT EXISTS privacy_consent BOOLEAN DEFAULT true,
-    ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN DEFAULT false;
+    ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS email_delivery_status TEXT DEFAULT 'pending',
+    ADD COLUMN IF NOT EXISTS last_email_sent_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS last_email_type TEXT,
+    ADD COLUMN IF NOT EXISTS last_email_error TEXT;
 
 -- Allow resume_url to be optional/nullable
 ALTER TABLE public.internship_applications ALTER COLUMN resume_url DROP NOT NULL;
@@ -257,6 +261,13 @@ CREATE TABLE IF NOT EXISTS public.email_recipients (
     error_message TEXT,
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.email_recipients
+    ADD COLUMN IF NOT EXISTS email_type TEXT DEFAULT 'acceptance',
+    ADD COLUMN IF NOT EXISTS subject TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_email_recipients_app ON public.email_recipients(application_id);
+CREATE INDEX IF NOT EXISTS idx_email_recipients_email ON public.email_recipients(recipient_email);
 
 ALTER TABLE public.email_campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_campaign_logs ENABLE ROW LEVEL SECURITY;
