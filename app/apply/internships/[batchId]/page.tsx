@@ -119,29 +119,42 @@ export default function InternshipApplyPage() {
     });
     const phoneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Debounced Live Phone Verification Handler
+    // Debounced Live Phone Verification Handler (Supports all countries, ITU-T E.164)
     const handlePhoneChange = (val: string) => {
-        // Strip non-digits and cap at 10 digits
-        const clean = val.replace(/\D/g, "").slice(0, 10);
+        // Allow leading +, digits, spaces, parentheses, hyphens, capped at 20 characters
+        const trimmed = val.trimStart();
+        const hasLeadingPlus = trimmed.startsWith("+");
+        const clean = (hasLeadingPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
         setFormData((prev) => ({ ...prev, phone: clean }));
 
         if (phoneTimeoutRef.current) clearTimeout(phoneTimeoutRef.current);
 
-        if (!clean) {
+        const digitsOnly = clean.replace(/\D/g, "");
+
+        if (!digitsOnly) {
             setPhoneValidation({ checking: false, status: "idle", message: "" });
             return;
         }
 
-        if (clean.length < 10) {
+        if (digitsOnly.length < 7) {
             setPhoneValidation({
                 checking: false,
                 status: "invalid_format",
-                message: `Please enter 10 digits (${clean.length}/10 entered).`
+                message: `Please enter at least 7 digits (${digitsOnly.length} entered).`
             });
             return;
         }
 
-        setPhoneValidation({ checking: true, status: "checking", message: "Verifying mobile number..." });
+        if (digitsOnly.length > 15) {
+            setPhoneValidation({
+                checking: false,
+                status: "invalid_format",
+                message: "Phone number cannot exceed 15 digits (ITU-T standard)."
+            });
+            return;
+        }
+
+        setPhoneValidation({ checking: true, status: "checking", message: "Verifying phone number..." });
 
         phoneTimeoutRef.current = setTimeout(async () => {
             try {
@@ -272,9 +285,12 @@ export default function InternshipApplyPage() {
     const validateStep1 = () => {
         if (!formData.fullName.trim()) return "Full name is required";
         if (!formData.email.trim() || !formData.email.includes("@")) return "A valid email is required";
-        if (!formData.phone.trim() || formData.phone.length < 10) return "A valid 10-digit mobile number is required";
-        if (phoneValidation.status === "duplicate") return "This mobile number is already registered for this internship batch.";
-        if (phoneValidation.status === "invalid_format") return phoneValidation.message || "Please enter a valid 10-digit Indian mobile number.";
+        const phoneDigits = formData.phone.replace(/\D/g, "");
+        if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
+            return "A valid phone number (7 to 15 digits, with country code if outside India) is required";
+        }
+        if (phoneValidation.status === "duplicate") return "This phone number is already registered for this internship batch.";
+        if (phoneValidation.status === "invalid_format") return phoneValidation.message || "Please enter a valid phone number.";
         if (!formData.gender) return "Please select your gender";
 
         // College
@@ -576,8 +592,8 @@ export default function InternshipApplyPage() {
                                         <input
                                             type="tel"
                                             required
-                                            maxLength={10}
-                                            placeholder="10-digit mobile number (e.g. 9876543210)"
+                                            maxLength={20}
+                                            placeholder="e.g. +1 555-0199 or +91 98765 43210"
                                             value={formData.phone}
                                             onChange={(e) => handlePhoneChange(e.target.value)}
                                             className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -586,18 +602,21 @@ export default function InternshipApplyPage() {
                                             <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
                                         )}
                                     </div>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                        Accepts any country number. Please include your country code (e.g. +1, +44, +91, +971).
+                                    </p>
                                     {/* Live Phone Availability State Indicators */}
                                     {phoneValidation.status !== "idle" && (
                                         <div className="mt-1.5 flex items-center gap-1.5 text-xs">
                                             {phoneValidation.status === "checking" && (
                                                 <span className="text-slate-500 flex items-center gap-1">
-                                                    <Loader2 className="h-3 w-3 animate-spin" /> Checking mobile number...
+                                                    <Loader2 className="h-3 w-3 animate-spin" /> Checking phone number...
                                                 </span>
                                             )}
                                             {phoneValidation.status === "valid" && (
                                                 <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1 font-medium text-[11px]">
                                                     <Check className="h-3 w-3 text-emerald-600" />
-                                                    {phoneValidation.message || "Valid mobile number."}
+                                                    {phoneValidation.message || "Valid phone number."}
                                                 </span>
                                             )}
                                             {(phoneValidation.status === "invalid_format" || phoneValidation.status === "duplicate") && (
@@ -622,9 +641,15 @@ export default function InternshipApplyPage() {
                                     </label>
                                     <input
                                         type="tel"
-                                        placeholder="If different from mobile number"
+                                        maxLength={20}
+                                        placeholder="e.g. +1 555-0199 (same as phone if left empty)"
                                         value={formData.whatsappNumber}
-                                        onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                                        onChange={(e) => {
+                                            const trimmed = e.target.value.trimStart();
+                                            const hasPlus = trimmed.startsWith("+");
+                                            const clean = (hasPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
+                                            setFormData({ ...formData, whatsappNumber: clean });
+                                        }}
                                         className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>

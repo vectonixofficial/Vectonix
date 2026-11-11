@@ -401,8 +401,9 @@ function StudentDashboardContent() {
             alert("Full legal name is required.");
             return;
         }
-        if (!profileForm.phone.trim() || profileForm.phone.length < 10) {
-            alert("A valid 10-digit mobile number is required.");
+        const phoneDigits = profileForm.phone.replace(/\D/g, "");
+        if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
+            alert("A valid phone number (7 to 15 digits) is required.");
             return;
         }
         if (!profileForm.college_name.trim()) {
@@ -2252,13 +2253,19 @@ function StudentDashboardContent() {
                                             </div>
 
                                             <div>
-                                                <label className="block font-semibold text-slate-700 mb-1">Mobile Number (10 digits) *</label>
+                                                <label className="block font-semibold text-slate-700 mb-1">Phone / Mobile Number *</label>
                                                 <input
                                                     type="tel"
                                                     required
-                                                    maxLength={10}
+                                                    maxLength={20}
+                                                    placeholder="e.g. +1 555-0199 or +91 98765 43210"
                                                     value={profileForm.phone}
-                                                    onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value.replace(/\D/g, "") })}
+                                                    onChange={(e) => {
+                                                        const trimmed = e.target.value.trimStart();
+                                                        const hasPlus = trimmed.startsWith("+");
+                                                        const clean = (hasPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
+                                                        setProfileForm({ ...profileForm, phone: clean });
+                                                    }}
                                                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500"
                                                 />
                                             </div>
@@ -2267,10 +2274,15 @@ function StudentDashboardContent() {
                                                 <label className="block font-semibold text-slate-700 mb-1">WhatsApp Number</label>
                                                 <input
                                                     type="tel"
-                                                    maxLength={10}
+                                                    maxLength={20}
                                                     placeholder="Same as mobile if left empty"
                                                     value={profileForm.whatsapp_number}
-                                                    onChange={(e) => setProfileForm({ ...profileForm, whatsapp_number: e.target.value.replace(/\D/g, "") })}
+                                                    onChange={(e) => {
+                                                        const trimmed = e.target.value.trimStart();
+                                                        const hasPlus = trimmed.startsWith("+");
+                                                        const clean = (hasPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
+                                                        setProfileForm({ ...profileForm, whatsapp_number: clean });
+                                                    }}
                                                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500"
                                                 />
                                             </div>
