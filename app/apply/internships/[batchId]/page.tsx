@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { internshipService, PACKAGES_CONFIG, INTERNSHIP_DOMAINS } from "@/lib/services/internshipService";
 import { DatabaseInternshipBatch, DatabaseInternshipApplication, GenderType, InternshipPackageType } from "@/lib/supabase";
-import { INDIAN_STATES, COUNTRIES } from "@/lib/data/geoData";
+import { INDIAN_STATES, COUNTRIES, COUNTRY_DIAL_CODES, getCountryByDialCode } from "@/lib/data/geoData";
 import { CollegeRecord } from "@/lib/data/collegesData";
 
 export default function InternshipApplyPage() {
@@ -44,7 +44,9 @@ export default function InternshipApplyPage() {
         // Personal
         fullName: "",
         email: "",
+        countryCode: "+91",
         phone: "",
+        whatsappCountryCode: "+91",
         whatsappNumber: "",
         gender: "Male" as GenderType,
         dateOfBirth: "",
@@ -119,28 +121,32 @@ export default function InternshipApplyPage() {
     });
     const phoneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Debounced Live Phone Verification Handler (Supports all countries, ITU-T E.164)
-    const handlePhoneChange = (val: string) => {
-        // Allow leading +, digits, spaces, parentheses, hyphens, capped at 20 characters
-        const trimmed = val.trimStart();
-        const hasLeadingPlus = trimmed.startsWith("+");
-        const clean = (hasLeadingPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
-        setFormData((prev) => ({ ...prev, phone: clean }));
-
+    // Debounced Live Phone Verification Handler with Country Code support
+    const triggerPhoneVerification = (phoneVal: string, cCode: string) => {
         if (phoneTimeoutRef.current) clearTimeout(phoneTimeoutRef.current);
 
-        const digitsOnly = clean.replace(/\D/g, "");
+        const digitsOnly = phoneVal.replace(/\D/g, "");
 
         if (!digitsOnly) {
             setPhoneValidation({ checking: false, status: "idle", message: "" });
             return;
         }
 
-        if (digitsOnly.length < 7) {
+        // If India (+91), guide student for 10-digit number
+        if (cCode === "+91" && digitsOnly.length < 10) {
             setPhoneValidation({
                 checking: false,
                 status: "invalid_format",
-                message: `Please enter at least 7 digits (${digitsOnly.length} entered).`
+                message: `Please enter 10 digits (${digitsOnly.length}/10 entered).`
+            });
+            return;
+        }
+
+        if (digitsOnly.length < 5) {
+            setPhoneValidation({
+                checking: false,
+                status: "invalid_format",
+                message: `Please enter at least 5 digits (${digitsOnly.length} entered).`
             });
             return;
         }
@@ -149,16 +155,17 @@ export default function InternshipApplyPage() {
             setPhoneValidation({
                 checking: false,
                 status: "invalid_format",
-                message: "Phone number cannot exceed 15 digits (ITU-T standard)."
+                message: "Phone number cannot exceed 15 digits."
             });
             return;
         }
 
+        const fullPhone = `${cCode} ${digitsOnly}`;
         setPhoneValidation({ checking: true, status: "checking", message: "Verifying phone number..." });
 
         phoneTimeoutRef.current = setTimeout(async () => {
             try {
-                const res = await fetch(`/api/validate-phone?phone=${encodeURIComponent(clean)}&batchId=${encodeURIComponent(batchId)}`);
+                const res = await fetch(`/api/validate-phone?phone=${encodeURIComponent(fullPhone)}&batchId=${encodeURIComponent(batchId)}`);
                 const data = await res.json();
                 setPhoneValidation({
                     checking: false,
@@ -173,6 +180,24 @@ export default function InternshipApplyPage() {
                 });
             }
         }, 400);
+    };
+
+    const handlePhoneChange = (val: string) => {
+        // Strip non-digits and cap at 15 digits for local portion
+        const clean = val.replace(/\D/g, "").slice(0, 15);
+        setFormData((prev) => ({ ...prev, phone: clean }));
+        triggerPhoneVerification(clean, formData.countryCode);
+    };
+
+    const handleCountryCodeChange = (newCode: string) => {
+        setFormData((prev) => ({
+            ...prev,
+            countryCode: newCode,
+            whatsappCountryCode: prev.whatsappCountryCode === prev.countryCode ? newCode : prev.whatsappCountryCode
+        }));
+        if (formData.phone) {
+            triggerPhoneVerification(formData.phone, newCode);
+        }
     };
 
     // Debounced Live Email Verification Handler
@@ -286,8 +311,14 @@ export default function InternshipApplyPage() {
         if (!formData.fullName.trim()) return "Full name is required";
         if (!formData.email.trim() || !formData.email.includes("@")) return "A valid email is required";
         const phoneDigits = formData.phone.replace(/\D/g, "");
-        if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
-            return "A valid phone number (7 to 15 digits, with country code if outside India) is required";
+        if (!phoneDigits) {
+            return "Mobile / Phone number is required";
+        }
+        if (formData.countryCode === "+91" && phoneDigits.length !== 10) {
+            return "Please enter a valid 10-digit Indian mobile number";
+        }
+        if (phoneDigits.length < 5 || phoneDigits.length > 15) {
+            return "Please enter a valid phone number";
         }
         if (phoneValidation.status === "duplicate") return "This phone number is already registered for this internship batch.";
         if (phoneValidation.status === "invalid_format") return phoneValidation.message || "Please enter a valid phone number.";
@@ -360,13 +391,18 @@ export default function InternshipApplyPage() {
             const selectedPkg = PACKAGES_CONFIG[formData.packageName];
             const verifiedPrice = selectedPkg?.price !== undefined ? selectedPkg.price : (formData.packageName === "Free" ? 0 : 749);
 
+            const fullPhone = `${formData.countryCode} ${formData.phone.trim()}`.trim();
+            const fullWhatsapp = formData.whatsappNumber.trim()
+                ? `${formData.whatsappCountryCode} ${formData.whatsappNumber.trim()}`.trim()
+                : fullPhone;
+
             const result = await internshipService.submitApplication({
                 batchId: batch?.id || batchId,
                 fullName: formData.fullName,
                 email: formData.email,
-                phone: formData.phone,
-                mobileNumber: formData.phone,
-                whatsappNumber: formData.whatsappNumber || formData.phone,
+                phone: fullPhone,
+                mobileNumber: fullPhone,
+                whatsappNumber: fullWhatsapp,
                 gender: formData.gender,
                 dateOfBirth: formData.dateOfBirth,
 
@@ -584,26 +620,51 @@ export default function InternshipApplyPage() {
                                     )}
                                 </div>
 
-                                <div>
+                                <div className="sm:col-span-2">
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                                         Mobile / Phone Number *
                                     </label>
-                                    <div className="relative">
-                                        <input
-                                            type="tel"
-                                            required
-                                            maxLength={20}
-                                            placeholder="e.g. +1 555-0199 or +91 98765 43210"
-                                            value={formData.phone}
-                                            onChange={(e) => handlePhoneChange(e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                        {phoneValidation.checking && (
-                                            <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
-                                        )}
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        {/* Country Code Dropdown Column (Left) */}
+                                        <div className="w-full sm:w-[170px] flex-shrink-0">
+                                            <div className="relative">
+                                                <select
+                                                    value={formData.countryCode}
+                                                    onChange={(e) => handleCountryCodeChange(e.target.value)}
+                                                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
+                                                    title="Select Country Code"
+                                                >
+                                                    {COUNTRY_DIAL_CODES.map((c) => (
+                                                        <option key={`cc-${c.code}-${c.dialCode}`} value={c.dialCode}>
+                                                            {c.flag} {c.dialCode} ({c.name})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Phone Number Input Box (Right) */}
+                                        <div className="flex-1 min-w-0 relative">
+                                            <input
+                                                type="tel"
+                                                required
+                                                maxLength={15}
+                                                placeholder={
+                                                    formData.countryCode === "+91"
+                                                        ? "10-digit mobile number (e.g. 9876543210)"
+                                                        : "Phone number (e.g. 555-0199)"
+                                                }
+                                                value={formData.phone}
+                                                onChange={(e) => handlePhoneChange(e.target.value)}
+                                                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            {phoneValidation.checking && (
+                                                <Loader2 className="h-4 w-4 animate-spin text-indigo-600 absolute right-3 top-3" />
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-[11px] text-slate-500 mt-1">
-                                        Accepts any country number. Please include your country code (e.g. +1, +44, +91, +971).
+                                        Country: <span className="font-semibold text-slate-700">{getCountryByDialCode(formData.countryCode).flag} {getCountryByDialCode(formData.countryCode).name} ({formData.countryCode})</span>. Default is India (+91), or select any country from the dropdown.
                                     </p>
                                     {/* Live Phone Availability State Indicators */}
                                     {phoneValidation.status !== "idle" && (
@@ -635,23 +696,39 @@ export default function InternshipApplyPage() {
                                     )}
                                 </div>
 
-                                <div>
+                                <div className="sm:col-span-2">
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                                         WhatsApp Number
                                     </label>
-                                    <input
-                                        type="tel"
-                                        maxLength={20}
-                                        placeholder="e.g. +1 555-0199 (same as phone if left empty)"
-                                        value={formData.whatsappNumber}
-                                        onChange={(e) => {
-                                            const trimmed = e.target.value.trimStart();
-                                            const hasPlus = trimmed.startsWith("+");
-                                            const clean = (hasPlus ? "+" : "") + trimmed.replace(/[^\d\s()-]/g, "").slice(0, 20);
-                                            setFormData({ ...formData, whatsappNumber: clean });
-                                        }}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <div className="w-full sm:w-[170px] flex-shrink-0">
+                                            <select
+                                                value={formData.whatsappCountryCode}
+                                                onChange={(e) => setFormData({ ...formData, whatsappCountryCode: e.target.value })}
+                                                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
+                                                title="Select WhatsApp Country Code"
+                                            >
+                                                {COUNTRY_DIAL_CODES.map((c) => (
+                                                    <option key={`wa-${c.code}-${c.dialCode}`} value={c.dialCode}>
+                                                        {c.flag} {c.dialCode} ({c.name})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <input
+                                                type="tel"
+                                                maxLength={15}
+                                                placeholder="Same as mobile if left empty"
+                                                value={formData.whatsappNumber}
+                                                onChange={(e) => {
+                                                    const clean = e.target.value.replace(/[^\d\s-]/g, "").slice(0, 15);
+                                                    setFormData({ ...formData, whatsappNumber: clean });
+                                                }}
+                                                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>
