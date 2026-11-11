@@ -29,6 +29,7 @@ import { internshipService, PACKAGES_CONFIG, INTERNSHIP_DOMAINS } from "@/lib/se
 import { DatabaseInternshipBatch, DatabaseInternshipApplication, GenderType, InternshipPackageType } from "@/lib/supabase";
 import { INDIAN_STATES, COUNTRIES, COUNTRY_DIAL_CODES, getCountryByDialCode } from "@/lib/data/geoData";
 import { CollegeRecord } from "@/lib/data/collegesData";
+import { CountryCodeDropdown } from "@/components/CountryCodeDropdown";
 
 export default function InternshipApplyPage() {
     const params = useParams();
@@ -625,22 +626,13 @@ export default function InternshipApplyPage() {
                                         Mobile / Phone Number *
                                     </label>
                                     <div className="flex flex-col sm:flex-row gap-2">
-                                        {/* Country Code Dropdown Column (Left) */}
-                                        <div className="w-full sm:w-[170px] flex-shrink-0">
-                                            <div className="relative">
-                                                <select
-                                                    value={formData.countryCode}
-                                                    onChange={(e) => handleCountryCodeChange(e.target.value)}
-                                                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
-                                                    title="Select Country Code"
-                                                >
-                                                    {COUNTRY_DIAL_CODES.map((c) => (
-                                                        <option key={`cc-${c.code}-${c.dialCode}`} value={c.dialCode}>
-                                                            {c.flag} {c.dialCode} ({c.name})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                        {/* Country Code Dropdown Column (Left) with Flag Images */}
+                                        <div className="w-full sm:w-[155px] flex-shrink-0">
+                                            <CountryCodeDropdown
+                                                value={formData.countryCode}
+                                                onChange={(code) => handleCountryCodeChange(code)}
+                                                title="Select Phone Country Code"
+                                            />
                                         </div>
 
                                         {/* Phone Number Input Box (Right) */}
@@ -663,8 +655,19 @@ export default function InternshipApplyPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 mt-1">
-                                        Country: <span className="font-semibold text-slate-700">{getCountryByDialCode(formData.countryCode).flag} {getCountryByDialCode(formData.countryCode).name} ({formData.countryCode})</span>. Default is India (+91), or select any country from the dropdown.
+                                    <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <span>Selected Country:</span>
+                                        <span className="font-semibold text-slate-700 inline-flex items-center gap-1.5">
+                                            <img
+                                                src={`https://flagcdn.com/w40/${getCountryByDialCode(formData.countryCode).code.toLowerCase()}.png`}
+                                                alt={getCountryByDialCode(formData.countryCode).name}
+                                                width={16}
+                                                height={11}
+                                                className="w-4 h-2.5 rounded-2xs border border-slate-200 object-cover inline-block"
+                                            />
+                                            {getCountryByDialCode(formData.countryCode).name} ({formData.countryCode})
+                                        </span>
+                                        <span className="text-slate-400">• Default is India (+91), or choose any country from the dropdown.</span>
                                     </p>
                                     {/* Live Phone Availability State Indicators */}
                                     {phoneValidation.status !== "idle" && (
@@ -701,19 +704,12 @@ export default function InternshipApplyPage() {
                                         WhatsApp Number
                                     </label>
                                     <div className="flex flex-col sm:flex-row gap-2">
-                                        <div className="w-full sm:w-[170px] flex-shrink-0">
-                                            <select
+                                        <div className="w-full sm:w-[155px] flex-shrink-0">
+                                            <CountryCodeDropdown
                                                 value={formData.whatsappCountryCode}
-                                                onChange={(e) => setFormData({ ...formData, whatsappCountryCode: e.target.value })}
-                                                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
+                                                onChange={(code) => setFormData({ ...formData, whatsappCountryCode: code })}
                                                 title="Select WhatsApp Country Code"
-                                            >
-                                                {COUNTRY_DIAL_CODES.map((c) => (
-                                                    <option key={`wa-${c.code}-${c.dialCode}`} value={c.dialCode}>
-                                                        {c.flag} {c.dialCode} ({c.name})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <input
