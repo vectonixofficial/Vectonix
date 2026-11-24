@@ -425,7 +425,7 @@ export default function AdminProjectAllocationsPage() {
             {/* Candidates Table */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="w-full text-left border-collapse text-xs min-w-[760px]">
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                                 <th className="py-3.5 px-4">Application ID</th>
@@ -675,12 +675,12 @@ export default function AdminProjectAllocationsPage() {
             {/* AUTO-ALLOCATE COHORT CONFIRMATION MODAL */}
             <AnimatePresence>
                 {showAutoModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.96 }}
-                            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-8"
+                            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600">

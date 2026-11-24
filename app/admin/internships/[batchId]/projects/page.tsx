@@ -229,7 +229,7 @@ export default function AdminProjectBankPage() {
 
             {/* Top Navigation & Breadcrumbs */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <Link
                         href={`/admin/internships/${batchId}`}
                         className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
@@ -253,7 +253,7 @@ export default function AdminProjectBankPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <Link
                         href={`/admin/internships/${batchId}/allocations`}
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm transition-colors"
@@ -414,7 +414,7 @@ export default function AdminProjectBankPage() {
                     />
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <div className="relative">
                         <select
                             value={domainFilter}

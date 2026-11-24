@@ -49,7 +49,10 @@ import {
     Bot,
     FlaskConical,
     Brain,
-    PlaySquare
+    PlaySquare,
+    Menu,
+    PanelLeftClose,
+    PanelLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -126,6 +129,33 @@ export function StudentDashboardContent() {
     const [activeSection, setActiveSection] = useState<
         "overview" | "announcements" | "assignments" | "project" | "reviews" | "resources" | "support" | "profile" | "certificate"
     >("overview");
+
+    // Responsive sidebar state
+    const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+    // Close mobile drawer on escape
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isMobileSidebarOpen) {
+                setIsMobileSidebarOpen(false);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isMobileSidebarOpen]);
+
+    // Prevent background scrolling when mobile drawer is open
+    useEffect(() => {
+        if (isMobileSidebarOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [isMobileSidebarOpen]);
 
     // Module Data
     const [announcements, setAnnouncements] = useState<StudentAnnouncement[]>([]);
@@ -929,30 +959,55 @@ export function StudentDashboardContent() {
                 </div>
             )}
             {/* Top Navigation Bar */}
-            <header className="bg-white border-b border-slate-200 sticky top-16 z-20 px-4 sm:px-8 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <header className="bg-white border-b border-slate-200 sticky top-16 z-20 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    {/* Mobile Hamburger Button */}
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileSidebarOpen(true)}
+                        className="md:hidden p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                        aria-label="Open Internship Menu"
+                    >
+                        <Menu className="h-5 w-5" />
+                    </button>
+
+                    {/* Desktop Sidebar Collapse Toggle */}
+                    <button
+                        type="button"
+                        onClick={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
+                        className="hidden md:flex p-2 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                        aria-label={isDesktopSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        title={isDesktopSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {isDesktopSidebarCollapsed ? (
+                            <PanelLeft className="h-4 w-4" />
+                        ) : (
+                            <PanelLeftClose className="h-4 w-4" />
+                        )}
+                    </button>
+
                     {student.profile_picture_url ? (
                         <img
                             src={student.profile_picture_url}
                             alt={student.full_name}
-                            className="h-9 w-9 rounded-xl object-cover border border-slate-200 shadow-xs"
+                            className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-cover border border-slate-200 shadow-xs shrink-0"
                         />
                     ) : (
-                        <div className="h-9 w-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
                             {student.full_name ? student.full_name.charAt(0).toUpperCase() : "VX"}
                         </div>
                     )}
-                    <div>
-                        <h2 className="text-sm font-bold text-slate-900 leading-tight">
-                            Vectonix Student Dashboard
+                    <div className="min-w-0">
+                        <h2 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">
+                            {student.full_name || "Vectonix Student"}
                         </h2>
-                        <span className="text-[11px] text-slate-400">
-                            Batch WI26 • {student.domain}
+                        <span className="text-[10px] sm:text-[11px] text-slate-400 block truncate">
+                            WI26 • {student.domain}
                         </span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     {/* Notification Bell Dropdown */}
                     <div className="relative">
                         <button
@@ -969,7 +1024,7 @@ export function StudentDashboardContent() {
                         </button>
 
                         {showNotificationsDropdown && (
-                            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                            <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3 animate-in fade-in slide-from-top-2">
                                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                                     <div className="flex items-center gap-2">
                                         <Bell className="h-4 w-4 text-indigo-600" />
@@ -992,7 +1047,7 @@ export function StudentDashboardContent() {
                                     )}
                                 </div>
 
-                                <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                                <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                                     {notifications.length === 0 ? (
                                         <p className="text-xs text-slate-400 text-center py-6">
                                             You&apos;re all caught up! No notifications.
@@ -1040,65 +1095,183 @@ export function StudentDashboardContent() {
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-red-50 hover:text-red-600 text-xs font-semibold text-slate-600 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-red-50 hover:text-red-600 text-xs font-semibold text-slate-600 transition-colors cursor-pointer"
                     >
-                        <LogOut className="h-3.5 w-3.5" />
-                        <span>Logout</span>
+                        <LogOut className="h-3.5 w-3.5 shrink-0" />
+                        <span className="hidden xs:inline">Logout</span>
                     </button>
                 </div>
             </header>
 
-            <div className="flex-1 flex flex-col md:flex-row">
-                {/* Desktop & Tablet Sidebar */}
-                <aside className="w-full md:w-64 bg-white border-r border-slate-200 p-4 space-y-1 flex-shrink-0">
-                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-2">
-                        Internship Menu
-                    </div>
+            <div className="flex-1 flex min-w-0">
+                {/* Desktop Collapsible Sidebar */}
+                <aside
+                    className={`hidden md:flex flex-col justify-between sticky top-32 h-[calc(100vh-8rem)] bg-white border-r border-slate-200 p-3 space-y-1 shrink-0 transition-all duration-300 ease-in-out z-10 ${
+                        isDesktopSidebarCollapsed ? "w-20" : "w-64"
+                    }`}
+                >
+                    <div className="overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                        {!isDesktopSidebarCollapsed && (
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-2">
+                                Internship Menu
+                            </div>
+                        )}
 
-                    {[
-                        { id: "overview", label: "Overview", icon: LayoutDashboard },
-                        { id: "announcements", label: "Announcements", icon: Bell, badge: announcements.length },
-                        { id: "assignments", label: "Quizzes & Assessments", icon: CheckSquare, badge: quizzes.length, locked: !isApproved },
-                        { id: "project", label: "Project Workspace", icon: FolderGit2, locked: !isApproved },
-                        { id: "reviews", label: "Weekly Reviews", icon: Calendar, badge: reviews.length, locked: !isApproved },
-                        { id: "resources", label: "Learning Resources", icon: BookOpen, locked: isRejected },
-                        { id: "support", label: "Mentor Support", icon: HelpCircle, locked: !isApproved },
-                        { id: "profile", label: "My Profile", icon: User },
-                        { id: "certificate", label: "Certificate", icon: Award },
-                    ].map((item) => {
-                        const Icon = item.icon;
-                        const isActive = activeSection === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveSection(item.id as any)}
-                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                                    isActive
-                                        ? "bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs"
-                                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                }`}
-                            >
-                                <div className="flex items-center gap-2.5">
-                                    <Icon className={`h-4 w-4 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
-                                    <span>{item.label}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    {item.locked && (
-                                        <Lock className="h-3 w-3 text-slate-400" />
+                        {[
+                            { id: "overview", label: "Overview", icon: LayoutDashboard },
+                            { id: "announcements", label: "Announcements", icon: Bell, badge: announcements.length },
+                            { id: "assignments", label: "Quizzes & Assessments", icon: CheckSquare, badge: quizzes.length, locked: !isApproved },
+                            { id: "project", label: "Project Workspace", icon: FolderGit2, locked: !isApproved },
+                            { id: "reviews", label: "Weekly Reviews", icon: Calendar, badge: reviews.length, locked: !isApproved },
+                            { id: "resources", label: "Learning Resources", icon: BookOpen, locked: isRejected },
+                            { id: "support", label: "Mentor Support", icon: HelpCircle, locked: !isApproved },
+                            { id: "profile", label: "My Profile", icon: User },
+                            { id: "certificate", label: "Certificate", icon: Award },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeSection === item.id;
+                            return (
+                                <div key={item.id} className="relative group">
+                                    <button
+                                        onClick={() => setActiveSection(item.id as any)}
+                                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                                            isActive
+                                                ? "bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs font-bold"
+                                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                        } ${isDesktopSidebarCollapsed ? "justify-center px-0" : ""}`}
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
+                                            {!isDesktopSidebarCollapsed && <span>{item.label}</span>}
+                                        </div>
+                                        {!isDesktopSidebarCollapsed && (
+                                            <div className="flex items-center gap-1.5">
+                                                {item.locked && (
+                                                    <Lock className="h-3 w-3 text-slate-400" />
+                                                )}
+                                                {item.badge !== undefined && (
+                                                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600">
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </button>
+                                    {isDesktopSidebarCollapsed && (
+                                        <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                            {item.label} {item.badge !== undefined ? `(${item.badge})` : ""}
+                                        </div>
                                     )}
-                                    {item.badge !== undefined && (
-                                        <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600">
-                                            {item.badge}
-                                        </span>
-                                    )}
                                 </div>
-                            </button>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </aside>
 
+                {/* Mobile Drawer Slide-in & Backdrop */}
+                {isMobileSidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 md:hidden animate-in fade-in duration-200"
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                        aria-hidden="true"
+                    />
+                )}
+
+                <div
+                    className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col justify-between p-4 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+                        isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    }`}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Internship Navigation"
+                >
+                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                                VX
+                            </div>
+                            <div>
+                                <span className="font-bold text-slate-900 text-xs">Vectonix Student</span>
+                                <span className="block text-[10px] text-slate-400">
+                                    WI26 • {student.domain}
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setIsMobileSidebarOpen(false)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            aria-label="Close menu"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="overflow-y-auto space-y-1 flex-1 pr-1 custom-scrollbar">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1">
+                            Navigation
+                        </div>
+                        {[
+                            { id: "overview", label: "Overview", icon: LayoutDashboard },
+                            { id: "announcements", label: "Announcements", icon: Bell, badge: announcements.length },
+                            { id: "assignments", label: "Quizzes & Assessments", icon: CheckSquare, badge: quizzes.length, locked: !isApproved },
+                            { id: "project", label: "Project Workspace", icon: FolderGit2, locked: !isApproved },
+                            { id: "reviews", label: "Weekly Reviews", icon: Calendar, badge: reviews.length, locked: !isApproved },
+                            { id: "resources", label: "Learning Resources", icon: BookOpen, locked: isRejected },
+                            { id: "support", label: "Mentor Support", icon: HelpCircle, locked: !isApproved },
+                            { id: "profile", label: "My Profile", icon: User },
+                            { id: "certificate", label: "Certificate", icon: Award },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeSection === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveSection(item.id as any);
+                                        setIsMobileSidebarOpen(false);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                                        isActive
+                                            ? "bg-indigo-600 text-white shadow-2xs font-bold"
+                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                                        <span>{item.label}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        {item.locked && (
+                                            <Lock className={`h-3 w-3 ${isActive ? "text-white/80" : "text-slate-400"}`} />
+                                        )}
+                                        {item.badge !== undefined && (
+                                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between px-3 text-[11px] text-slate-500 font-mono">
+                            <span>App ID:</span>
+                            <span className="font-bold text-slate-800">{student.application_id || student.application_number}</span>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2.5 w-full px-3.5 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                            <LogOut className="h-4 w-4 shrink-0" />
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>
+
                 {/* Main Content Area */}
-                <main className="flex-1 p-4 sm:p-8 max-w-6xl">
+                <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-6xl min-w-0 overflow-x-hidden">
                     {/* SECTION 1: OVERVIEW */}
                     {activeSection === "overview" && (
                         <div className="space-y-6">
@@ -3044,7 +3217,7 @@ export function StudentDashboardContent() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4"
+                            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <h3 className="font-bold text-slate-900 text-sm">
@@ -3135,7 +3308,7 @@ export function StudentDashboardContent() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-4 border border-slate-200"
+                            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-8 space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-start justify-between border-b border-slate-100 pb-3">
                                 <div>
@@ -3350,7 +3523,7 @@ export function StudentDashboardContent() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl"
+                            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-5 border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <div className="flex items-center gap-2">

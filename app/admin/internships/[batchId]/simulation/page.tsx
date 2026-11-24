@@ -201,7 +201,7 @@ export default function StudentSimulationCenterPage() {
                             Testing & QA Tools
                         </span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
                             <PlaySquare className="h-5 w-5" />
                         </div>
@@ -216,7 +216,7 @@ export default function StudentSimulationCenterPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <Button
                         onClick={handleRunDiagnostics}
                         disabled={diagnosticsRunning}
@@ -268,7 +268,7 @@ export default function StudentSimulationCenterPage() {
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-3 mb-3">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                         <div className="h-10 w-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
                                             {getDomainIcon(dom.icon)}
                                         </div>
