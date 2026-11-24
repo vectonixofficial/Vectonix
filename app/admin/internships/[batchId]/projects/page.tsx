@@ -26,7 +26,14 @@ import {
     X,
     BookOpen,
     Layers,
-    Target
+    Target,
+    Brain,
+    Bot,
+    FlaskConical,
+    Copy,
+    Cpu,
+    CheckSquare,
+    ListChecks
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { projectBankService, normalizeDomain } from "@/lib/project-bank";
@@ -114,6 +121,20 @@ export default function AdminProjectBankPage() {
         }
     };
 
+    const handleDuplicateTemplate = async (id: string, title: string) => {
+        try {
+            const res = await projectBankService.duplicateProjectTemplate(id);
+            if (res.success) {
+                showToast(`Project "${title}" duplicated successfully!`);
+                await loadTemplates();
+            } else {
+                alert(`Could not duplicate: ${res.error}`);
+            }
+        } catch (err: any) {
+            alert(`Error: ${err.message}`);
+        }
+    };
+
     // Filter logic
     const filteredTemplates = templates.filter((t) => {
         const matchesDomain =
@@ -127,6 +148,7 @@ export default function AdminProjectBankPage() {
         const search = searchTerm.toLowerCase();
         const matchesSearch =
             !search ||
+            t.id.toLowerCase().includes(search) ||
             t.title.toLowerCase().includes(search) ||
             t.short_description.toLowerCase().includes(search) ||
             t.domain.toLowerCase().includes(search) ||
@@ -145,6 +167,14 @@ export default function AdminProjectBankPage() {
                 </span>
             );
         }
+        if (norm === "AI / Machine Learning") {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                    <Brain className="h-3 w-3" />
+                    AI / ML
+                </span>
+            );
+        }
         if (norm === "Cybersecurity") {
             return (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -153,8 +183,24 @@ export default function AdminProjectBankPage() {
                 </span>
             );
         }
+        if (norm === "Robotics") {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-50 text-cyan-700 border border-cyan-100">
+                    <Bot className="h-3 w-3" />
+                    Robotics
+                </span>
+            );
+        }
+        if (norm === "Software Testing and Automation") {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                    <FlaskConical className="h-3 w-3" />
+                    Software Testing
+                </span>
+            );
+        }
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100">
                 <TrendingUp className="h-3 w-3" />
                 Digital Marketing
             </span>
@@ -202,7 +248,7 @@ export default function AdminProjectBankPage() {
                             </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Standardized bank of 18 industry-grade capstone projects across Full Stack, Cybersecurity, and Digital Marketing.
+                            Standardized bank of {templates.length} industry-grade capstone projects across AI/ML, Robotics, Software Testing, Full Stack, Cybersecurity, and Digital Marketing.
                         </p>
                     </div>
                 </div>
@@ -220,7 +266,7 @@ export default function AdminProjectBankPage() {
                         onClick={() => {
                             setEditingTemplate({
                                 title: "",
-                                domain: "Full Stack Development",
+                                domain: "AI / Machine Learning",
                                 short_description: "",
                                 problem_statement: "",
                                 objectives: [],
@@ -244,60 +290,114 @@ export default function AdminProjectBankPage() {
                 </div>
             </div>
 
-            {/* Quick Domain Counters */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Quick Domain Counters Grid (6 Domains) */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <button
-                    onClick={() => setDomainFilter("Full Stack Development")}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
-                        domainFilter === "Full Stack Development"
-                            ? "border-indigo-600 bg-indigo-50/50 shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                    onClick={() => setDomainFilter(domainFilter === "Full Stack Development" ? "all" : "Full Stack Development")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "Full Stack Development"
+                            ? "border-indigo-600 bg-indigo-50/70 shadow-sm ring-1 ring-indigo-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Full Stack Development</span>
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Full Stack</span>
                         <Code className="h-4 w-4 text-indigo-600" />
                     </div>
-                    <div className="mt-2 text-2xl font-bold text-slate-900">
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
                         {templates.filter((t) => normalizeDomain(t.domain) === "Full Stack Development").length}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Campus portals, queues, marketplaces & trackers</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">Campus portals, queues, SaaS</p>
                 </button>
 
                 <button
-                    onClick={() => setDomainFilter("Cybersecurity")}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
-                        domainFilter === "Cybersecurity"
-                            ? "border-emerald-600 bg-emerald-50/50 shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                    onClick={() => setDomainFilter(domainFilter === "AI / Machine Learning" ? "all" : "AI / Machine Learning")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "AI / Machine Learning"
+                            ? "border-violet-600 bg-violet-50/70 shadow-sm ring-1 ring-violet-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cybersecurity</span>
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">AI / ML</span>
+                        <Brain className="h-4 w-4 text-violet-600" />
+                    </div>
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
+                        {templates.filter((t) => normalizeDomain(t.domain) === "AI / Machine Learning").length}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">NLP, Chatbots, YOLO, RAG</p>
+                </button>
+
+                <button
+                    onClick={() => setDomainFilter(domainFilter === "Robotics" ? "all" : "Robotics")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "Robotics"
+                            ? "border-cyan-600 bg-cyan-50/70 shadow-sm ring-1 ring-cyan-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Robotics</span>
+                        <Bot className="h-4 w-4 text-cyan-600" />
+                    </div>
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
+                        {templates.filter((t) => normalizeDomain(t.domain) === "Robotics").length}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">ROS 2, Gazebo, SLAM, Arms</p>
+                </button>
+
+                <button
+                    onClick={() => setDomainFilter(domainFilter === "Software Testing and Automation" ? "all" : "Software Testing and Automation")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "Software Testing and Automation"
+                            ? "border-amber-600 bg-amber-50/70 shadow-sm ring-1 ring-amber-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Testing & QA</span>
+                        <FlaskConical className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
+                        {templates.filter((t) => normalizeDomain(t.domain) === "Software Testing and Automation").length}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">Selenium, Pytest, JMeter, CI</p>
+                </button>
+
+                <button
+                    onClick={() => setDomainFilter(domainFilter === "Cybersecurity" ? "all" : "Cybersecurity")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "Cybersecurity"
+                            ? "border-emerald-600 bg-emerald-50/70 shadow-sm ring-1 ring-emerald-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Cybersecurity</span>
                         <Shield className="h-4 w-4 text-emerald-600" />
                     </div>
-                    <div className="mt-2 text-2xl font-bold text-slate-900">
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
                         {templates.filter((t) => normalizeDomain(t.domain) === "Cybersecurity").length}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Phishing detectors, SIEM, FIM & password analyzers</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">Phishing, SIEM, FIM, Scanner</p>
                 </button>
 
                 <button
-                    onClick={() => setDomainFilter("Digital Marketing")}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
-                        domainFilter === "Digital Marketing"
-                            ? "border-amber-600 bg-amber-50/50 shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                    onClick={() => setDomainFilter(domainFilter === "Digital Marketing" ? "all" : "Digital Marketing")}
+                    className={`p-3.5 rounded-2xl border text-left transition-all ${
+                        normalizeDomain(domainFilter) === "Digital Marketing"
+                            ? "border-rose-600 bg-rose-50/70 shadow-sm ring-1 ring-rose-500"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Digital Marketing</span>
-                        <TrendingUp className="h-4 w-4 text-amber-600" />
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Marketing</span>
+                        <TrendingUp className="h-4 w-4 text-rose-600" />
                     </div>
-                    <div className="mt-2 text-2xl font-bold text-slate-900">
+                    <div className="mt-1.5 text-xl font-bold text-slate-900">
                         {templates.filter((t) => normalizeDomain(t.domain) === "Digital Marketing").length}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Growth campaigns, SEO blueprints & lead funnels</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">Growth, SEO, Funnels, Ads</p>
                 </button>
             </div>
 
@@ -307,7 +407,7 @@ export default function AdminProjectBankPage() {
                     <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                     <input
                         type="text"
-                        placeholder="Search project title, problem keywords, tech stack..."
+                        placeholder="Search project ID (e.g. AI-ML-01, ROB-02, STA-04), title, tech stack..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl pl-10 pr-4 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none transition-colors"
@@ -322,9 +422,12 @@ export default function AdminProjectBankPage() {
                             className="appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 px-3 py-2 pr-8 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                         >
                             <option value="all">All Domains ({templates.length})</option>
-                            <option value="Full Stack Development">Full Stack Development</option>
-                            <option value="Cybersecurity">Cybersecurity</option>
-                            <option value="Digital Marketing">Digital Marketing</option>
+                            <option value="AI / Machine Learning">AI / Machine Learning (6)</option>
+                            <option value="Robotics">Robotics (6)</option>
+                            <option value="Software Testing and Automation">Software Testing & Automation (6)</option>
+                            <option value="Full Stack Development">Full Stack Development (6)</option>
+                            <option value="Cybersecurity">Cybersecurity (6)</option>
+                            <option value="Digital Marketing">Digital Marketing (6)</option>
                         </select>
                         <ChevronDown className="h-3.5 w-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
                     </div>
@@ -429,6 +532,14 @@ export default function AdminProjectBankPage() {
                                     </button>
 
                                     <button
+                                        onClick={() => handleDuplicateTemplate(template.id, template.title)}
+                                        className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                        title="Duplicate Project"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </button>
+
+                                    <button
                                         onClick={() => {
                                             setEditingTemplate(template);
                                             setIsCreating(false);
@@ -461,14 +572,16 @@ export default function AdminProjectBankPage() {
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.96 }}
-                            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8"
+                            className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8"
                         >
                             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
                                         {getDomainBadge(selectedTemplate.domain)}
                                         {getDifficultyBadge(selectedTemplate.difficulty_level)}
-                                        <span className="text-xs text-slate-400 font-mono">ID: {selectedTemplate.id}</span>
+                                        <span className="text-xs text-slate-500 font-mono font-bold bg-slate-100 px-2 py-0.5 rounded">
+                                            ID: {selectedTemplate.id}
+                                        </span>
                                     </div>
                                     <h2 className="text-xl font-bold text-slate-900">{selectedTemplate.title}</h2>
                                     <p className="text-xs text-slate-500 mt-1">{selectedTemplate.short_description}</p>
@@ -520,11 +633,140 @@ export default function AdminProjectBankPage() {
                                     </div>
                                 </div>
 
+                                {/* Learning Outcomes & Prerequisites */}
+                                {(selectedTemplate.learning_outcomes?.length || selectedTemplate.prerequisites?.length) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {selectedTemplate.learning_outcomes && selectedTemplate.learning_outcomes.length > 0 && (
+                                            <div className="bg-emerald-50/40 p-4 rounded-xl border border-emerald-100/70">
+                                                <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                    <BookOpen className="h-3.5 w-3.5 text-emerald-600" />
+                                                    Learning Outcomes
+                                                </h4>
+                                                <ul className="list-disc list-inside space-y-1.5 text-emerald-900">
+                                                    {selectedTemplate.learning_outcomes.map((item, i) => (
+                                                        <li key={i}>{item}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {selectedTemplate.prerequisites && selectedTemplate.prerequisites.length > 0 && (
+                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                    <ListChecks className="h-3.5 w-3.5 text-indigo-600" />
+                                                    Prerequisites & Skill Requirements
+                                                </h4>
+                                                <ul className="list-disc list-inside space-y-1.5 text-slate-600">
+                                                    {selectedTemplate.prerequisites.map((req, i) => (
+                                                        <li key={i}>{req}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Functional & Non-Functional Requirements */}
+                                {(selectedTemplate.functional_requirements?.length || selectedTemplate.non_functional_requirements?.length) && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {selectedTemplate.functional_requirements && selectedTemplate.functional_requirements.length > 0 && (
+                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                                                    Functional Requirements
+                                                </h4>
+                                                <ul className="list-disc list-inside space-y-1.5 text-slate-600">
+                                                    {selectedTemplate.functional_requirements.map((fr, i) => (
+                                                        <li key={i}>{fr}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {selectedTemplate.non_functional_requirements && selectedTemplate.non_functional_requirements.length > 0 && (
+                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                                                    Non-Functional Requirements & Safety
+                                                </h4>
+                                                <ul className="list-disc list-inside space-y-1.5 text-slate-600">
+                                                    {selectedTemplate.non_functional_requirements.map((nfr, i) => (
+                                                        <li key={i}>{nfr}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Robotics Simulation & Hardware Policy */}
+                                {selectedTemplate.simulation_policy && (
+                                    <div className="p-4 rounded-2xl bg-cyan-50/60 border border-cyan-100 text-cyan-950 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Bot className="h-4 w-4 text-cyan-700" />
+                                            <h4 className="text-xs font-bold text-cyan-900 uppercase tracking-wider">
+                                                Robotics Hardware & Simulation Policy (Simulation-First)
+                                            </h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                                            <div className="bg-white/80 p-2.5 rounded-xl border border-cyan-200/50">
+                                                <strong className="block text-cyan-900 mb-0.5">Free Simulation Alternative:</strong>
+                                                <span>{selectedTemplate.simulation_policy.free_simulation_alternative}</span>
+                                            </div>
+                                            <div className="bg-white/80 p-2.5 rounded-xl border border-cyan-200/50">
+                                                <strong className="block text-cyan-900 mb-0.5">Minimum Software Requirements:</strong>
+                                                <span>{selectedTemplate.simulation_policy.minimum_software}</span>
+                                            </div>
+                                            <div className="bg-white/80 p-2.5 rounded-xl border border-cyan-200/50">
+                                                <strong className="block text-cyan-900 mb-0.5">Expected Simulation Output:</strong>
+                                                <span>{selectedTemplate.simulation_policy.expected_simulation_output}</span>
+                                            </div>
+                                            <div className="bg-white/80 p-2.5 rounded-xl border border-cyan-200/50">
+                                                <strong className="block text-cyan-900 mb-0.5">Optional Hardware Extension:</strong>
+                                                <span>{selectedTemplate.simulation_policy.optional_hardware}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-cyan-800 italic">
+                                            Note: Interns are NOT required to purchase hardware. Complete evaluation can be achieved using 100% free simulation software.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Four-Milestone Internship Structure Preview */}
+                                {selectedTemplate.milestone_descriptions && selectedTemplate.milestone_descriptions.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                            <Clock className="h-3.5 w-3.5 text-indigo-600" />
+                                            Four-Milestone Internship Plan Preview
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {selectedTemplate.milestone_descriptions.map((m) => (
+                                                <div key={m.milestone} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-bold text-indigo-700 text-xs">Milestone {m.milestone}</span>
+                                                        <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-medium">Sprint {m.milestone}</span>
+                                                    </div>
+                                                    <p className="font-semibold text-slate-800 text-[11px]">{m.title}</p>
+                                                    <p className="text-[11px] text-slate-500">{m.description}</p>
+                                                    {m.tasks && m.tasks.length > 0 && (
+                                                        <ul className="list-disc list-inside text-[10px] text-slate-600 space-y-0.5 pt-1">
+                                                            {m.tasks.slice(0, 3).map((task, idx) => (
+                                                                <li key={idx} className="truncate">{task}</li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                    <div className="pt-1.5 border-t border-slate-200/60 text-[10px] text-slate-500">
+                                                        <strong>Deliverables: </strong>{m.deliverables}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Expected Features */}
                                 {selectedTemplate.expected_features && selectedTemplate.expected_features.length > 0 && (
                                     <div>
                                         <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
-                                            Expected Features & Scope
+                                            Detailed Feature Requirements & Scope
                                         </h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {selectedTemplate.expected_features.map((feat, i) => (
@@ -562,6 +804,30 @@ export default function AdminProjectBankPage() {
                                                 <div key={i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-slate-600">
                                                     {crit}
                                                 </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Reference Materials (Official Documentation) */}
+                                {selectedTemplate.reference_materials && selectedTemplate.reference_materials.length > 0 && (
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                            <ExternalLink className="h-3.5 w-3.5 text-indigo-600" />
+                                            Reference Documentation & Resources
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedTemplate.reference_materials.map((ref, i) => (
+                                                <a
+                                                    key={i}
+                                                    href={ref}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-colors"
+                                                >
+                                                    <span>{ref.replace("https://", "")}</span>
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
                                             ))}
                                         </div>
                                     </div>
@@ -629,10 +895,13 @@ export default function AdminProjectBankPage() {
                                     <div>
                                         <label className="block font-semibold text-slate-700 mb-1">Domain *</label>
                                         <select
-                                            value={editingTemplate.domain || "Full Stack Development"}
+                                            value={editingTemplate.domain || "AI / Machine Learning"}
                                             onChange={(e) => setEditingTemplate({ ...editingTemplate, domain: e.target.value })}
                                             className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none bg-white"
                                         >
+                                            <option value="AI / Machine Learning">AI / Machine Learning</option>
+                                            <option value="Robotics">Robotics</option>
+                                            <option value="Software Testing and Automation">Software Testing and Automation</option>
                                             <option value="Full Stack Development">Full Stack Development</option>
                                             <option value="Cybersecurity">Cybersecurity</option>
                                             <option value="Digital Marketing">Digital Marketing</option>

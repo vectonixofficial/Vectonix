@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize Supabase server client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/lib/supabase";
 
 export async function GET(request: Request) {
     try {
@@ -50,7 +45,7 @@ export async function GET(request: Request) {
         const normalizedPhone = hasPlus ? `+${digitsOnly}` : digitsOnly;
 
         // 5. Check for duplicate registration in Supabase across possible formatting variants
-        if (supabaseUrl && supabaseAnonKey) {
+        if (supabase) {
             const candidateValues = new Set<string>();
             candidateValues.add(digitsOnly);
             candidateValues.add(`+${digitsOnly}`);

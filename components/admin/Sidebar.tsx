@@ -22,7 +22,8 @@ import {
     Bell,
     BookOpen,
     HelpCircle,
-    Target
+    Target,
+    PlaySquare
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -36,6 +37,7 @@ interface SubNavItem {
 const internshipSubLinks: SubNavItem[] = [
     { name: "Batches & Cohorts", href: "/admin/internships/wi26", icon: Briefcase },
     { name: "Student Applications", href: "/admin/internships/wi26#students", icon: Users },
+    { name: "Student Simulation Center", href: "/admin/internships/wi26/simulation", icon: PlaySquare },
     { name: "Project Bank", href: "/admin/internships/wi26/projects", icon: FolderKanban },
     { name: "Project Allocations", href: "/admin/internships/wi26/allocations", icon: Layers },
     { name: "Milestones & Workspace", href: "/admin/internships/wi26#milestones", icon: Target },

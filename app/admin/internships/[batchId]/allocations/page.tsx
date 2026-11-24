@@ -27,7 +27,10 @@ import {
     Eye,
     Settings,
     Edit2,
-    Users
+    Users,
+    Brain,
+    Bot,
+    FlaskConical
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { internshipService } from "@/lib/services/internshipService";
@@ -232,6 +235,30 @@ export default function AdminProjectAllocationsPage() {
                 </span>
             );
         }
+        if (norm === "AI / Machine Learning") {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                    <Brain className="h-3 w-3" />
+                    AI / ML
+                </span>
+            );
+        }
+        if (norm === "Robotics") {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-100">
+                    <Bot className="h-3 w-3" />
+                    Robotics
+                </span>
+            );
+        }
+        if (norm === "Software Testing and Automation") {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                    <FlaskConical className="h-3 w-3" />
+                    Software Testing
+                </span>
+            );
+        }
         if (norm === "Cybersecurity") {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -241,7 +268,7 @@ export default function AdminProjectAllocationsPage() {
             );
         }
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-100">
                 <TrendingUp className="h-3 w-3" />
                 Digital Marketing
             </span>
@@ -370,6 +397,9 @@ export default function AdminProjectAllocationsPage() {
                             className="appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 px-3 py-2 pr-8 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                         >
                             <option value="all">All Domains</option>
+                            <option value="AI / Machine Learning">AI / Machine Learning</option>
+                            <option value="Robotics">Robotics</option>
+                            <option value="Software Testing and Automation">Software Testing & Automation</option>
                             <option value="Full Stack Development">Full Stack Development</option>
                             <option value="Cybersecurity">Cybersecurity</option>
                             <option value="Digital Marketing">Digital Marketing</option>

@@ -43,7 +43,13 @@ import {
     Crop,
     Check,
     Download,
-    Edit3
+    Edit3,
+    Sliders,
+    RefreshCw,
+    Bot,
+    FlaskConical,
+    Brain,
+    PlaySquare
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -57,6 +63,10 @@ import {
     DomainQuiz
 } from "@/lib/services/studentService";
 import { DatabaseInternshipApplication } from "@/lib/supabase";
+import { normalizeDomain } from "@/lib/project-bank";
+import { useSimulation, SimulationProvider } from "@/lib/simulation/simulationContext";
+import { SCENARIO_PRESETS, SIMULATION_DOMAINS, SimulationConfig } from "@/lib/simulation/syntheticData";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const MILESTONES_SCHEDULE = [
     {
@@ -105,9 +115,11 @@ const MILESTONES_SCHEDULE = [
     }
 ];
 
-function StudentDashboardContent() {
+export function StudentDashboardContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const sim = useSimulation();
+    const [showSimControls, setShowSimControls] = useState(false);
 
     const [student, setStudent] = useState<DatabaseInternshipApplication | null>(null);
     const [loading, setLoading] = useState(true);
@@ -203,6 +215,32 @@ function StudentDashboardContent() {
     });
 
     useEffect(() => {
+        // Handle Simulation Mode
+        if (sim?.isSimulation) {
+            setStudent(sim.student);
+            setProject(sim.project);
+            setAnnouncements(sim.announcements);
+            setAssignments(sim.assignments);
+            setResources(sim.resources);
+            setWeeklyReviews(sim.reviews);
+            setSupportTickets(sim.supportTickets);
+            setQuizzes(sim.quizzes);
+            setQuizResults(sim.quizResults);
+            if (sim.project) {
+                setGithubRepoUrl(sim.project.github_url || "");
+                setLiveDemoUrl(sim.project.project_url || "");
+                setDocumentationUrl(sim.project.documentation_url || "");
+                setEvidenceUrl(sim.project.evidence_url || "");
+            } else {
+                setGithubRepoUrl("");
+                setLiveDemoUrl("");
+                setDocumentationUrl("");
+                setEvidenceUrl("");
+            }
+            setLoading(false);
+            return;
+        }
+
         const initDashboard = async () => {
             setLoading(true);
 
@@ -261,9 +299,13 @@ function StudentDashboardContent() {
         };
 
         initDashboard();
-    }, [searchParams, router]);
+    }, [searchParams, router, sim?.isSimulation, sim?.student, sim?.project, sim?.resources, sim?.announcements, sim?.assignments]);
 
     const handleLogout = () => {
+        if (sim?.isSimulation) {
+            sim.exitSimulation();
+            return;
+        }
         studentService.logout();
         if (typeof window !== "undefined") {
             window.location.replace("/internship/login");
@@ -482,6 +524,11 @@ function StudentDashboardContent() {
         setQuizScore(roundedScore);
         setQuizSubmitted(true);
 
+        if (sim?.isSimulation) {
+            sim.submitQuiz(activeQuiz.id, quizAnswers, roundedScore);
+            return;
+        }
+
         const appId = student.application_id || student.application_number || "";
         studentService.saveQuizResult(appId, activeQuiz.id, {
             score: roundedScore,
@@ -505,6 +552,17 @@ function StudentDashboardContent() {
         if (!selectedAssignment || !student) return;
 
         setIsSubmittingWork(true);
+        if (sim?.isSimulation) {
+            setSubmissionSuccess(true);
+            setTimeout(() => {
+                setSubmissionSuccess(false);
+                setSelectedAssignment(null);
+                setSubmissionForm({ description: "", githubUrl: "", projectUrl: "" });
+            }, 1800);
+            setIsSubmittingWork(false);
+            alert("[SIMULATION] Assignment submission saved in simulation mode!");
+            return;
+        }
         try {
             const appId = student.application_id || student.application_number || "";
             await studentService.submitAssignment({
@@ -537,6 +595,17 @@ function StudentDashboardContent() {
     const handleSaveProjectLinks = async () => {
         if (!student) return;
         setIsSavingProject(true);
+        if (sim?.isSimulation) {
+            sim.updateProjectLinks({
+                githubUrl: githubRepoUrl,
+                projectUrl: liveDemoUrl,
+                documentationUrl: documentationUrl,
+                evidenceUrl: evidenceUrl
+            });
+            setIsSavingProject(false);
+            alert("[SIMULATION] Project links updated in simulation mode!");
+            return;
+        }
         try {
             const appId = student.application_id || student.application_number || "";
             await studentService.updateProjectLinks(appId, {
@@ -560,6 +629,20 @@ function StudentDashboardContent() {
         if (!selectedMilestoneForSubmit || !project || !student || !milestoneSubmitUrl.trim()) return;
 
         setIsSubmittingMilestone(true);
+        if (sim?.isSimulation) {
+            sim.submitMilestone({
+                milestoneIndex: selectedMilestoneForSubmit.index,
+                milestoneTitle: selectedMilestoneForSubmit.title,
+                submissionUrl: milestoneSubmitUrl.trim(),
+                notes: milestoneSubmitNotes.trim()
+            });
+            setIsSubmittingMilestone(false);
+            alert(`[SIMULATION] Milestone ${selectedMilestoneForSubmit.index} submitted for mentor review in simulation mode!`);
+            setSelectedMilestoneForSubmit(null);
+            setMilestoneSubmitUrl("");
+            setMilestoneSubmitNotes("");
+            return;
+        }
         try {
             const appId = student.application_id || student.application_number || "";
             const res = await studentService.submitMilestone({
@@ -593,6 +676,14 @@ function StudentDashboardContent() {
         if (!student || !supportSubject.trim() || !supportMessage.trim()) return;
 
         setIsSendingTicket(true);
+        if (sim?.isSimulation) {
+            sim.createSupportTicket(supportSubject.trim(), supportMessage.trim());
+            setSupportSubject("");
+            setSupportMessage("");
+            setIsSendingTicket(false);
+            alert("[SIMULATION] Support inquiry logged in simulation desk!");
+            return;
+        }
         try {
             const appId = student.application_id || student.application_number || "";
             await studentService.createSupportTicket({
@@ -637,8 +728,8 @@ function StudentDashboardContent() {
     const progressPercent = Math.min(100, approvedMilestonesCount * 25);
     const completedQuizzesCount = quizzes.filter((q) => !!quizResults[q.id]).length;
 
-    const isApproved = student.status === "accepted";
-    const isRejected = student.status === "rejected";
+    const isApproved = (student.status || "").toLowerCase() === "accepted";
+    const isRejected = (student.status || "").toLowerCase() === "rejected";
     const isPending = !isApproved && !isRejected;
 
     const notifications = [
@@ -697,6 +788,146 @@ function StudentDashboardContent() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col pt-20">
+            {/* Simulation Mode Banner & Live Scenario Controls */}
+            {sim?.isSimulation && (
+                <div className="sticky top-0 z-50 flex flex-col bg-amber-500 text-slate-950 shadow-md border-b border-amber-600">
+                    <div className="px-4 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-medium">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="bg-black text-amber-400 px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase">
+                                SIMULATION MODE
+                            </span>
+                            <span className="font-semibold">
+                                You are viewing a test student dashboard. No real student data or records will be modified.
+                            </span>
+                            <span className="hidden lg:inline-flex items-center gap-1.5 bg-amber-400/80 text-amber-950 px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold">
+                                <span>{sim.config.domain}</span>
+                                <span>•</span>
+                                <span>App: {sim.config.applicationStatus}</span>
+                                <span>•</span>
+                                <span>Project: {sim.config.projectStatus}</span>
+                                <span>•</span>
+                                <span>Milestone: {sim.config.milestoneStatus}</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowSimControls(!showSimControls)}
+                                className="bg-slate-900 hover:bg-slate-800 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                            >
+                                <Sliders className="h-3.5 w-3.5" />
+                                <span>{showSimControls ? "Hide Controls" : "Scenario Controls"}</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={sim.exitSimulation}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                            >
+                                <LogOut className="h-3.5 w-3.5" />
+                                <span>Exit Simulation</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {showSimControls && (
+                        <div className="bg-slate-900 text-white px-4 sm:px-8 py-4 border-t border-slate-800 animate-in slide-in-from-top-2 duration-150">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                                {/* Domain Switcher */}
+                                <div>
+                                    <label className="text-slate-400 font-semibold block mb-1.5 text-[11px] uppercase tracking-wider">
+                                        Internship Domain
+                                    </label>
+                                    <select
+                                        value={sim.config.domain}
+                                        onChange={(e) => sim.setConfig({ ...sim.config, domain: e.target.value })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:ring-1 focus:ring-amber-400 outline-none"
+                                    >
+                                        {SIMULATION_DOMAINS.map((d) => (
+                                            <option key={d.id} value={d.name}>
+                                                {d.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Application Status */}
+                                <div>
+                                    <label className="text-slate-400 font-semibold block mb-1.5 text-[11px] uppercase tracking-wider">
+                                        Application Status
+                                    </label>
+                                    <select
+                                        value={sim.config.applicationStatus}
+                                        onChange={(e) => sim.setConfig({ ...sim.config, applicationStatus: e.target.value as any })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:ring-1 focus:ring-amber-400 outline-none"
+                                    >
+                                        <option value="Accepted">Accepted (Full Access)</option>
+                                        <option value="Pending">Pending (Under Review)</option>
+                                        <option value="Rejected">Rejected (Restricted)</option>
+                                    </select>
+                                </div>
+
+                                {/* Project Status */}
+                                <div>
+                                    <label className="text-slate-400 font-semibold block mb-1.5 text-[11px] uppercase tracking-wider">
+                                        Project Allocation
+                                    </label>
+                                    <select
+                                        value={sim.config.projectStatus}
+                                        onChange={(e) => sim.setConfig({ ...sim.config, projectStatus: e.target.value as any })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:ring-1 focus:ring-amber-400 outline-none"
+                                    >
+                                        <option value="Not Allocated">Not Allocated Yet</option>
+                                        <option value="Allocated">Allocated (Ready to Start)</option>
+                                        <option value="In Progress">In Progress (Active Work)</option>
+                                        <option value="Completed">Completed (100% Verified)</option>
+                                    </select>
+                                </div>
+
+                                {/* Milestone Status */}
+                                <div>
+                                    <label className="text-slate-400 font-semibold block mb-1.5 text-[11px] uppercase tracking-wider">
+                                        Milestone 1 State
+                                    </label>
+                                    <select
+                                        value={sim.config.milestoneStatus}
+                                        onChange={(e) => sim.setConfig({ ...sim.config, milestoneStatus: e.target.value as any })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:ring-1 focus:ring-amber-400 outline-none"
+                                    >
+                                        <option value="Not Started">Not Started</option>
+                                        <option value="Submitted">Submitted (Under Review)</option>
+                                        <option value="Revision Requested">Revision Requested</option>
+                                        <option value="Approved">Approved (Progressing)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-[11px] text-slate-400">Quick Presets:</span>
+                                    {SCENARIO_PRESETS.slice(0, 5).map((p) => (
+                                        <button
+                                            key={p.name}
+                                            type="button"
+                                            onClick={() => sim.applyScenarioPreset(p.name)}
+                                            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-medium transition-colors cursor-pointer border border-slate-700"
+                                        >
+                                            {p.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={sim.resetSimulation}
+                                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-300 text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer border border-slate-700"
+                                >
+                                    <RefreshCw className="h-3 w-3" />
+                                    <span>Reset Simulation</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             {/* Top Navigation Bar */}
             <header className="bg-white border-b border-slate-200 sticky top-16 z-20 px-4 sm:px-8 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1372,6 +1603,99 @@ function StudentDashboardContent() {
                                             </div>
                                         )}
 
+                                        {/* Project Specifications & Objectives */}
+                                        {project.template && (
+                                            <div className="space-y-4 pt-2">
+                                                {/* Tech Stack & Badges */}
+                                                {project.template.tech_stack && project.template.tech_stack.length > 0 && (
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                                            Project Technology Stack
+                                                        </h4>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {project.template.tech_stack.map((t: string, idx: number) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200"
+                                                                >
+                                                                    {t}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Objectives & Deliverables */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                    {project.template.objectives && project.template.objectives.length > 0 && (
+                                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1.5">
+                                                            <strong className="text-slate-900 font-bold flex items-center gap-1.5">
+                                                                <Target className="h-3.5 w-3.5 text-indigo-600" />
+                                                                Key Project Objectives
+                                                            </strong>
+                                                            <ul className="list-disc list-inside space-y-1 text-slate-600">
+                                                                {project.template.objectives.slice(0, 4).map((obj: string, idx: number) => (
+                                                                    <li key={idx}>{obj}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+
+                                                    {project.template.expected_deliverables && project.template.expected_deliverables.length > 0 && (
+                                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-1.5">
+                                                            <strong className="text-slate-900 font-bold flex items-center gap-1.5">
+                                                                <Briefcase className="h-3.5 w-3.5 text-indigo-600" />
+                                                                Expected Deliverables
+                                                            </strong>
+                                                            <ul className="list-disc list-inside space-y-1 text-slate-600">
+                                                                {project.template.expected_deliverables.slice(0, 4).map((del: string, idx: number) => (
+                                                                    <li key={idx}>{del}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Robotics Simulation-First Policy Banner */}
+                                                {(project.domain?.toLowerCase().includes("robot") || project.template.simulation_policy) && (
+                                                    <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200/80 text-xs text-cyan-950 space-y-2">
+                                                        <div className="flex items-center gap-2 font-bold text-cyan-900">
+                                                            <Shield className="h-4 w-4 text-cyan-700" />
+                                                            <span>Robotics Simulation-First Policy (No Expensive Hardware Required)</span>
+                                                        </div>
+                                                        <p className="text-cyan-900 leading-relaxed text-[11px]">
+                                                            Vectonix enforces a simulation-first policy. Interns can complete all milestones using 100% free simulation platforms (Webots, ROS 2, Gazebo, Tinkercad). Purchasing physical robotics components is strictly optional.
+                                                        </p>
+                                                        {project.template.simulation_policy && (
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+                                                                <div className="bg-white/80 p-2 rounded-xl border border-cyan-200/60">
+                                                                    <strong className="text-cyan-900">Free Simulation: </strong>
+                                                                    <span>{project.template.simulation_policy.free_simulation_alternative}</span>
+                                                                </div>
+                                                                <div className="bg-white/80 p-2 rounded-xl border border-cyan-200/60">
+                                                                    <strong className="text-cyan-900">Expected Output: </strong>
+                                                                    <span>{project.template.simulation_policy.expected_simulation_output}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Software Testing Safety Policy Banner */}
+                                                {(project.domain?.toLowerCase().includes("test") || project.domain?.toLowerCase().includes("sta")) && (
+                                                    <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-950 space-y-1">
+                                                        <strong className="font-bold text-amber-900 flex items-center gap-1.5">
+                                                            <AlertCircle className="h-4 w-4 text-amber-700" />
+                                                            Software Testing Safety Policy
+                                                        </strong>
+                                                        <p className="text-[11px] text-amber-900 leading-relaxed">
+                                                            Only execute performance or automated tests against localhost, owned applications, or authorized staging environments. Never conduct unauthorized automated tests or load testing against third-party public websites.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {/* 2. Dynamic 30-Day Internship Timeline Engine */}
                                         <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-3">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -1486,16 +1810,16 @@ function StudentDashboardContent() {
 
                                                             <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                                                                 {!isPrevApproved && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
-                                                                {m.title}
+                                                                {existingMilestone?.title || project.template?.milestone_descriptions?.[m.index - 1]?.title || m.title}
                                                             </h4>
 
                                                             <p className="text-xs text-slate-600 leading-relaxed">
-                                                                {m.scope}
+                                                                {project.template?.milestone_descriptions?.[m.index - 1]?.description || (existingMilestone as any)?.description || m.scope}
                                                             </p>
 
                                                             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[11px] text-slate-600">
                                                                 <strong className="text-slate-800">Deliverables: </strong>
-                                                                {m.deliverables}
+                                                                {project.template?.milestone_descriptions?.[m.index - 1]?.deliverables || (existingMilestone as any)?.deliverables || m.deliverables}
                                                             </div>
 
                                                             {statusMessage && (
@@ -1576,18 +1900,18 @@ function StudentDashboardContent() {
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                                            {/* Software Project inputs */}
-                                            {project.domain?.toLowerCase().includes("full") || project.domain?.toLowerCase().includes("stack") ? (
+                                            {normalizeDomain(project.domain) === "AI / Machine Learning" ? (
+                                                /* AI / ML inputs */
                                                 <>
                                                     <div>
                                                         <label className="block font-semibold text-slate-700 mb-1">
-                                                            GitHub Repository URL *
+                                                            Model / Project Repository URL (GitHub) *
                                                         </label>
                                                         <div className="relative">
                                                             <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                                                             <input
                                                                 type="url"
-                                                                placeholder="https://github.com/your-username/capstone-project"
+                                                                placeholder="https://github.com/your-username/ai-project"
                                                                 value={githubRepoUrl}
                                                                 onChange={(e) => setGithubRepoUrl(e.target.value)}
                                                                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
@@ -1597,13 +1921,13 @@ function StudentDashboardContent() {
 
                                                     <div>
                                                         <label className="block font-semibold text-slate-700 mb-1">
-                                                            Live Hosted Demo (Vercel / Netlify / Render)
+                                                            Live Demo / Hugging Face / Colab Notebook URL
                                                         </label>
                                                         <div className="relative">
                                                             <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                                                             <input
                                                                 type="url"
-                                                                placeholder="https://your-project.vercel.app"
+                                                                placeholder="https://huggingface.co/spaces/... or https://colab.research.google.com/..."
                                                                 value={liveDemoUrl}
                                                                 onChange={(e) => setLiveDemoUrl(e.target.value)}
                                                                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
@@ -1611,7 +1935,77 @@ function StudentDashboardContent() {
                                                         </div>
                                                     </div>
                                                 </>
-                                            ) : project.domain?.toLowerCase().includes("cyber") || project.domain?.toLowerCase().includes("sec") ? (
+                                            ) : normalizeDomain(project.domain) === "Robotics" ? (
+                                                /* Robotics inputs */
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Simulation Package / Robot Code (GitHub) *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://github.com/your-username/robotics-simulation"
+                                                                value={githubRepoUrl}
+                                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Simulation Run Recording / World File URL
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://drive.google.com/... (screen recording or world package)"
+                                                                value={evidenceUrl}
+                                                                onChange={(e) => setEvidenceUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : normalizeDomain(project.domain) === "Software Testing and Automation" ? (
+                                                /* Software Testing inputs */
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Automation Framework Repository (GitHub) *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://github.com/your-username/testing-framework"
+                                                                value={githubRepoUrl}
+                                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            HTML Test Execution Report / CI Dashboard URL
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://your-test-report.netlify.app or Google Drive report link"
+                                                                value={liveDemoUrl}
+                                                                onChange={(e) => setLiveDemoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : normalizeDomain(project.domain) === "Cybersecurity" ? (
                                                 /* Cybersecurity inputs */
                                                 <>
                                                     <div>
@@ -1646,7 +2040,7 @@ function StudentDashboardContent() {
                                                         </div>
                                                     </div>
                                                 </>
-                                            ) : (
+                                            ) : normalizeDomain(project.domain) === "Digital Marketing" ? (
                                                 /* Digital Marketing inputs */
                                                 <>
                                                     <div>
@@ -1676,6 +2070,41 @@ function StudentDashboardContent() {
                                                                 placeholder="https://www.canva.com/design/... or Notion link"
                                                                 value={evidenceUrl}
                                                                 onChange={(e) => setEvidenceUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                /* Full Stack inputs default */
+                                                <>
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            GitHub Repository URL *
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Github className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://github.com/your-username/capstone-project"
+                                                                value={githubRepoUrl}
+                                                                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block font-semibold text-slate-700 mb-1">
+                                                            Live Hosted Demo (Vercel / Netlify / Render)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Globe className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                                                            <input
+                                                                type="url"
+                                                                placeholder="https://your-project.vercel.app"
+                                                                value={liveDemoUrl}
+                                                                onChange={(e) => setLiveDemoUrl(e.target.value)}
                                                                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none"
                                                             />
                                                         </div>
@@ -3099,6 +3528,50 @@ function StudentDashboardContent() {
     );
 }
 
+function StudentDashboardWrapper() {
+    const searchParams = useSearchParams();
+    const isSimParam = searchParams.get("simulation") === "true";
+    const { user, isAdmin, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    if (isSimParam) {
+        if (authLoading) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                </div>
+            );
+        }
+        // Strict security enforcement: Only authenticated admins can access simulation mode
+        if (!user || !isAdmin) {
+            router.push("/internship/login");
+            return null;
+        }
+
+        const domainParam = searchParams.get("domain") || "Full Stack Development";
+        const appStatusParam = (searchParams.get("appStatus") || "Accepted") as any;
+        const projStatusParam = (searchParams.get("projStatus") || "In Progress") as any;
+        const mlstStatusParam = (searchParams.get("mlstStatus") || "Approved") as any;
+        const templateParam = searchParams.get("template") || undefined;
+
+        return (
+            <SimulationProvider
+                initialConfig={{
+                    domain: domainParam,
+                    applicationStatus: appStatusParam,
+                    projectStatus: projStatusParam,
+                    milestoneStatus: mlstStatusParam,
+                    projectTemplateId: templateParam
+                }}
+            >
+                <StudentDashboardContent />
+            </SimulationProvider>
+        );
+    }
+
+    return <StudentDashboardContent />;
+}
+
 export default function StudentDashboardPage() {
     return (
         <Suspense
@@ -3111,7 +3584,7 @@ export default function StudentDashboardPage() {
                 </div>
             }
         >
-            <StudentDashboardContent />
+            <StudentDashboardWrapper />
         </Suspense>
     );
 }

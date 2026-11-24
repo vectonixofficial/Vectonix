@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured, ProjectTemplate, DatabaseMentor } from "@/lib/supabase";
+import { AI_ML_PROJECTS, ROBOTICS_PROJECTS, STA_PROJECTS, ADDITIONAL_MENTORS } from "@/lib/data/new-projects";
 
 export const INITIAL_PROJECT_TEMPLATES: ProjectTemplate[] = [
     // FULL STACK DEVELOPMENT (6 Projects)
@@ -710,7 +711,16 @@ export const INITIAL_PROJECT_TEMPLATES: ProjectTemplate[] = [
         ],
         reference_materials: ["https://reallygoodemails.com"],
         is_active: true
-    }
+    },
+
+    // AI / MACHINE LEARNING (6 Projects)
+    ...AI_ML_PROJECTS,
+
+    // ROBOTICS (6 Projects)
+    ...ROBOTICS_PROJECTS,
+
+    // SOFTWARE TESTING AND AUTOMATION (6 Projects)
+    ...STA_PROJECTS
 ];
 
 export const INITIAL_MENTORS: DatabaseMentor[] = [
@@ -743,7 +753,8 @@ export const INITIAL_MENTORS: DatabaseMentor[] = [
         bio: "Performance marketing leader with expertise in organic SEO, conversion rate optimization, and brand scaling.",
         max_students: 30,
         is_active: true
-    }
+    },
+    ...ADDITIONAL_MENTORS
 ];
 
 // Helper to normalize domain strings for robust matching
@@ -752,6 +763,9 @@ export function normalizeDomain(domain: string): string {
     if (d.includes("full") || d.includes("stack") || d.includes("web dev") || d.includes("fs")) return "Full Stack Development";
     if (d.includes("cyber") || d.includes("security") || d.includes("sec")) return "Cybersecurity";
     if (d.includes("market") || d.includes("digital") || d.includes("growth")) return "Digital Marketing";
+    if (d.includes("robot") || d.includes("iot") || d.includes("embedded") || d.startsWith("rob")) return "Robotics";
+    if (d.includes("test") || d.includes("sta") || d.includes("qa") || (d.includes("automation") && !d.includes("robot"))) return "Software Testing and Automation";
+    if (d.includes("ai") || d.includes("ml") || d.includes("machine") || d.includes("intelligence") || d.includes("data science")) return "AI / Machine Learning";
     return domain;
 }
 
@@ -774,9 +788,32 @@ export const projectBankService = {
             }
         }
 
-        // Fallback to local 18 templates if database has no templates yet
+        // Fallback or merge with local 36 templates if database has partial templates
         if (!templates || templates.length === 0) {
             templates = INITIAL_PROJECT_TEMPLATES;
+        } else {
+            // Enrich DB records with local rich specifications (milestone details, simulation policies, requirements)
+            templates = templates.map((t) => {
+                const local = INITIAL_PROJECT_TEMPLATES.find((p) => p.id === t.id);
+                if (!local) return t;
+                return {
+                    ...local,
+                    ...t,
+                    milestone_descriptions: t.milestone_descriptions || local.milestone_descriptions,
+                    simulation_policy: t.simulation_policy || local.simulation_policy,
+                    learning_outcomes: t.learning_outcomes || local.learning_outcomes,
+                    prerequisites: t.prerequisites || local.prerequisites,
+                    required_hardware_software: t.required_hardware_software || local.required_hardware_software,
+                    functional_requirements: t.functional_requirements || local.functional_requirements,
+                    non_functional_requirements: t.non_functional_requirements || local.non_functional_requirements
+                };
+            });
+
+            if (templates.length < INITIAL_PROJECT_TEMPLATES.length) {
+                const dbIds = new Set(templates.map((t) => t.id));
+                const missing = INITIAL_PROJECT_TEMPLATES.filter((t) => !dbIds.has(t.id));
+                templates = [...templates, ...missing];
+            }
         }
 
         if (domainFilter && domainFilter !== "All" && domainFilter !== "all") {
@@ -799,7 +836,9 @@ export const projectBankService = {
                     .eq("id", id)
                     .single();
                 if (!error && data) {
-                    return data as ProjectTemplate;
+                    // Enrich with local extended descriptions if DB template lacks them
+                    const localMatch = INITIAL_PROJECT_TEMPLATES.find((p) => p.id === id);
+                    return { ...localMatch, ...(data as ProjectTemplate) };
                 }
             } catch (err) {
                 // fall through to local lookup
@@ -831,23 +870,80 @@ export const projectBankService = {
             evaluation_criteria: template.evaluation_criteria || [],
             reference_materials: template.reference_materials || [],
             is_active: template.is_active !== undefined ? template.is_active : true,
+            learning_outcomes: template.learning_outcomes || [],
+            prerequisites: template.prerequisites || [],
+            required_hardware_software: template.required_hardware_software || [],
+            functional_requirements: template.functional_requirements || [],
+            non_functional_requirements: template.non_functional_requirements || [],
+            milestone_descriptions: template.milestone_descriptions || [],
+            simulation_policy: template.simulation_policy,
             updated_at: new Date().toISOString()
         };
 
         if (isSupabaseConfigured) {
+            // First attempt full upsert
             const { data, error } = await supabase
                 .from("project_templates")
                 .upsert(record)
                 .select()
                 .single();
 
-            if (error) {
-                return { success: false, error: error.message };
+            if (!error && data) {
+                return { success: true, data: data as ProjectTemplate };
             }
-            return { success: true, data: data as ProjectTemplate };
+
+            // Fallback for schema compatibility: if new columns don't exist in DB, upsert base columns
+            const baseRecord = {
+                id: record.id,
+                title: record.title,
+                domain: record.domain,
+                short_description: record.short_description,
+                problem_statement: record.problem_statement,
+                objectives: record.objectives,
+                requirements: record.requirements,
+                expected_features: record.expected_features,
+                tech_stack: record.tech_stack,
+                difficulty_level: record.difficulty_level,
+                expected_deliverables: record.expected_deliverables,
+                duration_weeks: record.duration_weeks,
+                evaluation_criteria: record.evaluation_criteria,
+                reference_materials: record.reference_materials,
+                is_active: record.is_active,
+                updated_at: record.updated_at
+            };
+
+            const retry = await supabase
+                .from("project_templates")
+                .upsert(baseRecord)
+                .select()
+                .single();
+
+            if (retry.error) {
+                return { success: false, error: retry.error.message };
+            }
+            return { success: true, data: { ...record, ...retry.data } as ProjectTemplate };
         }
 
         return { success: true, data: record };
+    },
+
+    /**
+     * Duplicate a project template
+     */
+    async duplicateProjectTemplate(id: string): Promise<{ success: boolean; data?: ProjectTemplate; error?: string }> {
+        const source = await this.getProjectTemplateById(id);
+        if (!source) {
+            return { success: false, error: "Source project template not found." };
+        }
+        const clonedId = `${source.id}-copy-${Date.now().toString(36).slice(-4)}`;
+        const clone: ProjectTemplate = {
+            ...source,
+            id: clonedId,
+            title: `${source.title} (Copy)`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        return this.saveProjectTemplate(clone);
     },
 
     /**
@@ -896,9 +992,13 @@ export const projectBankService = {
 
         if (!mentors || mentors.length === 0) {
             mentors = INITIAL_MENTORS;
+        } else if (mentors.length < INITIAL_MENTORS.length) {
+            const dbIds = new Set(mentors.map((m) => m.id));
+            const missing = INITIAL_MENTORS.filter((m) => !dbIds.has(m.id));
+            mentors = [...mentors, ...missing];
         }
 
-        if (domainFilter && domainFilter !== "All") {
+        if (domainFilter && domainFilter !== "All" && domainFilter !== "all") {
             const targetNorm = normalizeDomain(domainFilter);
             mentors = mentors.filter((m) =>
                 m.domains.some((d) => normalizeDomain(d) === targetNorm)

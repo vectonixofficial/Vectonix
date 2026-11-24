@@ -110,10 +110,17 @@ export const allocationService = {
                 return { success: false, error: "Selected project template does not exist." };
             }
 
+            const customM1 = template.milestone_descriptions?.[0];
+            const customM2 = template.milestone_descriptions?.[1];
+            const customM3 = template.milestone_descriptions?.[2];
+            const customM4 = template.milestone_descriptions?.[3];
+
             const standardMilestones = [
                 {
                     index: 1,
-                    title: "Milestone 1: Architectural Blueprint, Schema & Foundation Setup",
+                    title: customM1?.title || "Milestone 1: Architectural Blueprint, Schema & Foundation Setup",
+                    description: customM1?.description || "Understand the problem, research solutions, and prepare architecture.",
+                    deliverables: customM1?.deliverables || "Design proposal document, wireframes, or architecture rubric link.",
                     completed: false,
                     status: "In Progress",
                     startDate: "2026-11-25",
@@ -123,7 +130,9 @@ export const allocationService = {
                 },
                 {
                     index: 2,
-                    title: "Milestone 2: Core Engineering, Business Logic & API Development",
+                    title: customM2?.title || "Milestone 2: Core Engineering, Business Logic & API Development",
+                    description: customM2?.description || "Implement core algorithm, project structure, and primary functionality.",
+                    deliverables: customM2?.deliverables || "Working Git branch commit, API test results, or component demo.",
                     completed: false,
                     status: "Locked",
                     startDate: "2026-12-03",
@@ -133,7 +142,9 @@ export const allocationService = {
                 },
                 {
                     index: 3,
-                    title: "Milestone 3: Advanced Integration, Automated Testing & Security Hardening",
+                    title: customM3?.title || "Milestone 3: Advanced Integration, Automated Testing & Security Hardening",
+                    description: customM3?.description || "Complete remaining features, integration, error handling, and performance tuning.",
+                    deliverables: customM3?.deliverables || "Staging deployment link, test suite results, or simulation run.",
                     completed: false,
                     status: "Locked",
                     startDate: "2026-12-10",
@@ -143,7 +154,9 @@ export const allocationService = {
                 },
                 {
                     index: 4,
-                    title: "Milestone 4: Cloud Deployment, Comprehensive Documentation & Final Presentation",
+                    title: customM4?.title || "Milestone 4: Cloud Deployment, Comprehensive Documentation & Final Presentation",
+                    description: customM4?.description || "Execute complete testing, prepare documentation, record demo, and submit code.",
+                    deliverables: customM4?.deliverables || "Live production URL, final report link, and demonstration walkthrough video.",
                     completed: false,
                     status: "Locked",
                     startDate: "2026-12-17",
@@ -311,7 +324,10 @@ export const allocationService = {
             const domainTemplates: Record<string, typeof allTemplates> = {
                 "Full Stack Development": allTemplates.filter((t) => normalizeDomain(t.domain) === "Full Stack Development"),
                 "Cybersecurity": allTemplates.filter((t) => normalizeDomain(t.domain) === "Cybersecurity"),
-                "Digital Marketing": allTemplates.filter((t) => normalizeDomain(t.domain) === "Digital Marketing")
+                "Digital Marketing": allTemplates.filter((t) => normalizeDomain(t.domain) === "Digital Marketing"),
+                "AI / Machine Learning": allTemplates.filter((t) => normalizeDomain(t.domain) === "AI / Machine Learning"),
+                "Robotics": allTemplates.filter((t) => normalizeDomain(t.domain) === "Robotics"),
+                "Software Testing and Automation": allTemplates.filter((t) => normalizeDomain(t.domain) === "Software Testing and Automation")
             };
 
             let successCount = 0;

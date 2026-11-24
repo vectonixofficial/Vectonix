@@ -193,6 +193,23 @@ export interface DatabaseEmailTemplate {
 
 export type ProjectDifficulty = "Beginner" | "Intermediate" | "Advanced";
 
+export interface ProjectMilestoneDescription {
+    milestone: number;
+    title: string;
+    description: string;
+    tasks: string[];
+    deliverables: string;
+}
+
+export interface RoboticsSimulationPolicy {
+    minimum_software: string;
+    optional_hardware: string;
+    free_simulation_alternative: string;
+    installation_instructions: string;
+    expected_simulation_output: string;
+    hardware_extension: string;
+}
+
 export interface ProjectTemplate {
     id: string;
     title: string;
@@ -200,7 +217,7 @@ export interface ProjectTemplate {
     short_description: string;
     problem_statement: string;
     objectives: string[];
-    requirements: string[];
+    requirements?: string[];
     expected_features: string[];
     tech_stack: string[];
     difficulty_level: ProjectDifficulty;
@@ -209,6 +226,13 @@ export interface ProjectTemplate {
     evaluation_criteria: string[];
     reference_materials: string[];
     is_active: boolean;
+    learning_outcomes?: string[];
+    prerequisites?: string[];
+    required_hardware_software?: string[];
+    functional_requirements?: string[];
+    non_functional_requirements?: string[];
+    milestone_descriptions?: ProjectMilestoneDescription[];
+    simulation_policy?: RoboticsSimulationPolicy;
     created_at?: string;
     updated_at?: string;
 }

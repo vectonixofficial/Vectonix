@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured, DatabaseInternshipApplication } from "@/lib/supabase";
 import { hydrateApplication, internshipService } from "@/lib/services/internshipService";
 import { hydrateStudentProject } from "@/lib/services/allocationService";
+import { normalizeDomain } from "@/lib/project-bank";
 
 export interface StudentAnnouncement {
     id: string;
@@ -280,6 +281,149 @@ const DEFAULT_RESOURCES: LearningResource[] = [
         category: "PDF Notes",
         resource_url: "/handbooks/Vectonix_DigitalMarketing_Handbook.pdf",
         created_at: "2026-11-02T10:00:00Z"
+    },
+    // AI / MACHINE LEARNING OFFICIAL DOCUMENTATION
+    {
+        id: "res-python-docs",
+        batch_id: "wi26",
+        domain: "AI / Machine Learning",
+        title: "Official Python Documentation & Standard Library Reference",
+        description: "Official Python language documentation, standard library index, and language specifications.",
+        category: "Documentation",
+        resource_url: "https://docs.python.org/3/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-sklearn-docs",
+        batch_id: "wi26",
+        domain: "AI / Machine Learning",
+        title: "Scikit-Learn Machine Learning Documentation",
+        description: "Official guide, API reference, and examples for classification, regression, clustering, and data preprocessing in Scikit-Learn.",
+        category: "Documentation",
+        resource_url: "https://scikit-learn.org/stable/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-opencv-docs",
+        batch_id: "wi26",
+        domain: "AI / Machine Learning",
+        title: "OpenCV Official Computer Vision Documentation",
+        description: "Comprehensive documentation and tutorials for OpenCV image processing, video analysis, and object detection.",
+        category: "Documentation",
+        resource_url: "https://docs.opencv.org/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    // ROBOTICS OFFICIAL DOCUMENTATION & SIMULATION
+    {
+        id: "res-ros2-docs",
+        batch_id: "wi26",
+        domain: "Robotics",
+        title: "ROS 2 Humble / Rolling Official Documentation",
+        description: "Primary documentation for ROS 2 concepts, CLI tools, nodes, topics, actions, colcon workspace, and client libraries.",
+        category: "Documentation",
+        resource_url: "https://docs.ros.org/en/humble/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-gazebo-docs",
+        batch_id: "wi26",
+        domain: "Robotics",
+        title: "Gazebo Simulation Platform Official Documentation",
+        description: "Official guide for Gazebo robot physics simulation, world authoring, sensor plugins, and ROS 2 integration.",
+        category: "Documentation",
+        resource_url: "https://gazebosim.org/docs",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-mediapipe-docs",
+        batch_id: "wi26",
+        domain: "Robotics",
+        title: "Google MediaPipe Solutions Official Documentation",
+        description: "Official developer guide for Google MediaPipe Hands landmark detection and real-time vision pipelines.",
+        category: "Documentation",
+        resource_url: "https://ai.google.dev/edge/mediapipe/solutions/guide",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-arduino-docs",
+        batch_id: "wi26",
+        domain: "Robotics",
+        title: "Arduino Official Documentation & Hardware Reference",
+        description: "Official Arduino language reference, pinouts, PWM motor control tutorials, and sensor libraries.",
+        category: "Documentation",
+        resource_url: "https://docs.arduino.cc/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    // SOFTWARE TESTING AND AUTOMATION OFFICIAL DOCUMENTATION
+    {
+        id: "res-selenium-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Selenium WebDriver Official Documentation",
+        description: "Official guide for Selenium browser automation, element locators, explicit waits, and Page Object Model.",
+        category: "Documentation",
+        resource_url: "https://www.selenium.dev/documentation/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-pytest-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Pytest Framework Official Documentation",
+        description: "Official Pytest documentation covering test fixtures, assertions, parameterization, and reporting plugins.",
+        category: "Documentation",
+        resource_url: "https://docs.pytest.org/en/stable/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-postman-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Postman & Newman CLI Official Documentation",
+        description: "Official documentation for Postman collection authoring, automated API tests, and command-line execution with Newman.",
+        category: "Documentation",
+        resource_url: "https://learning.postman.com/docs/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-jmeter-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Apache JMeter Official User Manual",
+        description: "Official user manual and component reference for Apache JMeter load, performance, and stress testing.",
+        category: "Documentation",
+        resource_url: "https://jmeter.apache.org/usermanual/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-locust-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Locust Performance Testing Documentation",
+        description: "Official guide for writing Python-based user load test scenarios and real-time performance tracking with Locust.",
+        category: "Documentation",
+        resource_url: "https://docs.locust.io/en/stable/",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-playwright-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "Microsoft Playwright Official Documentation",
+        description: "Official documentation for cross-browser end-to-end testing across Chromium, Firefox, and WebKit.",
+        category: "Documentation",
+        resource_url: "https://playwright.dev/docs/intro",
+        created_at: "2026-11-25T10:00:00Z"
+    },
+    {
+        id: "res-github-actions-docs",
+        batch_id: "wi26",
+        domain: "Software Testing and Automation",
+        title: "GitHub Actions CI/CD Official Documentation",
+        description: "Official guide to workflow automation, runner configurations, test artifacts, and automated CI pipelines.",
+        category: "Documentation",
+        resource_url: "https://docs.github.com/en/actions",
+        created_at: "2026-11-25T10:00:00Z"
     }
 ];
 
@@ -1493,8 +1637,9 @@ export const studentService = {
     async getLearningResources(batchId: string = "wi26", domain: string = "All"): Promise<LearningResource[]> {
         const getFallbackResources = () => {
             if (!domain || domain === "All") return DEFAULT_RESOURCES;
+            const norm = normalizeDomain(domain);
             return DEFAULT_RESOURCES.filter(
-                (r) => r.domain === "All" || r.domain.toLowerCase() === domain.toLowerCase()
+                (r) => r.domain === "All" || normalizeDomain(r.domain) === norm
             );
         };
 

@@ -1,0 +1,2320 @@
+import { ProjectTemplate, DatabaseMentor } from "@/lib/supabase";
+
+export const AI_ML_PROJECTS: ProjectTemplate[] = [
+    {
+        id: "AI-ML-01",
+        title: "AI Resume Analyzer & Career Recommendation System",
+        domain: "AI / Machine Learning",
+        short_description: "Develop a system that extracts information from resumes, identifies skills, detects missing skills, and recommends relevant job roles.",
+        problem_statement: "Job applicants frequently struggle to understand why their resumes are filtered out by automated Applicant Tracking Systems (ATS) and lack personalized guidance on skill deficiencies for targeted career paths.",
+        objectives: [
+            "Build an automated document processing pipeline for PDF resumes",
+            "Extract structured entities including contact information, education, work history, and technical competencies using NLP",
+            "Identify missing critical skills required for target job profiles",
+            "Generate deterministic and similarity-based job-role recommendations with actionable gap analysis"
+        ],
+        learning_outcomes: [
+            "Mastery of text extraction from unstructured documents (PDF, DOCX)",
+            "Implementation of Named Entity Recognition (NER) and regex-based entity matching using SpaCy and NLTK",
+            "Application of Cosine Similarity and TF-IDF / sentence embeddings for career role ranking",
+            "Designing intuitive analytics dashboards for job candidates"
+        ],
+        prerequisites: [
+            "Proficiency in Python 3.9+",
+            "Fundamental understanding of Natural Language Processing (tokenization, lemmatization, stop words)",
+            "Basic experience with Scikit-learn and web frameworks (Flask or FastAPI)"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+ runtime",
+            "Standard developer workstation (8GB RAM minimum)",
+            "Libraries: PyPDF2 / pdfplumber, spaCy, NLTK, Scikit-learn, FastAPI / Flask"
+        ],
+        tech_stack: ["Python", "FastAPI / Flask", "NLP (spaCy, NLTK)", "Scikit-learn", "PyPDF2 / pdfplumber", "React / Next.js"],
+        expected_features: [
+            "PDF resume upload interface with drag-and-drop validation",
+            "Multi-page text extraction with error tolerance",
+            "Technical and soft skill identification against curated skill taxonomies",
+            "Interactive skill gap detection flagging missing industry competencies",
+            "Ranked job-role recommendations with match confidence score",
+            "Interactive analytics dashboard showing resume strength score and improvement suggestions"
+        ],
+        functional_requirements: [
+            "System must parse PDF files up to 10MB within 3 seconds",
+            "System must categorize extracted skills into technical, tools, languages, and domain competencies",
+            "System must calculate percentage alignment against selected industry job descriptions",
+            "System must display recommended keywords to improve ATS compatibility"
+        ],
+        non_functional_requirements: [
+            "Data privacy: Resumes must be processed in memory and not stored permanently without user consent",
+            "Response latency < 2.5 seconds for resume extraction and scoring",
+            "Mobile-responsive UI for resume submission and report inspection"
+        ],
+        expected_deliverables: [
+            "Complete source code repository with comprehensive README and requirements.txt",
+            "REST API documentation (OpenAPI / Swagger)",
+            "Test suite verifying skill extraction accuracy on a benchmark set of 20 sample resumes",
+            "Demonstration video walkthrough explaining extraction pipeline and results dashboard"
+        ],
+        evaluation_criteria: [
+            "Entity extraction precision and skill taxonomy coverage (30%)",
+            "Recommendation algorithm accuracy and skill gap logic (25%)",
+            "API design, exception handling, and code modularity (25%)",
+            "Dashboard usability, documentation, and demo polish (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://scikit-learn.org/stable/",
+            "https://spacy.io/usage",
+            "https://fastapi.tiangolo.com/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Research, Planning & Architecture Design",
+                description: "Understand the ATS problem, study NLP parsing methods, establish the skill taxonomy, and prepare the system architecture.",
+                tasks: [
+                    "Research common ATS parsing pitfalls and PDF layout variations",
+                    "Compile and categorize a comprehensive skills taxonomy dataset (1000+ technical skills)",
+                    "Design system architecture diagram, data flow diagram, and REST API specification",
+                    "Set up GitHub repository, virtual environment, and initial directory structure"
+                ],
+                deliverables: "System architecture proposal document, API rubric, and Git repository initialization."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Core Development: Extraction & Parsing Engine",
+                description: "Build the text extraction engine, entity extractors, and baseline API routes.",
+                tasks: [
+                    "Implement robust PDF extraction using pdfplumber with fallback mechanisms",
+                    "Develop NLP entity matcher using spaCy/regex for phone, email, education, and skills",
+                    "Create FastAPI/Flask endpoints for document upload and JSON parsing response",
+                    "Implement initial unit tests verifying parser resilience against corrupted or scanned documents"
+                ],
+                deliverables: "Working parsing engine, API endpoint for document processing, and initial test suite."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Advanced Features: Job Recommendation & Gap Analysis",
+                description: "Implement career recommendation algorithm, missing skill detector, and web dashboard.",
+                tasks: [
+                    "Implement TF-IDF and Cosine Similarity matching against 15+ standardized job role profiles",
+                    "Build skill gap detection logic that identifies missing requirements for top matching roles",
+                    "Develop interactive web results dashboard showing scores, extracted skills, and actionable tips",
+                    "Implement exportable PDF/JSON career readiness report"
+                ],
+                deliverables: "Functional recommendation engine, working web dashboard, and sample analysis reports."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Testing, Optimization & Final Submission",
+                description: "Conduct precision evaluation, optimize extraction latency, prepare documentation, and record demo.",
+                tasks: [
+                    "Benchmark extraction precision against a test corpus of 25 diverse candidate resumes",
+                    "Handle edge cases (multi-column layouts, tables, uncommon font encodings)",
+                    "Write comprehensive setup guide, API usage documentation, and architecture report",
+                    "Record 5-minute video demonstration showcasing resume upload, extraction, and gap analysis"
+                ],
+                deliverables: "Final GitHub repository, evaluation benchmark report, live demo link, and demonstration video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "AI-ML-02",
+        title: "Intelligent College Enquiry Chatbot",
+        domain: "AI / Machine Learning",
+        short_description: "Create an AI chatbot that answers college-related questions using an approved knowledge base.",
+        problem_statement: "Prospective students and parents struggle to find timely, accurate information regarding admissions, course fees, eligibility criteria, and hostel facilities on dense, outdated college portals.",
+        objectives: [
+            "Develop a conversational chatbot specialized in institutional academic inquiries",
+            "Ingest and index an authorized institutional knowledge base (courses, fees, admissions, facilities)",
+            "Implement semantic vector search to retrieve relevant context accurately",
+            "Provide graceful unknown-answer handling and an administrative interface to update FAQs"
+        ],
+        learning_outcomes: [
+            "Practical understanding of Retrieval-Augmented Generation (RAG) and semantic vector search",
+            "Generating and indexing vector embeddings using Sentence Transformers and FAISS / ChromaDB",
+            "Handling conversational state, dialogue contexts, and out-of-domain query guardrails",
+            "Building administrative knowledge curation portals"
+        ],
+        prerequisites: [
+            "Python programming and REST API development",
+            "Basic concepts of vector embeddings and semantic similarity",
+            "HTML/JavaScript or React for conversational UI"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+ runtime",
+            "Vector store: ChromaDB or FAISS",
+            "Sentence Transformers (e.g. all-MiniLM-L6-v2)",
+            "FastAPI or Flask backend",
+            "Modern web browser"
+        ],
+        tech_stack: ["Python", "NLP", "FastAPI / Flask", "ChromaDB / FAISS", "Sentence Transformers", "Tailwind CSS"],
+        expected_features: [
+            "Clean web chat interface with typing indicators and quick suggestion buttons",
+            "Approved college knowledge base covering admissions, fee structures, departments, and hostels",
+            "Fast semantic search retrieving top-k authoritative answers",
+            "Context-aware multi-turn conversation memory",
+            "Confidence thresholding with graceful fallback when queries are unanswerable from the knowledge base",
+            "Admin-editable knowledge base dashboard to add, edit, or delete Q&A pairs"
+        ],
+        functional_requirements: [
+            "Bot must answer questions exclusively grounded in the verified college knowledge base",
+            "Bot must output clear contact escalation info when question confidence falls below 0.65",
+            "Admin portal must allow authenticated staff to upload new course FAQs and re-index immediately",
+            "Chat history must be persisted during the browser session"
+        ],
+        non_functional_requirements: [
+            "Query response time under 1.5 seconds",
+            "No hallucinated institutional policies, fee figures, or contact details",
+            "Cross-browser compatibility on desktop and mobile viewports"
+        ],
+        expected_deliverables: [
+            "Full source code for chat backend and frontend interface",
+            "Pre-populated institutional knowledge base dataset (JSON / Markdown)",
+            "Comprehensive test suite covering 50+ diverse user query scenarios",
+            "Walkthrough video demonstrating inquiry handling and admin knowledge updates"
+        ],
+        evaluation_criteria: [
+            "Semantic retrieval accuracy and response relevance (30%)",
+            "Unknown-answer handling and hallucination prevention (25%)",
+            "Admin knowledge management workflow (25%)",
+            "UI responsiveness, documentation, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://www.sbert.net/",
+            "https://docs.trychroma.com/",
+            "https://fastapi.tiangolo.com/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Knowledge Base Curation & Search Architecture",
+                description: "Curate verified college FAQ dataset, evaluate embedding models, and design the chatbot architecture.",
+                tasks: [
+                    "Curate structured dataset of 80+ official college FAQs (courses, admissions, fees, hostel)",
+                    "Design system architecture diagram separating user chat flow, vector index, and admin CRUD",
+                    "Benchmark embedding models for semantic retrieval efficiency",
+                    "Initialize Git repository and project environment"
+                ],
+                deliverables: "Institutional FAQ corpus, system architecture diagram, and project setup repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Vector Indexing & Semantic Search Engine",
+                description: "Implement document chunking, vector embedding generation, and backend retrieval APIs.",
+                tasks: [
+                    "Implement vector embedding pipeline using Sentence Transformers (all-MiniLM-L6-v2)",
+                    "Index knowledge base into ChromaDB / FAISS with metadata tagging",
+                    "Build semantic search API query endpoint returning top matched answers with confidence scores",
+                    "Add guardrails to flag out-of-scope queries (e.g. non-college topics)"
+                ],
+                deliverables: "Working vector search API, similarity retrieval module, and benchmark test script."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Chat Interface & Admin Knowledge Portal",
+                description: "Build the conversational UI, conversational context tracker, and admin knowledge management tool.",
+                tasks: [
+                    "Build responsive chat widget with suggestion chips, typing states, and error handling",
+                    "Implement multi-turn context retention for conversational follow-ups",
+                    "Build secure admin dashboard to add/update/delete FAQ entries with automatic re-indexing",
+                    "Implement fallback response suggesting official college contact desk for unresolved queries"
+                ],
+                deliverables: "Interactive chat frontend, working admin knowledge manager, and updated API."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Rigorous Testing, Benchmarking & Deployment",
+                description: "Evaluate query answering accuracy, measure response latency, write guide, and record demo.",
+                tasks: [
+                    "Test system against 60+ synthetic user queries (including typos, synonyms, and edge cases)",
+                    "Verify zero hallucination on critical admission policies and fee amounts",
+                    "Write deployment and admin operation documentation",
+                    "Record demonstration video showing user dialogue, out-of-scope query, and admin FAQ update"
+                ],
+                deliverables: "Final GitHub repository, query evaluation report, user documentation, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "AI-ML-03",
+        title: "Student Performance Prediction System",
+        domain: "AI / Machine Learning",
+        short_description: "Build a machine-learning application that analyzes academic data and predicts student performance categories.",
+        problem_statement: "Educational mentors often detect student academic distress only after semester final exams, missing critical early intervention windows when targeted support could prevent failure.",
+        objectives: [
+            "Build an end-to-end ML classification pipeline predicting academic performance bands (High, Moderate, At-Risk)",
+            "Identify key predictive factors (attendance, continuous assessment, study habits) using feature importance analysis",
+            "Provide automated, non-punitive learning intervention recommendations",
+            "Enforce strict ethical AI guidelines: use synthetic/consented data and disallow automated high-stakes punitive decisions"
+        ],
+        learning_outcomes: [
+            "Data preprocessing, exploratory data analysis (EDA), and feature engineering with Pandas and NumPy",
+            "Training and tuning multi-class ML classification algorithms with Scikit-learn",
+            "Model interpretability techniques (feature importances, SHAP / correlation analysis)",
+            "Ethical AI considerations, bias detection, and responsible machine learning practices"
+        ],
+        prerequisites: [
+            "Proficiency in Python, Pandas, NumPy, and Scikit-learn",
+            "Understanding of supervised classification algorithms (Random Forest, Logistic Regression, Gradient Boosting)",
+            "Familiarity with Streamlit or Flask for data applications"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Libraries: Pandas, NumPy, Scikit-learn, Matplotlib, Seaborn, Streamlit",
+            "Synthetic educational dataset (e.g. UCI Student Performance benchmark / synthetic generator)"
+        ],
+        tech_stack: ["Python", "Pandas", "NumPy", "Scikit-learn", "Streamlit", "Matplotlib / Seaborn"],
+        expected_features: [
+            "CSV/Excel academic dataset upload interface",
+            "Automated data cleaning, missing value imputation, and outlier detection",
+            "Exploratory data analysis dashboard with interactive correlation heatmaps and distribution plots",
+            "Multi-model training and evaluation (Random Forest, Decision Tree, Logistic Regression, Gradient Boosting)",
+            "Performance category prediction (Distinction, Pass, Needs Support) with confidence metrics",
+            "Feature importance factor analysis highlighting primary academic impact drivers",
+            "Tailored learning recommendations based on identified risk factors",
+            "Prominent ethical AI disclosure stating predictions are supportive indicators, not definitive assessments"
+        ],
+        functional_requirements: [
+            "Dataset upload must validate schema and report data quality anomalies",
+            "Classification pipeline must report Accuracy, Precision, Recall, and F1-Score across all categories",
+            "Individual student predictions must highlight top 3 factors driving the classification",
+            "System must provide exportable intervention recommendation reports"
+        ],
+        non_functional_requirements: [
+            "Completely synthetic or anonymized/consented academic data only",
+            "Model training and prediction cycle < 5 seconds on standard hardware",
+            "Clear ethical AI notice banner displayed on all prediction screens"
+        ],
+        expected_deliverables: [
+            "Well-documented GitHub repository with clean code and dependencies",
+            "Jupyter Notebook containing exploratory data analysis and model benchmarking",
+            "Interactive Streamlit web application for dataset exploration and single-student prediction",
+            "Model evaluation report and video demonstration"
+        ],
+        evaluation_criteria: [
+            "Data preprocessing, EDA rigor, and feature engineering (25%)",
+            "Model selection, hyperparameter tuning, and validation metrics (25%)",
+            "Factor analysis, prescriptive recommendations, and ethical disclosure (25%)",
+            "Streamlit interface polish, documentation, and video demo (25%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://scikit-learn.org/stable/",
+            "https://pandas.pydata.org/docs/",
+            "https://docs.streamlit.io/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Data Preparation, EDA & Ethical Framework",
+                description: "Formulate synthetic academic dataset, perform exploratory data analysis, and establish ethical AI guidelines.",
+                tasks: [
+                    "Curate or generate synthetic student academic dataset with 1000+ records and diverse attributes",
+                    "Draft formal Ethical AI Notice prohibiting high-stakes automated academic decisions",
+                    "Perform exploratory data analysis exploring correlations between attendance, assignments, and test outcomes",
+                    "Establish GitHub repository with reproducible virtual environment"
+                ],
+                deliverables: "EDA Jupyter Notebook, synthetic dataset, ethical guidelines document, and project structure."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Feature Engineering & Model Training",
+                description: "Implement data cleaning, feature encoding, and train multi-model classification baselines.",
+                tasks: [
+                    "Build data preprocessing pipeline (missing value imputation, one-hot encoding, StandardScaler)",
+                    "Train baseline classifiers: Logistic Regression, Decision Tree, Random Forest, and Gradient Boosting",
+                    "Perform k-fold cross validation and hyperparameter tuning using GridSearchCV",
+                    "Evaluate models using Confusion Matrix, ROC-AUC, and macro F1-score"
+                ],
+                deliverables: "Scikit-learn training pipeline scripts, serialized model artifacts, and evaluation metrics log."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Streamlit Dashboard & Factor Analysis",
+                description: "Build the interactive Streamlit application with single-student prediction and factor explanations.",
+                tasks: [
+                    "Develop interactive Streamlit application with dataset upload and visual chart exploration",
+                    "Implement single-student prediction form with instant category classification and confidence score",
+                    "Add feature importance bar charts showing most influential academic predictors",
+                    "Integrate automated prescriptive learning recommendations tailored to predicted risk category"
+                ],
+                deliverables: "Working Streamlit application, factor analysis module, and intervention recommendation engine."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Model Verification, Documentation & Final Submission",
+                description: "Verify model stability, test edge cases, compile documentation, and record demo video.",
+                tasks: [
+                    "Evaluate model sensitivity across diverse synthetic student demographic profiles to ensure fairness",
+                    "Verify prominent display of ethical AI disclaimer and limitation notice",
+                    "Write detailed technical report and deployment instructions",
+                    "Record comprehensive video walkthrough showing dataset upload, model evaluation, and individual prediction"
+                ],
+                deliverables: "Final GitHub repository, technical report, live application link, and demonstration video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "AI-ML-04",
+        title: "Real-Time Object Detection System",
+        domain: "AI / Machine Learning",
+        short_description: "Create a computer vision application that detects and classifies objects through webcam input or uploaded images.",
+        problem_statement: "Deploying computer vision on edge devices and live webcams often suffers from prohibitive frame-rate lag, inconsistent object bounding boxes, and lack of visual telemetry for monitoring detected classes.",
+        objectives: [
+            "Develop a real-time computer vision detection application using OpenCV and YOLO",
+            "Process both live camera streaming feeds and uploaded static images",
+            "Render clean bounding boxes with class labels and confidence percentages",
+            "Maintain detection telemetry, detection history, and screenshot capture"
+        ],
+        learning_outcomes: [
+            "Computer vision fundamentals: image matrices, color spaces, frame sampling rates",
+            "Inference pipelines with YOLO (You Only Look Once) architecture",
+            "Video stream capture and frame overlay rendering with OpenCV",
+            "Building interactive graphical user interfaces for vision telemetry"
+        ],
+        prerequisites: [
+            "Python programming experience",
+            "Basic understanding of convolutional neural networks and object detection principles",
+            "Working computer with a standard USB / built-in webcam"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "OpenCV (cv2), Ultralytics YOLOv8 (yolov8n lightweight pre-trained model)",
+            "Webcam (standard 720p or 1080p)",
+            "Streamlit, Flask, or Tkinter for user interface"
+        ],
+        tech_stack: ["Python", "OpenCV", "YOLO (Ultralytics YOLOv8)", "NumPy", "Streamlit / Flask"],
+        expected_features: [
+            "Live webcam stream detection with real-time FPS counter",
+            "Static image upload with immediate bounding box annotation",
+            "Adjustable confidence threshold slider (0.1 to 1.0)",
+            "Multi-class detection across 80 standard COCO classes (persons, vehicles, electronics, furniture)",
+            "One-click screenshot capture with labeled detections saved locally",
+            "Detection statistics panel showing count of each detected object class in current frame",
+            "Detection history timeline logging timestamps and detected classes"
+        ],
+        functional_requirements: [
+            "Live webcam detection must sustain at least 15 FPS on standard CPU hardware using YOLOv8n",
+            "Image upload must process and return annotated detections within 1.5 seconds",
+            "Bounding boxes must display clear contrasting colors per class with legible text labels",
+            "Screenshot capture must save both annotated and raw unannotated frames with timestamp filenames"
+        ],
+        non_functional_requirements: [
+            "Zero cloud dependence: inference must execute entirely on local hardware",
+            "Graceful handling of webcam disconnection and permission errors",
+            "Clean modular code separating video capture, inference engine, and UI presentation"
+        ],
+        expected_deliverables: [
+            "Clean GitHub repository with setup instructions and sample input images",
+            "Inference performance benchmark report comparing YOLOv8n vs YOLOv8s across resolutions",
+            "Working web or desktop application with live webcam and file upload support",
+            "Demonstration video capturing live webcam object detection and screenshot feature"
+        ],
+        evaluation_criteria: [
+            "Detection pipeline stability, accuracy, and frame rate (30%)",
+            "OpenCV stream processing and overlay quality (25%)",
+            "Feature completeness (threshold slider, screenshot, stats, history) (25%)",
+            "Code quality, documentation, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://docs.opencv.org/",
+            "https://docs.ultralytics.com/",
+            "https://docs.streamlit.io/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Computer Vision Architecture & Pipeline Setup",
+                description: "Study YOLO architecture, set up OpenCV environment, and design application workflow.",
+                tasks: [
+                    "Evaluate YOLOv8 model sizes (nano, small, medium) against hardware constraints",
+                    "Design application architecture separating video capture, inference worker, and UI thread",
+                    "Verify camera access and create OpenCV frame capture boilerplate",
+                    "Set up project repository with dependency specifications"
+                ],
+                deliverables: "Architecture design document, initial webcam test script, and repository setup."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — YOLO Model Integration & Inference Engine",
+                description: "Integrate pre-trained YOLOv8 weights, implement bounding box logic, and build image inference.",
+                tasks: [
+                    "Integrate Ultralytics YOLOv8n pre-trained on COCO dataset",
+                    "Implement bounding box, label text, and confidence percentage drawing utilities in OpenCV",
+                    "Build static image detection module with configurable confidence threshold",
+                    "Create unit tests validating detection accuracy across benchmark sample images"
+                ],
+                deliverables: "Working static image detection engine, annotation helper module, and test outputs."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Real-Time Webcam Stream & Telemetry UI",
+                description: "Implement live video detection loop, FPS telemetry, screenshot capture, and class counter.",
+                tasks: [
+                    "Build real-time video inference loop with non-blocking frame buffer",
+                    "Implement real-time FPS calculation and overlay on video stream",
+                    "Add screenshot capture mechanism saving annotated image with timestamp",
+                    "Create telemetry dashboard displaying detected object counts and detection history log"
+                ],
+                deliverables: "Real-time webcam application with screenshot capture and live telemetry panel."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Performance Benchmarking, Documentation & Demo",
+                description: "Benchmark inference FPS across resolutions, handle edge cases, document system, and record demo.",
+                tasks: [
+                    "Benchmark detection latency and FPS across 480p, 720p, and 1080p stream resolutions",
+                    "Implement graceful exception handling for camera release, missing permissions, and memory leaks",
+                    "Write comprehensive README with installation guide and troubleshooting notes",
+                    "Record high-quality video demonstration highlighting real-time detection and features"
+                ],
+                deliverables: "Final GitHub repository, performance benchmark report, and demonstration video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "AI-ML-05",
+        title: "Fake News & Misinformation Classifier",
+        domain: "AI / Machine Learning",
+        short_description: "Develop an NLP-based application that analyzes text and classifies it using a trained machine-learning model.",
+        problem_statement: "The proliferation of digital misinformation and sensationalist claims makes it difficult for readers to evaluate textual credibility, creating a need for educational classification tools that highlight linguistic signals.",
+        objectives: [
+            "Build an NLP classification pipeline capable of classifying text into credible vs misleading categories",
+            "Extract stylistic, sentiment, and lexical features characteristic of clickbait and unverified news",
+            "Display prediction probability scores alongside influential linguistic markers",
+            "Provide explicit educational disclosures that model predictions do not establish objective factual truth"
+        ],
+        learning_outcomes: [
+            "Text preprocessing techniques: tokenization, lemmatization, stop-word removal, n-grams",
+            "Feature representation using TF-IDF (Term Frequency-Inverse Document Frequency)",
+            "Evaluating classifiers using Confusion Matrices, Precision, Recall, and F1-Scores",
+            "Communicating model limitations and AI transparency to end users"
+        ],
+        prerequisites: [
+            "Python programming and Scikit-learn basics",
+            "Understanding of NLP preprocessing pipelines",
+            "Basic experience building web UIs with Streamlit or Flask"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Libraries: NLTK, Scikit-learn, Pandas, NumPy, Streamlit",
+            "Public benchmark dataset (e.g. Kaggle Fake News / ISOT dataset)"
+        ],
+        tech_stack: ["Python", "NLP", "Scikit-learn", "NLTK", "Streamlit", "Pandas"],
+        expected_features: [
+            "Article text paste input box with character counter and URL article text fetcher",
+            "Automated text cleaning and linguistic normalization pipeline",
+            "Classification output (Credible / Potentially Misleading) with confidence meter",
+            "Highlighting of top positive and negative influential words driving the classification",
+            "Model evaluation dashboard displaying Precision, Recall, Confusion Matrix, and ROC curve",
+            "History log of analyzed articles with timestamp and prediction breakdown",
+            "Prominent explanation of model limitations clearly stating that ML classification does not verify factual truth"
+        ],
+        functional_requirements: [
+            "System must accept articles ranging from 50 to 5,000 words",
+            "Preprocessing must strip HTML tags, punctuation, and English stop words while preserving informative bi-grams",
+            "Model must achieve at least 88% F1-score on hold-out validation dataset",
+            "Every prediction output must display an unmissable disclaimer explaining that language patterns do not equal factuality"
+        ],
+        non_functional_requirements: [
+            "Inference time < 500ms per article",
+            "Model artifacts serialized with joblib for instant memory loading",
+            "Transparent documentation of training data sources and known linguistic biases"
+        ],
+        expected_deliverables: [
+            "Clean Git repository with training notebooks, saved model files, and web app code",
+            "Model evaluation report detailing accuracy across multiple ML algorithms (Naive Bayes, PassiveAggressive, Logistic Regression)",
+            "Interactive Streamlit web application with text analyzer and limitation explanations",
+            "Demonstration video explaining model training, inference, and ethical disclaimer"
+        ],
+        evaluation_criteria: [
+            "NLP preprocessing quality and feature extraction pipeline (25%)",
+            "Model performance, cross-validation, and metric reporting (25%)",
+            "Linguistic explainability and prominent limitation disclaimer (25%)",
+            "Web interface polish, documentation, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://scikit-learn.org/stable/",
+            "https://www.nltk.org/",
+            "https://docs.streamlit.io/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Data Collection, Cleaning & NLP Preprocessing",
+                description: "Curate benchmark news dataset, implement text preprocessing pipeline, and draft limitation notices.",
+                tasks: [
+                    "Curate verified news dataset (e.g. ISOT News dataset containing real and fake articles)",
+                    "Implement NLP cleaning function (lowercasing, regex cleanup, tokenization, lemmatization)",
+                    "Draft comprehensive limitation notice explaining statistical language patterns vs empirical truth",
+                    "Initialize Git repository and project structure"
+                ],
+                deliverables: "Cleaned dataset, preprocessing module, limitation statement, and GitHub repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Model Training, Benchmarking & Evaluation",
+                description: "Build TF-IDF vectorizer, train classification models, and benchmark evaluation metrics.",
+                tasks: [
+                    "Construct TF-IDF feature pipeline with unigram and bigram extraction (max_features=10000)",
+                    "Train and compare Multinomial Naive Bayes, Logistic Regression, and PassiveAggressive classifiers",
+                    "Evaluate models using 5-fold cross-validation, precision, recall, and confusion matrix",
+                    "Serialize the top performing model and vectorizer with joblib"
+                ],
+                deliverables: "Model training notebook, saved pipeline pickle/joblib files, and benchmark metrics report."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Interactive UI, Explainability & History Log",
+                description: "Build Streamlit user interface with text input, probability gauges, and influential word markers.",
+                tasks: [
+                    "Build responsive Streamlit UI with text paste area and sample test articles",
+                    "Implement prediction probability visualization using gauge and progress indicators",
+                    "Extract top positive and negative feature coefficients to highlight influential words",
+                    "Implement prediction history session log and permanent limitations banner"
+                ],
+                deliverables: "Complete Streamlit application with explainability highlights and persistent disclaimer."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Adversarial Testing, Documentation & Demo",
+                description: "Test adversarial phrasing, measure false-positive rates, write documentation, and record demo.",
+                tasks: [
+                    "Conduct adversarial testing (irony, satire, unusual writing styles) and document limitations",
+                    "Verify that the model limitation statement is clearly visible to users",
+                    "Write comprehensive README including algorithm explanation and ethical considerations",
+                    "Record demonstration video showing article classification and explainability features"
+                ],
+                deliverables: "Final GitHub repository, adversarial test report, live app link, and demo video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "AI-ML-06",
+        title: "AI Document Summarizer & Question Answering Tool",
+        domain: "AI / Machine Learning",
+        short_description: "Build an application that summarizes documents and answers questions using their contents.",
+        problem_statement: "Professionals and students spend hours reviewing dense 50+ page technical manuals, research reports, and contracts to extract essential findings or find specific clauses.",
+        objectives: [
+            "Build an intelligent document comprehension tool supporting PDF and plain text formats",
+            "Generate automatic multi-tier summaries (executive summary, bulleted key takeaways)",
+            "Implement grounded Question Answering (Q&A) using semantic vector retrieval (RAG)",
+            "Provide explicit page and passage citations and indicate clearly when answers are not present in the document"
+        ],
+        learning_outcomes: [
+            "Document parsing, text segmentation, and semantic chunking strategies",
+            "Retrieval-Augmented Generation (RAG) architecture and vector store indexing",
+            "Extractive vs abstractive summarization techniques",
+            "Source attribution, hallucination suppression, and grounded NLP systems"
+        ],
+        prerequisites: [
+            "Proficiency in Python and NLP basics",
+            "Understanding of embeddings, vector similarity search, and RAG architectures",
+            "Experience with Streamlit, Flask, or FastAPI"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Libraries: PyPDF2 / pypdf, LangChain / LlamaIndex or native HuggingFace transformers, ChromaDB / FAISS",
+            "Sentence Transformers embedding model (all-MiniLM-L6-v2)"
+        ],
+        tech_stack: ["Python", "NLP", "RAG", "ChromaDB / FAISS", "Sentence Transformers", "PyPDF2", "Streamlit"],
+        expected_features: [
+            "PDF and TXT document upload with multi-document support",
+            "Document text extraction with page-level metadata retention",
+            "Automated summary generation (Executive Summary, Key Highlights, Bullet Points)",
+            "Interactive Question & Answering search grounded strictly in document contents",
+            "Source citation badges displaying specific page numbers and passage excerpts for every answer",
+            "Explicit out-of-context refusal: clearly states 'Information not found in the uploaded document' when unsupported",
+            "Document query history log enabling review of previous summaries and answers"
+        ],
+        functional_requirements: [
+            "System must ingest documents up to 50 pages within 10 seconds",
+            "Chunking engine must split text into 500-token chunks with 50-token overlap, retaining page numbers",
+            "Vector retrieval must fetch top-3 relevant chunks with cosine similarity thresholding",
+            "QA module must quote the exact retrieved sentences supporting its answer"
+        ],
+        non_functional_requirements: [
+            "Strict hallucination guardrails: no answers from external web knowledge",
+            "Uploaded documents kept in local session memory and erased upon session reset",
+            "Clean responsive user interface with split-screen document viewer and chat"
+        ],
+        expected_deliverables: [
+            "Complete source code repository with comprehensive requirements and architecture diagram",
+            "Evaluation benchmark evaluating summary quality and QA accuracy on 5 sample technical papers",
+            "Interactive Streamlit or web application with document upload, summarizer, and citation viewer",
+            "Demonstration video showing multi-page PDF processing, summary generation, and grounded QA"
+        ],
+        evaluation_criteria: [
+            "Text chunking and vector retrieval precision (25%)",
+            "Summarization quality and executive key-point extraction (25%)",
+            "Grounded question answering with accurate page citations and hallucination prevention (30%)",
+            "UI design, documentation, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://www.sbert.net/",
+            "https://docs.trychroma.com/",
+            "https://pypdf2.readthedocs.io/",
+            "https://docs.streamlit.io/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Document Parsing & Chunking Architecture",
+                description: "Design RAG system architecture, implement PDF parser with page tracking, and evaluate chunking strategies.",
+                tasks: [
+                    "Design end-to-end RAG architecture separating document ingestion, vector storage, and QA generation",
+                    "Implement robust PDF extraction using pypdf/PyPDF2 preserving page number metadata",
+                    "Evaluate fixed-size vs semantic sentence chunking strategies (500 tokens, 50 overlap)",
+                    "Set up GitHub repository with reproducible environment configuration"
+                ],
+                deliverables: "System architecture blueprint, PDF extraction module with page metadata, and repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Vector Indexing & Summarization Engine",
+                description: "Generate embeddings, populate vector database, and build multi-tier summarization module.",
+                tasks: [
+                    "Embed document chunks using Sentence Transformers (all-MiniLM-L6-v2)",
+                    "Index embeddings into ChromaDB / FAISS with page index metadata",
+                    "Build extractive summarizer utilizing TextRank / frequency scoring for key takeaways",
+                    "Create unit tests validating chunk retrieval against known passage queries"
+                ],
+                deliverables: "Working vector index pipeline, extractive summarization engine, and test outputs."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Grounded Question Answering & Citation UI",
+                description: "Build semantic QA pipeline with citation badges, refusal handling, and interactive Streamlit UI.",
+                tasks: [
+                    "Implement semantic QA query pipeline retrieving top-3 matching chunks with similarity scoring",
+                    "Build strict guardrails: return 'Information not found in document' when top similarity < 0.5",
+                    "Develop Streamlit UI featuring split view: document summary and conversational QA",
+                    "Render page number citation badges and expandable source passages alongside answers"
+                ],
+                deliverables: "Grounded QA module with citation rendering and complete Streamlit web interface."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Rigorous Verification, Documentation & Demo",
+                description: "Benchmark retrieval precision on complex documents, write setup documentation, and record demo video.",
+                tasks: [
+                    "Benchmark retrieval precision and answer grounding on 5 diverse technical reports",
+                    "Verify complete refusal behavior on out-of-context trick questions",
+                    "Write comprehensive technical documentation including architecture diagrams and setup instructions",
+                    "Record demonstration video showing document upload, summary generation, and grounded QA with citations"
+                ],
+                deliverables: "Final GitHub repository, retrieval evaluation report, live demo link, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+export const ROBOTICS_PROJECTS: ProjectTemplate[] = [
+    {
+        id: "ROB-01",
+        title: "Autonomous Obstacle-Avoiding Mobile Robot",
+        domain: "Robotics",
+        short_description: "Simulated mobile robot equipped with distance sensing that navigates environments autonomously while avoiding static and dynamic collisions.",
+        problem_statement: "Mobile robots in dynamic environments frequently risk collisions with unforeseen obstacles, necessitating resilient perception and reactive path-planning algorithms.",
+        objectives: [
+            "Develop a simulated two-wheeled differential drive mobile robot in ROS 2 and Gazebo",
+            "Process simulated distance sensor data (LiDAR or Ultrasonic) to detect surrounding obstacles",
+            "Implement autonomous obstacle avoidance algorithms (Bug algorithm or Vector Field Histogram)",
+            "Visualize robot trajectory and sensor scans in RViz2 / Gazebo dashboard"
+        ],
+        learning_outcomes: [
+            "ROS 2 core concepts: nodes, topics, publishers, subscribers, QoS profiles",
+            "Gazebo 3D physics simulation and differential drive kinematics",
+            "Sensor data processing for LaserScan (`sensor_msgs/msg/LaserScan`)",
+            "Reactive obstacle avoidance and kinematic motion control (`geometry_msgs/msg/Twist`)"
+        ],
+        prerequisites: [
+            "Basic Python or C++ programming",
+            "Familiarity with Linux / Ubuntu CLI (or WSL2 on Windows)",
+            "High-school physics principles of velocity and kinematics"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Ubuntu 22.04 LTS (native, VM, or Windows WSL2)",
+            "ROS 2 Humble / Iron",
+            "Gazebo Simulator (Classic or Ignition Gazebo)",
+            "Python 3.10+",
+            "RViz2 visualization tool"
+        ],
+        tech_stack: ["ROS 2", "Gazebo", "Python", "simulated LiDAR", "RViz2"],
+        expected_features: [
+            "3D simulated differential drive mobile robot model (URDF/SDF)",
+            "Simulated 360-degree LiDAR and distance sensors",
+            "Autonomous wandering and collision avoidance algorithm",
+            "Dynamic path planning with speed modulation based on obstacle proximity",
+            "Target destination navigation in enclosed virtual arena",
+            "Real-time simulation dashboard displaying distance readings, linear/angular velocity, and state"
+        ],
+        functional_requirements: [
+            "Robot must maintain a minimum safety clearance of 0.3 meters from all arena walls and obstacles",
+            "Robot must automatically reduce linear velocity when an obstacle is detected within 0.8 meters",
+            "Robot must navigate continuously for 5 minutes in a maze without a single collision event",
+            "Sensor reading node must publish LaserScan messages at a minimum rate of 10 Hz"
+        ],
+        non_functional_requirements: [
+            "Simulation must operate stably at real-time factor >= 0.8 on standard consumer laptops",
+            "100% free simulation environment requiring zero paid hardware",
+            "Clean ROS 2 workspace structure adhering to standard colcon build standards"
+        ],
+        expected_deliverables: [
+            "ROS 2 package repository containing robot description (URDF), launch files, and control nodes",
+            "Gazebo world file with customized obstacle maze",
+            "Detailed README with step-by-step installation instructions for Ubuntu / WSL2",
+            "Demonstration screen recording video showing autonomous navigation and collision avoidance"
+        ],
+        evaluation_criteria: [
+            "ROS 2 node architecture and communication design (25%)",
+            "Obstacle avoidance algorithm effectiveness and smoothness (30%)",
+            "Gazebo simulation and RViz2 visualization setup (25%)",
+            "Documentation, hardware policy compliance, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.ros.org/en/humble/",
+            "https://gazebosim.org/docs",
+            "https://docs.python.org/3/",
+            "https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/"
+        ],
+        simulation_policy: {
+            minimum_software: "Ubuntu 22.04 LTS (via Windows WSL2 or dual-boot), ROS 2 Humble Desktop, Gazebo, Python 3.10.",
+            optional_hardware: "Arduino Uno, 2x DC Gear Motors, L298N motor driver, HC-SR04 Ultrasonic sensor, 2WD chassis (approx ₹1200, completely optional).",
+            free_simulation_alternative: "TurtleBot3 Gazebo simulation package (`turtlebot3_gazebo`) with virtual 360 LiDAR and maze world.",
+            installation_instructions: "Install ROS 2 Humble, run `sudo apt install ros-humble-turtlebot3* ros-humble-gazebo-*`, export `TURTLEBOT3_MODEL=burger`, and launch gazebo world.",
+            expected_simulation_output: "TurtleBot3 moves autonomously in Gazebo maze world, turns smoothly upon sensing walls via simulated laser scan, with trajectory displayed in RViz2.",
+            hardware_extension: "Optionally port the avoidance algorithm to an Arduino microcontroller connected to physical ultrasonic sensors and dual motors."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Simulation Environment & Robot Modeling",
+                description: "Set up ROS 2 and Gazebo, configure the simulation workspace, and construct the mobile robot model.",
+                tasks: [
+                    "Install ROS 2 Humble and Gazebo simulation stack (native or via Windows WSL2)",
+                    "Create ROS 2 package with colcon build workspace",
+                    "Configure robot model (TurtleBot3 or custom URDF) with differential drive plugin and LiDAR sensor",
+                    "Create Gazebo simulation world containing enclosed arena walls and cylindrical obstacles"
+                ],
+                deliverables: "ROS 2 package, URDF robot definition, Gazebo world file, and launch test script."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Sensor Data Ingestion & Kinematic Control",
+                description: "Implement sensor subscriber node, process distance readings, and publish velocity commands.",
+                tasks: [
+                    "Create ROS 2 node subscribing to `/scan` (`sensor_msgs/msg/LaserScan`)",
+                    "Parse laser scan ranges into directional sectors: front, left, right, and rear minimum distances",
+                    "Implement `/cmd_vel` publisher (`geometry_msgs/msg/Twist`) controlling linear and angular velocity",
+                    "Verify manual keyboard teleoperation and verify sensor range outputs in terminal"
+                ],
+                deliverables: "Laser scan parsing node, velocity publisher node, and verification log."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Obstacle Avoidance Logic & Autonomous Navigation",
+                description: "Develop reactive avoidance algorithm, dynamic speed scaling, and state machine control.",
+                tasks: [
+                    "Implement reactive finite state machine (Forward, Turn Left, Turn Right, Emergency Reverse)",
+                    "Incorporate dynamic speed modulation: slow down as front obstacle distance decreases below threshold",
+                    "Configure RViz2 display visualizing LaserScan point clouds and robot odometry path",
+                    "Test continuous autonomous run in Gazebo arena without manual intervention"
+                ],
+                deliverables: "Autonomous avoidance controller node, RViz2 configuration file, and successful simulation run."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Testing, Edge-Case Hardening & Final Submission",
+                description: "Test maze navigation, resolve corner trapping edge cases, document setup, and record demo video.",
+                tasks: [
+                    "Test robot navigation in complex maze environments and resolve local minima (corner trap) scenarios",
+                    "Document step-by-step execution instructions for free simulation on Windows WSL2 / Ubuntu",
+                    "Write project technical report outlining software architecture, node graph, and hardware alternatives",
+                    "Record comprehensive video demonstrating Gazebo maze exploration and RViz2 sensor visualization"
+                ],
+                deliverables: "Final GitHub repository, technical report, simulation guide, and demonstration video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "ROB-02",
+        title: "Robotic Arm Pick-and-Place Simulator",
+        domain: "Robotics",
+        short_description: "3D multi-joint articulated robotic arm simulation that plans kinematic trajectories to grasp objects and relocate them to target bins.",
+        problem_statement: "Industrial robotic arms require rigorous kinematic validation and collision-free path planning in simulation before executing pick-and-place trajectories on expensive factory machinery.",
+        objectives: [
+            "Model an articulated robotic manipulator arm (4-DOF to 6-DOF) with end-effector gripper",
+            "Calculate forward and inverse kinematics for coordinate-targeted joint positioning",
+            "Simulate pick-and-place task cycle: approach, grasp, lift, transfer, and release",
+            "Visualize motion trajectory and task completion status in a 3D simulation environment"
+        ],
+        learning_outcomes: [
+            "Robotic arm kinematics: Forward Kinematics (FK) and Inverse Kinematics (IK)",
+            "Joint trajectory generation, motion constraints, and end-effector coordination",
+            "Manipulator simulation using MoveIt 2 / ROS 2 or Webots / PyBullet physics simulators",
+            "Gripper contact physics and object manipulation dynamics"
+        ],
+        prerequisites: [
+            "Python programming",
+            "Basic understanding of 3D coordinate frames, matrices, and angles (roll, pitch, yaw)",
+            "Familiarity with simulation software concepts"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Webots Robot Simulator (free, cross-platform on Windows/macOS/Linux) OR ROS 2 MoveIt 2",
+            "Libraries: NumPy, SciPy, Matplotlib (for analytical kinematics)"
+        ],
+        tech_stack: ["Python", "ROS 2", "MoveIt 2 / Webots", "Kinematics", "URDF"],
+        expected_features: [
+            "Articulated 4-DOF or 6-DOF robotic arm 3D model with parallel or vacuum gripper",
+            "Interactive joint control mode (forward kinematics slider mode)",
+            "Inverse kinematics coordinate target input (X, Y, Z end-effector positioning)",
+            "Automated pick-and-place cycle picking cubes from source platform and depositing in target container",
+            "Smooth motion visualization without jerky velocity spikes or joint limit violations",
+            "Task completion status display logging cycle time and success count"
+        ],
+        functional_requirements: [
+            "Arm must calculate IK solution for any reachable target within workspace radius",
+            "End-effector must grasp and maintain grip on simulated object throughout transfer movement",
+            "Gripper must release object accurately inside target receptacle without throwing or bouncing",
+            "System must report cycle duration and detect unreachable coordinate exceptions"
+        ],
+        non_functional_requirements: [
+            "100% free simulation software requiring zero physical components",
+            "Smooth 3D viewport rendering at >= 30 FPS",
+            "Cross-platform compatibility running on standard Windows 10/11 or Ubuntu"
+        ],
+        expected_deliverables: [
+            "Complete simulation package (Webots world and controller OR ROS 2 MoveIt package)",
+            "Python kinematics module with FK and IK calculations",
+            "Comprehensive setup instructions with zero-hardware prerequisites",
+            "Demonstration screen recording showcasing pick-and-place sequence and kinematics"
+        ],
+        evaluation_criteria: [
+            "Kinematics implementation accuracy and trajectory smoothness (30%)",
+            "Pick-and-place cycle execution and gripper physics reliability (25%)",
+            "Simulation environment realism and code cleanliness (25%)",
+            "Documentation, hardware policy compliance, and video demo (20%)"
+        ],
+        reference_materials: [
+            "https://docs.ros.org/en/humble/",
+            "https://moveit.picknik.ai/",
+            "https://cyberbotics.com/doc/guide/index",
+            "https://docs.python.org/3/"
+        ],
+        simulation_policy: {
+            minimum_software: "Webots Robot Simulator (free download from cyberbotics.com for Windows/macOS/Ubuntu) OR ROS 2 Humble with MoveIt 2.",
+            optional_hardware: "4-DOF acrylic hobby robotic arm kit with 4x SG90 servos and Arduino/PCA9685 driver (approx ₹1500, purely optional).",
+            free_simulation_alternative: "Webots built-in Universal Robots UR5e or Franka Emika Panda arm simulation with custom Python supervisory controller.",
+            installation_instructions: "Install Webots from official site, open the project world file, attach the Python controller, and click Run.",
+            expected_simulation_output: "Robotic arm smoothly approaches colored block on table, closes gripper fingers, lifts object, rotates base to target box, and opens gripper to deposit object successfully.",
+            hardware_extension: "Optionally export joint angle arrays to Arduino via Serial to actuate a physical servo arm."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Arm Modeling & Simulation Setup",
+                description: "Select simulation platform, import robotic arm URDF/proto, and establish coordinate conventions.",
+                tasks: [
+                    "Install Webots simulation platform or ROS 2 MoveIt 2 environment",
+                    "Import 4-DOF or 6-DOF robotic arm model with revolute joints and gripper end-effector",
+                    "Define base, shoulder, elbow, wrist, and tool center point (TCP) coordinate frames",
+                    "Create simulation world containing table, source pick pedestal, target drop box, and pickable blocks"
+                ],
+                deliverables: "Simulation world file, robotic arm model configuration, and initial joint rotation script."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Kinematics Engine (FK & IK Calculation)",
+                description: "Implement forward kinematics and analytical/numerical inverse kinematics solver in Python.",
+                tasks: [
+                    "Derive Denavit-Hartenberg (DH) parameters or geometric transformation matrices for the arm",
+                    "Implement Forward Kinematics function computing TCP position from joint angles",
+                    "Implement Inverse Kinematics solver calculating required joint angles for target (X, Y, Z)",
+                    "Add validation rejecting target points outside the reachable spherical workspace"
+                ],
+                deliverables: "Python kinematics library (`kinematics.py`), test verification script, and workspace plot."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Pick-and-Place State Machine & Gripper Logic",
+                description: "Implement automated pick-and-place sequence with trajectory interpolation and gripper control.",
+                tasks: [
+                    "Implement trajectory interpolator generating smooth joint velocity profiles between waypoints",
+                    "Build automated pick-and-place state machine: Home -> Pre-Pick -> Grasp -> Lift -> Pre-Place -> Drop",
+                    "Integrate gripper actuator control and verify physical block contact in simulation",
+                    "Add task completion counter and cycle duration timer"
+                ],
+                deliverables: "Complete automated pick-and-place controller script and verified simulation run."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Edge-Case Testing, Documentation & Final Demo",
+                description: "Test multi-object relocations, handle grasp failures, compile user documentation, and record demo video.",
+                tasks: [
+                    "Test continuous pick-and-place with 3 distinct objects located at different table coordinates",
+                    "Implement error recovery if object slips from gripper during transfer",
+                    "Write clear installation and run guide requiring zero physical hardware",
+                    "Record demonstration video showing kinematics execution, pick-and-place cycle, and telemetry"
+                ],
+                deliverables: "Final GitHub repository, technical report, free simulation guide, and video walkthrough."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "ROB-03",
+        title: "Smart Line-Following Robot",
+        domain: "Robotics",
+        short_description: "Autonomous wheeled robot that tracks high-contrast floor trajectories using multi-sensor array logic and proportional control algorithms.",
+        problem_statement: "Automated Guided Vehicles (AGVs) in industrial logistics must reliably navigate painted floor lines without deviation, requiring responsive sensor filtering and proportional motor control.",
+        objectives: [
+            "Design an autonomous line-tracking mobile robot model with multi-channel IR sensor array",
+            "Develop line-following control algorithm (PID or state-based weighted error correction)",
+            "Implement corner turning logic (acute, right angle, and T-junctions) and obstacle emergency braking",
+            "Provide complete simulation in Webots / Tinkercad with optional Arduino hardware schematics"
+        ],
+        learning_outcomes: [
+            "Sensor thresholding and analog-to-digital calibration of infrared reflectance sensors",
+            "Proportional-Integral-Derivative (PID) closed-loop feedback motor control",
+            "Differential drive steering principles and motor PWM duty cycles",
+            "Virtual circuit prototyping in Tinkercad and physical microcontroller firmware"
+        ],
+        prerequisites: [
+            "Basic C++ / Arduino or Python programming",
+            "Understanding of basic feedback control concepts (error calculation)",
+            "Familiarity with logic conditions and state machines"
+        ],
+        difficulty_level: "Beginner",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Tinkercad Circuits (100% free online in-browser) OR Webots Robot Simulator",
+            "Arduino IDE (for C++ code compilation)",
+            "Optional Hardware: Arduino Uno/Nano, 3-5 Channel IR sensor module, L298N motor driver, 2x DC TT motors, chassis"
+        ],
+        tech_stack: ["Arduino / C++", "Webots / Tinkercad Circuits", "PID Control", "IR Sensors", "Differential Drive"],
+        expected_features: [
+            "Virtual 3 to 5-channel infrared sensor array reading line contrast values",
+            "Closed-loop PID steering algorithm maintaining robot center over line track",
+            "Sharp 90-degree turn detection and recovery logic",
+            "T-junction and cross-intersection decision handling",
+            "Ultrasonic / proximity sensor obstacle emergency stop feature",
+            "Virtual circuit schematic diagram and interactive simulation dashboard"
+        ],
+        functional_requirements: [
+            "Robot must successfully complete track laps without losing line contact",
+            "PID loop update frequency must be >= 50 Hz",
+            "Emergency obstacle stop must engage within 10cm of obstacle and resume automatically once cleared",
+            "Algorithm must handle both black line on white floor and white line on dark floor via calibration toggle"
+        ],
+        non_functional_requirements: [
+            "Zero cost: simulation runs 100% free in browser (Tinkercad) or Webots",
+            "Clean modular code separating sensor acquisition, PID computation, and motor actuation",
+            "Hardware bill of materials provided strictly as an optional hobby extension (< ₹1200)"
+        ],
+        expected_deliverables: [
+            "Complete Arduino C++ source code with detailed inline commentary",
+            "Tinkercad Circuits virtual simulation share link or Webots world package",
+            "Circuit wiring schematic diagram (Fritzing / PDF)",
+            "Demonstration video showing successful line tracking, corner navigation, and obstacle stop"
+        ],
+        evaluation_criteria: [
+            "Line tracking smoothness and PID tuning performance (30%)",
+            "Corner handling, junction logic, and obstacle stop reliability (25%)",
+            "Circuit design and firmware code cleanliness (25%)",
+            "Documentation, free simulation compliance, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.arduino.cc/",
+            "https://cyberbotics.com/doc/guide/index",
+            "https://www.tinkercad.com/circuits"
+        ],
+        simulation_policy: {
+            minimum_software: "Tinkercad Circuits (free browser tool) OR Webots Robot Simulator (free standalone).",
+            optional_hardware: "Arduino Uno/Nano, 5-channel TCRT5000 IR sensor module, L298N motor driver, 2x BO gear motors, 2WD acrylic chassis, 9V/battery holder (approx ₹900-₹1200, optional).",
+            free_simulation_alternative: "Tinkercad virtual Arduino circuit simulation with interactive sensor pots OR Webots e-puck differential wheels line-following world.",
+            installation_instructions: "Open Tinkercad in Chrome browser, import the circuit schematic and Arduino C++ code, and click 'Start Simulation'.",
+            expected_simulation_output: "Virtual robot motors adjust differential speed in response to IR sensor inputs, tracking curved line smoothly and halting when virtual proximity sensor detects obstacle.",
+            hardware_extension: "Optionally flash code onto real Arduino board connected to TCRT5000 module and place robot on electrical tape track."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Circuit Design, Track Layout & Logic Architecture",
+                description: "Design virtual circuit in Tinkercad/Webots, lay out track geometry, and architect control flow.",
+                tasks: [
+                    "Design virtual circuit schematic connecting Arduino, motor driver, 5 IR sensors, and ultrasonic sensor",
+                    "Configure line track with straightaways, gradual curves, 90-degree corners, and T-junctions",
+                    "Establish weighted sensor position mapping logic for error calculation",
+                    "Initialize project Git repository with documentation templates"
+                ],
+                deliverables: "Tinkercad circuit design link, track layout diagram, and control architecture blueprint."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Sensor Reading & Motor Driver Firmware",
+                description: "Implement sensor acquisition, threshold calibration, and differential PWM motor control.",
+                tasks: [
+                    "Write Arduino C++ firmware reading multi-channel digital/analog IR sensors",
+                    "Implement sensor calibration routine distinguishing black line vs white surface",
+                    "Develop differential drive motor actuation function with forward, reverse, and differential turning PWM",
+                    "Verify motor response to individual sensor activations in simulation"
+                ],
+                deliverables: "Sensor calibration module, motor control library, and test verification report."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — PID Control Implementation & Corner Handling",
+                description: "Implement closed-loop PID control algorithm and sharp corner turning state machine.",
+                tasks: [
+                    "Implement PID closed-loop feedback calculation (`Kp * error + Ki * integral + Kd * derivative`)",
+                    "Tune Kp, Ki, and Kd constants to eliminate trajectory oscillation and wobbling",
+                    "Add dedicated corner-handling state machine for 90-degree sharp turns and line-loss recovery",
+                    "Integrate front ultrasonic obstacle detection with automatic emergency stop and resume"
+                ],
+                deliverables: "Tuned PID controller firmware, obstacle avoidance module, and simulation test run."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Testing, Optional Hardware Guide & Final Demo",
+                description: "Perform continuous lap endurance testing, document simulation/hardware guide, and record demo video.",
+                tasks: [
+                    "Conduct 5 continuous simulated lap tests without track departure",
+                    "Compile comprehensive documentation detailing free simulation steps and optional physical assembly",
+                    "Provide bill of materials and wiring diagram for students wishing to build optional physical robot",
+                    "Record demonstration video showing smooth line tracking, cornering, and obstacle stop"
+                ],
+                deliverables: "Final GitHub repository, complete Arduino code, circuit diagram, and video demonstration."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "ROB-04",
+        title: "Indoor Robot Mapping & Navigation",
+        domain: "Robotics",
+        short_description: "Simultaneous Localization and Mapping (SLAM) and autonomous navigation stack for indoor mobile robots traversing unknown rooms.",
+        problem_statement: "Autonomous service robots operating in offices and hospitals must build precise metric floor plans of unknown indoor environments and navigate autonomously to designated rooms without human intervention.",
+        objectives: [
+            "Deploy a simulated mobile robot equipped with LiDAR and odometry in a multi-room indoor environment",
+            "Execute Simultaneous Localization and Mapping (SLAM) to generate a 2D occupancy grid map",
+            "Configure the ROS 2 Navigation stack (Nav2) with global and local costmaps",
+            "Execute autonomous point-to-point navigation with dynamic obstacle avoidance"
+        ],
+        learning_outcomes: [
+            "SLAM fundamentals: occupancy grid generation, scan matching, and loop closure",
+            "ROS 2 Nav2 architecture: BT Navigator, Costmaps, Planners (NavFn / Smac), and Controllers (DWB / RPP)",
+            "Visualizing robot coordinate transforms (TF2 tree) and navigation goal poses in RViz2",
+            "Indoor autonomous robotics deployment principles"
+        ],
+        prerequisites: [
+            "Intermediate ROS 2 knowledge (topics, actions, transforms)",
+            "Experience with Linux / Ubuntu CLI environment",
+            "Understanding of coordinate frames, odometry, and path planning"
+        ],
+        difficulty_level: "Advanced",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Ubuntu 22.04 LTS (native or Windows WSL2)",
+            "ROS 2 Humble Desktop",
+            "Gazebo Simulator",
+            "SLAM Toolbox (`ros-humble-slam-toolbox`)",
+            "Nav2 Navigation Stack (`ros-humble-navigation2`, `ros-humble-nav2-bringup`)",
+            "RViz2"
+        ],
+        tech_stack: ["ROS 2", "Gazebo", "SLAM Toolbox", "Nav2", "RViz2", "Python"],
+        expected_features: [
+            "High-fidelity simulated multi-room indoor office / house environment in Gazebo",
+            "Real-time 2D Occupancy Grid map generation using SLAM Toolbox",
+            "Map saving utility exporting standard `.yaml` metadata and `.pgm` image files",
+            "Adaptive Monte Carlo Localization (AMCL) tracking robot pose within saved map",
+            "Nav2 autonomous destination selection via RViz2 '2D Goal Pose' tool",
+            "Dynamic obstacle avoidance recalculating path when unforeseen obstacles block hallways",
+            "RViz2 navigation visualization showing costmaps, planned global path, and localized particles"
+        ],
+        functional_requirements: [
+            "SLAM mapping must cover at least 3 distinct rooms with accurate wall boundaries",
+            "Map resolution must be 0.05 meters per pixel (5cm per grid cell)",
+            "Nav2 must successfully guide robot from starting room to target room within 0.2m position tolerance",
+            "Robot must dynamically re-route around newly spawned obstacle placed in its original path"
+        ],
+        non_functional_requirements: [
+            "100% free simulation requiring zero expensive physical LiDAR or robot hardware",
+            "Stable simulation execution with real-time factor >= 0.7 on standard developer hardware",
+            "Clean launch files enabling single-command startup of mapping and navigation"
+        ],
+        expected_deliverables: [
+            "Complete ROS 2 package containing Gazebo world, Nav2 configuration parameters, and launch files",
+            "Exported 2D occupancy grid map files (`office_map.yaml`, `office_map.pgm`)",
+            "Detailed step-by-step setup documentation for Ubuntu / WSL2",
+            "Demonstration video capturing SLAM mapping process and Nav2 autonomous goal navigation"
+        ],
+        evaluation_criteria: [
+            "SLAM mapping quality and geometric accuracy of exported map (25%)",
+            "Nav2 stack configuration, path planner tuning, and obstacle avoidance (30%)",
+            "ROS 2 workspace architecture, launch file modularity, and TF tree integrity (25%)",
+            "Documentation quality, hardware policy compliance, and video demo (20%)"
+        ],
+        reference_materials: [
+            "https://docs.ros.org/en/humble/",
+            "https://navigation.ros.org/",
+            "https://github.com/SteveMacenski/slam_toolbox",
+            "https://gazebosim.org/docs"
+        ],
+        simulation_policy: {
+            minimum_software: "Ubuntu 22.04 LTS (via Windows WSL2 or native Linux), ROS 2 Humble, Gazebo, Nav2, SLAM Toolbox.",
+            optional_hardware: "RPLiDAR A1M8 360 laser scanner, Raspberry Pi 4, differential drive chassis with wheel encoders (approx ₹15,000, strictly optional).",
+            free_simulation_alternative: "TurtleBot3 Gazebo house world (`turtlebot3_gazebo turtlebot3_house.launch.py`) with SLAM Toolbox and Nav2 bringup.",
+            installation_instructions: "Install `ros-humble-slam-toolbox` and `ros-humble-nav2-bringup`. Launch Gazebo house world, run slam_toolbox, drive robot to map house, save map, and launch Nav2 bringup.",
+            expected_simulation_output: "Real-time 2D occupancy grid map generated as robot moves; clicking '2D Goal Pose' in RViz2 causes robot to plan global path and autonomously drive through doorways to target room avoiding obstacles.",
+            hardware_extension: "Optionally transfer saved map and Nav2 config to a physical TurtleBot or custom mobile base."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Indoor Environment & SLAM Configuration",
+                description: "Build indoor Gazebo world, configure robot sensors, and set up SLAM Toolbox parameters.",
+                tasks: [
+                    "Set up multi-room indoor environment in Gazebo (hallways, doorways, rooms)",
+                    "Configure mobile robot model with 360-degree LiDAR and odometry broadcast",
+                    "Configure SLAM Toolbox online asynchronous parameters (scan matching, resolution)",
+                    "Verify teleoperation and coordinate transform (TF2) tree integrity (`odom -> base_link -> laser_link`)"
+                ],
+                deliverables: "Gazebo indoor world file, SLAM Toolbox configuration, and transform verification graph."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Mapping Execution & Map Generation",
+                description: "Drive robot through virtual rooms, generate complete 2D occupancy grid map, and save map files.",
+                tasks: [
+                    "Drive robot throughout all rooms using keyboard teleoperation to map full environment",
+                    "Monitor loop closures and resolve scan matching drift",
+                    "Export completed 2D occupancy grid map using `nav2_map_server` (`.pgm` and `.yaml` formats)",
+                    "Inspect generated map for geometric consistency and wall closure"
+                ],
+                deliverables: "Exported indoor map files (`map.pgm`, `map.yaml`) and SLAM trajectory logs."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Nav2 Stack Configuration & Autonomous Waypoints",
+                description: "Configure Nav2 costmaps, AMCL localization, path planners, and test autonomous navigation.",
+                tasks: [
+                    "Configure Nav2 global and local costmap inflation layers and footprint parameters",
+                    "Load saved map into Map Server and initialize AMCL localization",
+                    "Configure Nav2 path planner (NavFn) and trajectory controller (DWB)",
+                    "Execute point-to-point goal navigation via RViz2 and verify goal arrival within tolerance"
+                ],
+                deliverables: "Nav2 parameter configuration files, launch scripts, and verified waypoint navigation."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Dynamic Obstacle Re-Routing & Final Submission",
+                description: "Test dynamic obstacle avoidance, benchmark navigation success rate, document setup, and record demo.",
+                tasks: [
+                    "Test real-time re-routing: spawn unexpected box in hallway and observe Nav2 costmap update and path deviation",
+                    "Benchmark navigation arrival success rate across 10 distinct room-to-room goal pairs",
+                    "Write step-by-step documentation for running simulation on Windows WSL2 or Ubuntu",
+                    "Record comprehensive demonstration video highlighting SLAM mapping, localization, and Nav2 navigation"
+                ],
+                deliverables: "Final GitHub repository, navigation benchmark report, setup guide, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "ROB-05",
+        title: "Hand Gesture-Controlled Robotic Hand",
+        domain: "Robotics",
+        short_description: "Vision-driven teleoperation system tracking 21 hand landmarks in real-time to actuate a multi-finger robotic prosthetic or gripper.",
+        problem_statement: "Intuitive teleoperation of robotic hands and prosthetic limbs typically relies on expensive sensor gloves or EMG electrodes, creating a need for accessible computer-vision gesture control.",
+        objectives: [
+            "Implement real-time 21-point hand landmark tracking using webcam input and Google MediaPipe",
+            "Calculate individual finger flexion angles from joint landmark coordinates",
+            "Map detected hand gestures (fist, open palm, peace, pinch) to robotic finger commands",
+            "Drive a simulated 3D robotic hand model with optional Arduino servo hardware integration"
+        ],
+        learning_outcomes: [
+            "Computer vision landmark tracking using Google MediaPipe Hands and OpenCV",
+            "Spatial vector mathematics: calculating Euclidean distances and joint flexion angles in 3D space",
+            "Translating human anatomical kinematics into robotic actuator command signals",
+            "Serial communication protocols (UART) connecting Python perception to hardware controllers"
+        ],
+        prerequisites: [
+            "Python programming",
+            "Basic geometry and vector math (dot products, angles between vectors)",
+            "Working computer with a standard USB / built-in webcam"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Libraries: OpenCV-Python, MediaPipe, NumPy, Matplotlib / PyBullet (for 3D simulation)",
+            "Webcam (standard 720p or 1080p)",
+            "Optional Hardware: Arduino Uno, 5x SG90 micro servos, 3D printed bionic hand chassis"
+        ],
+        tech_stack: ["Python", "OpenCV", "MediaPipe", "PyBullet / 3D Simulation", "Arduino (optional)"],
+        expected_features: [
+            "Live webcam feed with real-time 21 hand landmark skeleton tracking overlay",
+            "Finger flexion angle calculator measuring curling percentage for Thumb, Index, Middle, Ring, and Pinky",
+            "Gesture classification recognizing Open Palm, Fist, Pinch, Pointing, Victory, and Thumbs Up",
+            "Real-time 3D simulated robotic hand mirroring user finger movements with sub-100ms latency",
+            "Serial communication module transmitting joint angle packets to optional Arduino microcontroller",
+            "Gesture history timeline logging recognized gestures and timestamped confidence scores"
+        ],
+        functional_requirements: [
+            "Hand tracking must sustain at least 25 FPS on standard CPU hardware",
+            "Flexion angle mapping must map smoothly from 0 degrees (fully extended) to 180 degrees (fully curled)",
+            "Simulated robotic hand must replicate finger movements in real time with smooth interpolation",
+            "Gesture recognition accuracy must achieve >= 95% under standard indoor lighting"
+        ],
+        non_functional_requirements: [
+            "100% free simulation software requiring zero physical electronic hardware",
+            "Zero cloud API dependencies: all vision processing executed locally on device",
+            "Graceful handling of webcam obstruction or hand leaving the camera field of view"
+        ],
+        expected_deliverables: [
+            "Clean Python code repository containing vision tracker, kinematics mapper, and 3D simulation visualizer",
+            "Optional Arduino C++ sketch (`servo_hand.ino`) for students with physical hardware",
+            "Step-by-step installation and calibration guide",
+            "Demonstration video capturing webcam hand movements alongside synchronized 3D robotic hand mirroring"
+        ],
+        evaluation_criteria: [
+            "MediaPipe tracking stability and finger angle calculation precision (30%)",
+            "3D simulation visualization and mirroring responsiveness (25%)",
+            "Gesture recognition classification accuracy and serial protocol design (25%)",
+            "Documentation quality, hardware policy compliance, and video demo (20%)"
+        ],
+        reference_materials: [
+            "https://ai.google.dev/edge/mediapipe/solutions/guide",
+            "https://docs.opencv.org/",
+            "https://docs.python.org/3/",
+            "https://docs.arduino.cc/"
+        ],
+        simulation_policy: {
+            minimum_software: "Python 3.9+, OpenCV (`pip install opencv-python`), Google MediaPipe (`pip install mediapipe`), Matplotlib.",
+            optional_hardware: "Arduino Uno, 5x SG90 9g micro servos, 5V 2A external power supply, cardboard or 3D printed robotic hand (approx ₹1200, strictly optional).",
+            free_simulation_alternative: "Interactive 3D animated hand visualization rendered via PyBullet or Matplotlib 3D plotting reproducing all 5 robotic finger joint angles in real time.",
+            installation_instructions: "Install Python libraries via `pip install opencv-python mediapipe matplotlib`, run `python hand_tracker.py`, and hold hand up to laptop webcam.",
+            expected_simulation_output: "Webcam window shows 21 green landmark dots on user hand; adjacent 3D viewport displays digital robotic hand flexing and curling fingers in real time to match user hand movements.",
+            hardware_extension: "Optionally connect Arduino over USB COM port and transmit comma-separated servo angles (`servo1,servo2,servo3,servo4,servo5\\n`)."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Vision Pipeline & Landmark Tracking",
+                description: "Set up MediaPipe Hands pipeline, verify webcam capture, and extract 21 landmark 3D coordinates.",
+                tasks: [
+                    "Configure OpenCV webcam capture loop with FPS counter",
+                    "Integrate Google MediaPipe Hands solution extracting 21 landmark 3D positions per frame",
+                    "Render visual hand skeleton mesh and landmark index numbers on camera overlay",
+                    "Set up project repository with dependency definitions"
+                ],
+                deliverables: "Working webcam landmark tracking script, visual skeleton overlay, and repository setup."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Finger Flexion Calculation & Gesture Recognition",
+                description: "Compute joint angle vectors, calculate finger curl percentages, and classify standard gestures.",
+                tasks: [
+                    "Compute joint angles for MCP, PIP, and DIP joints using 3D vector dot products",
+                    "Normalize finger curling into continuous 0-100% flexion values for each of the 5 fingers",
+                    "Implement rule-based gesture classifier detecting Fist, Open Palm, Peace, Pinch, and Thumbs Up",
+                    "Add on-screen HUD displaying active gesture, confidence score, and individual finger angles"
+                ],
+                deliverables: "Finger kinematics calculation module, gesture recognition classifier, and HUD overlay."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — 3D Simulated Robotic Hand & Serial Communication",
+                description: "Build 3D simulated robotic hand visualization and optional Arduino serial transmission module.",
+                tasks: [
+                    "Build 3D simulated robotic hand model in Matplotlib 3D or PyBullet",
+                    "Link finger flexion outputs to 3D model joints with smooth interpolation for real-time mirroring",
+                    "Implement serial communication module formatting joint angle packets (`A0,A1,A2,A3,A4\\n`)",
+                    "Write optional Arduino firmware sketch receiving serial angles and driving 5 servo motors"
+                ],
+                deliverables: "Real-time 3D robotic hand visualizer, serial transmitter, and optional Arduino sketch."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Latency Optimization, Documentation & Final Demo",
+                description: "Optimize tracking latency, handle camera boundary edge cases, document system, and record demo video.",
+                tasks: [
+                    "Benchmark end-to-end vision-to-actuation latency and optimize processing to achieve sub-50ms lag",
+                    "Implement smooth fallback when hand leaves camera frame (gradual return to default rest pose)",
+                    "Write detailed technical report with setup guide and optional physical hardware wiring diagrams",
+                    "Record demonstration video showing live webcam hand gestures directly mirrored by the 3D robotic hand"
+                ],
+                deliverables: "Final GitHub repository, technical report, free simulation guide, and video demonstration."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "ROB-06",
+        title: "Autonomous Warehouse Delivery Robot",
+        domain: "Robotics",
+        short_description: "Autonomous mobile warehouse fulfillment vehicle capable of receiving shelf item dispatch orders and navigating rack aisles.",
+        problem_statement: "Modern e-commerce fulfillment centers require automated mobile robots (AMRs) to retrieve bins from dense storage aisles and deliver them to packing stations without human intervention or aisle gridlock.",
+        objectives: [
+            "Build a simulated warehouse fulfillment environment with storage racks, loading bays, and aisles",
+            "Develop an order dispatch task management queue assigning pick-and-drop locations",
+            "Implement global path planning (A* / Dijkstra) navigating obstacle-free aisle corridors",
+            "Simulate dynamic payload pickup and drop-off with task status tracking"
+        ],
+        learning_outcomes: [
+            "Industrial Automated Guided Vehicle (AGV) / Autonomous Mobile Robot (AMR) workflows",
+            "Grid-based global path planning algorithms (A*, Dijkstra) and costmap representation",
+            "Task scheduling, state machines, and order dispatch queues in robotics",
+            "Simulating industrial logistics environments in ROS 2 / Gazebo or Webots"
+        ],
+        prerequisites: [
+            "Python programming",
+            "Understanding of graph search algorithms (A* or Breadth-First Search)",
+            "Basic experience with ROS 2 or Webots simulation environments"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Webots Robot Simulator OR ROS 2 Humble + Gazebo",
+            "Libraries: NumPy, Matplotlib (for path planning visualization)"
+        ],
+        tech_stack: ["Python", "ROS 2 / Webots", "Gazebo", "A* Path Planning", "State Machine"],
+        expected_features: [
+            "Simulated warehouse environment with rows of numbered storage racks and drop-off sorting bays",
+            "Differential or Mecanum-wheel mobile delivery robot model with payload flatbed",
+            "Order dispatch task generator creating pick-up and delivery requests",
+            "Global path planning computing shortest collision-free path through warehouse aisles",
+            "Obstacle avoidance pausing or maneuvering around obstacles blocking aisle ways",
+            "Task execution dashboard displaying current order status, battery level, mission timer, and completed order history"
+        ],
+        functional_requirements: [
+            "Robot must successfully navigate from any dock station to any rack coordinate without clipping shelves",
+            "A* path planner must generate optimal path within 200ms on a 50x50 warehouse grid",
+            "Robot must verify arrival within 0.15m of target coordinate before commencing 3-second load simulation",
+            "System must log completed missions including travel distance, elapsed time, and order ID"
+        ],
+        non_functional_requirements: [
+            "100% free simulation software requiring zero expensive robotics hardware",
+            "Clear modular architecture separating warehouse order manager, path planner, and robot driver",
+            "Smooth 3D viewport rendering on standard Windows/Linux laptops"
+        ],
+        expected_deliverables: [
+            "Full simulation workspace (Webots world and controller OR ROS 2 Gazebo package)",
+            "Python A* path planning and task dispatch modules",
+            "Comprehensive setup instructions with zero-hardware prerequisites",
+            "Demonstration screen recording showing multi-order warehouse dispatch and autonomous delivery"
+        ],
+        evaluation_criteria: [
+            "A* path planning implementation and warehouse grid modeling (30%)",
+            "Order dispatch queue and mission state machine reliability (25%)",
+            "Simulation environment fidelity, kinematics, and obstacle avoidance (25%)",
+            "Documentation, hardware policy compliance, and video demonstration (20%)"
+        ],
+        reference_materials: [
+            "https://docs.ros.org/en/humble/",
+            "https://cyberbotics.com/doc/guide/index",
+            "https://gazebosim.org/docs",
+            "https://docs.python.org/3/"
+        ],
+        simulation_policy: {
+            minimum_software: "Webots Robot Simulator (free standalone download) OR ROS 2 Humble + Gazebo on Ubuntu/WSL2.",
+            optional_hardware: "Mecanum wheel 4WD mobile robot platform with Arduino/STM32 controller and ultrasonic sensors (approx ₹4000, completely optional).",
+            free_simulation_alternative: "Webots built-in industrial warehouse world (`warehouse.wbt`) with pre-configured forklift/AGV robot and storage racks.",
+            installation_instructions: "Install Webots from cyberbotics.com, open the warehouse world file, attach the Python warehouse manager controller, and start simulation.",
+            expected_simulation_output: "AMR robot receives order for Rack B4, calculates shortest aisle path using A*, drives smoothly through aisles, simulates box loading, navigates to Packing Bay 1, and marks order completed in dashboard.",
+            hardware_extension: "Optionally export planned trajectory waypoints to a physical Arduino mobile rover."
+        },
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Warehouse World Modeling & Grid Representation",
+                description: "Construct warehouse simulation world, define rack coordinates, and discretize map into grid.",
+                tasks: [
+                    "Create or configure warehouse world with 8+ rack aisles, loading docks, and obstacle barriers",
+                    "Configure mobile robot model with differential drive physics and proximity sensors",
+                    "Discretize warehouse floor plan into 2D grid matrix mapping walkable aisles and forbidden rack zones",
+                    "Set up project repository with architecture blueprint"
+                ],
+                deliverables: "Warehouse simulation world file, 2D occupancy grid representation, and repository setup."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — A* Global Path Planning Algorithm",
+                description: "Implement A* path planner on warehouse grid, test path optimality, and implement trajectory follower.",
+                tasks: [
+                    "Implement A* search algorithm with Euclidean/Manhattan distance heuristics",
+                    "Generate collision-free shortest path waypoints between loading bays and all rack coordinates",
+                    "Implement differential drive waypoint tracker translating path coordinates into motor velocities",
+                    "Verify path generation and execution in simulation across 10 random pick locations"
+                ],
+                deliverables: "Python A* path planning module (`planner.py`), waypoint tracking controller, and path plots."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Order Dispatch Queue & State Machine",
+                description: "Build order management queue, mission state machine (Pick, Transport, Drop), and status HUD.",
+                tasks: [
+                    "Build Order Dispatch Manager queueing incoming package delivery tasks (Source Rack -> Destination Bay)",
+                    "Implement robot mission state machine (Idle, Navigating to Pick, Loading, Navigating to Drop, Unloading)",
+                    "Add obstacle avoidance: pause or re-plan if another robot or obstacle blocks an aisle intersection",
+                    "Create status dashboard displaying active order, elapsed time, battery %, and completed task history"
+                ],
+                deliverables: "Order dispatch manager, mission state machine controller, and live telemetry dashboard."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Multi-Order Stress Test, Documentation & Final Demo",
+                description: "Execute consecutive multi-order batch delivery test, document free simulation guide, and record demo video.",
+                tasks: [
+                    "Execute 5-order consecutive warehouse delivery mission measuring cycle time and navigational accuracy",
+                    "Handle edge cases (blocked aisle re-routing, unreachable rack coordinate exceptions)",
+                    "Write comprehensive setup guide requiring zero paid hardware",
+                    "Record demonstration video showing order dispatching, A* path planning, and physical package delivery"
+                ],
+                deliverables: "Final GitHub repository, technical report, simulation guide, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+export const STA_PROJECTS: ProjectTemplate[] = [
+    {
+        id: "STA-01",
+        title: "Automated Web Application Testing Framework",
+        domain: "Software Testing and Automation",
+        short_description: "Build a reusable Selenium-based testing framework featuring Page Object Model architecture, automated HTML reports, and failure screenshots.",
+        problem_statement: "Manual regression testing of web portals is slow, error-prone, and unsustainable across frequent software release cycles, creating an imperative for resilient, reusable automated test frameworks.",
+        objectives: [
+            "Build a modular, reusable test automation framework using Java, Selenium WebDriver, and TestNG",
+            "Implement Page Object Model (POM) design pattern for maintainable test script separation",
+            "Automate critical user journeys: registration, authentication, complex forms, and navigation validation",
+            "Generate rich HTML execution reports with execution logs and automatic screenshot capture upon failure"
+        ],
+        learning_outcomes: [
+            "Test automation architecture and Page Object Model (POM) design pattern",
+            "Selenium WebDriver element locators (XPath, CSS selectors, dynamic wait strategies)",
+            "TestNG test execution lifecycles, assertions, parallel execution, and data-driven parameters",
+            "Automated test reporting and defect screenshot capture"
+        ],
+        prerequisites: [
+            "Basic Java programming concepts (OOP principles)",
+            "Fundamental understanding of web applications (HTML, forms, HTTP requests)",
+            "Familiarity with Maven dependency management"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Java JDK 17+",
+            "Maven 3.8+",
+            "Selenium WebDriver 4.x",
+            "TestNG framework",
+            "ExtentReports or Allure for test reporting",
+            "Target browsers: Google Chrome, Mozilla Firefox"
+        ],
+        tech_stack: ["Java", "Selenium WebDriver", "TestNG", "Maven", "ExtentReports"],
+        expected_features: [
+            "Browser automation supporting configurable Chrome and Firefox execution",
+            "Automated positive and negative testing for user login and registration flows",
+            "Comprehensive form validation testing (boundary values, special characters, required fields)",
+            "Multi-page navigation and breadcrumb verification",
+            "Automatic screenshot capture immediately upon test step failure",
+            "Structured test execution logs via Log4j / standard logger",
+            "Interactive HTML test reports with execution charts, pass/fail ratios, and failure stack traces",
+            "Cross-browser execution configuration via TestNG XML suite runner"
+        ],
+        functional_requirements: [
+            "Framework must execute tests headlessly or in visible browser mode via `testng.xml` parameter",
+            "Explicit waits (WebDriverWait) must be used instead of hard-coded sleeps to prevent test flakiness",
+            "Failed test steps must capture full-screen screenshot saved with test name and timestamp in `/screenshots`",
+            "HTML report must provide summary metrics: Total, Passed, Failed, Skipped, and total execution duration"
+        ],
+        non_functional_requirements: [
+            "High maintainability: locator changes must only require updates in a single Page Object class",
+            "Execution reliability: test suite pass rate must be consistent across multiple runs",
+            "Well-organized Maven directory structure (`src/main/java`, `src/test/java`, `src/test/resources`)"
+        ],
+        expected_deliverables: [
+            "Complete Maven project repository with clean Git commit history",
+            "Documented Test Plan and Test Case Specification spreadsheet (positive, negative, and edge test scenarios)",
+            "Sample ExtentReports HTML test execution report and failure screenshots",
+            "Demonstration video walkthrough showing automated test suite execution and report generation"
+        ],
+        evaluation_criteria: [
+            "Framework architecture and Page Object Model implementation (30%)",
+            "Test case coverage across positive, negative, and boundary scenarios (25%)",
+            "Reporting quality, screenshot-on-failure listener, and log structure (25%)",
+            "Documentation, code cleanliness, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://www.selenium.dev/documentation/",
+            "https://testng.org/doc/",
+            "https://maven.apache.org/guides/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Test Planning, Architecture & Maven Setup",
+                description: "Understand requirements, formulate test plan and test cases, design POM structure, and configure Maven environment.",
+                tasks: [
+                    "Formulate comprehensive Test Plan identifying web workflows (Auth, Forms, Navigation)",
+                    "Design 25+ detailed test cases covering positive paths, invalid credentials, and boundary input values",
+                    "Set up Maven project with `pom.xml` including Selenium, TestNG, WebDriverManager, and ExtentReports",
+                    "Design Page Object Model directory structure (`pages`, `tests`, `base`, `utilities`)"
+                ],
+                deliverables: "Test Plan document, Test Case Specification spreadsheet, and initialized Maven framework repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Core Testing Implementation: Base Drivers & Auth Suites",
+                description: "Implement BaseTest driver initialization, Page Object classes, and automated authentication test suites.",
+                tasks: [
+                    "Implement `BaseTest` class with cross-browser initialization (`WebDriverManager` for Chrome & Firefox)",
+                    "Create Page Object classes for Login Page and Registration Page with encapsulated locators and actions",
+                    "Develop TestNG test suites executing positive and negative login/registration scenarios",
+                    "Incorporate explicit waits (`WebDriverWait`) replacing hardcoded sleep delays"
+                ],
+                deliverables: "Working BaseTest driver factory, Page Object classes, and automated TestNG auth test suite."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Advanced Automation: Listeners, Screenshots & Reporting",
+                description: "Implement TestNG test failure listeners, automated screenshot capture, and ExtentReports HTML reporting.",
+                tasks: [
+                    "Implement TestNG `ITestListener` to capture screenshots automatically upon test step failures",
+                    "Integrate ExtentReports generating rich HTML execution dashboard with pass/fail charts",
+                    "Implement Data-Driven testing using TestNG `@DataProvider` reading parameterized credentials",
+                    "Automate multi-page navigation and complex form validation test suites"
+                ],
+                deliverables: "Integrated TestNG listener, automated screenshot capture module, and generated ExtentReport HTML."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Final Regression Run, Documentation & Video Demo",
+                description: "Execute full regression test suite, analyze test execution reports, prepare documentation, and record demo.",
+                tasks: [
+                    "Execute complete regression test suite across Chrome and Firefox via `testng.xml`",
+                    "Inspect generated test reports and verify 100% resolution of flaky locator failures",
+                    "Write framework documentation detailing setup steps, test execution commands, and project design",
+                    "Record comprehensive video demonstration showing test execution, screenshot on failure, and HTML report"
+                ],
+                deliverables: "Final GitHub repository, HTML test execution reports, documentation, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "STA-02",
+        title: "Automated REST API Testing System",
+        domain: "Software Testing and Automation",
+        short_description: "Build an automated API testing framework verifying CRUD endpoints, response schemas, status codes, and latency SLA metrics.",
+        problem_statement: "Backend services and microservices often suffer breaking changes and performance degradation without comprehensive API regression test suites validating contracts and error status codes.",
+        objectives: [
+            "Build an automated REST API testing framework using Python, Pytest, and Requests",
+            "Validate all primary HTTP methods: GET, POST, PUT, PATCH, and DELETE",
+            "Validate request headers, auth tokens, JSON response body schemas, and HTTP status codes",
+            "Measure API response times against SLA thresholds and generate automated HTML test reports"
+        ],
+        learning_outcomes: [
+            "RESTful API architecture, HTTP methods, headers, status codes, and JSON schemas",
+            "Automated API testing with Python Requests and Pytest test fixtures",
+            "JSON schema validation and contract testing",
+            "API performance benchmark measurement and Newman / Pytest-HTML reporting"
+        ],
+        prerequisites: [
+            "Python programming basics",
+            "Basic understanding of REST APIs, HTTP methods, and JSON data formats",
+            "Familiarity with Postman for manual API exploration"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Libraries: Pytest, Requests, Pydantic / jsonschema, Pytest-HTML",
+            "Postman & Newman CLI (optional integration)",
+            "Target API: Local sample REST API or public mock API (e.g. ReqRes, JSONPlaceholder)"
+        ],
+        tech_stack: ["Python", "Pytest", "Requests", "Postman", "Newman", "jsonschema"],
+        expected_features: [
+            "Centralized API client class managing base URLs, headers, and authentication tokens",
+            "Complete test suites for GET, POST, PUT, and DELETE operations",
+            "Strict JSON schema validation against defined data contracts",
+            "Status code verification (200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404 Not Found)",
+            "API response time measurement failing requests exceeding SLA thresholds (e.g. > 1000ms)",
+            "Negative test cases validating malformed payloads, invalid IDs, and missing auth tokens",
+            "Automated HTML test execution reports displaying duration and assertion results"
+        ],
+        functional_requirements: [
+            "Pytest fixtures must be used for setup/teardown (e.g. creating test resource and cleaning up in DELETE)",
+            "Framework must validate exact key existence and value data types in response bodies",
+            "Negative test cases must verify proper error message formatting and HTTP error codes",
+            "Newman or Pytest-HTML must output a clean self-contained HTML test report"
+        ],
+        non_functional_requirements: [
+            "Test execution speed: suite of 30 API tests should execute within 15 seconds",
+            "Zero coupling: individual tests must not depend on the execution order of other tests",
+            "Environment configuration via `.env` or configuration file (dev, staging, production URLs)"
+        ],
+        expected_deliverables: [
+            "Python API automation framework repository with requirements.txt",
+            "Postman Collection and Environment JSON export executable via Newman",
+            "Comprehensive API test matrix covering CRUD, boundary, and negative scenarios",
+            "Automated HTML test execution report and demonstration video"
+        ],
+        evaluation_criteria: [
+            "API test coverage across CRUD methods and negative test cases (30%)",
+            "JSON schema validation, assertion rigor, and fixture architecture (25%)",
+            "Response latency measurement, reporting quality, and Newman integration (25%)",
+            "Code modularity, documentation, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://docs.pytest.org/en/stable/",
+            "https://requests.readthedocs.io/",
+            "https://learning.postman.com/docs/",
+            "https://docs.python.org/3/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — API Specification Analysis & Test Matrix Design",
+                description: "Analyze target API endpoints, design comprehensive test case matrix, and set up Pytest framework structure.",
+                tasks: [
+                    "Review target REST API specifications (OpenAPI/Swagger documentation)",
+                    "Design comprehensive test matrix covering 30+ endpoints, status codes, and payload variations",
+                    "Set up Python virtual environment and configure `pytest.ini` and `requirements.txt`",
+                    "Create Postman collection with initial manual exploratory test requests"
+                ],
+                deliverables: "API Test Plan matrix document, Postman Collection JSON, and Git repository setup."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Core Testing: Pytest Fixtures & CRUD Automation",
+                description: "Implement API client wrapper, authentication fixture, and automated CRUD test suites.",
+                tasks: [
+                    "Build reusable `APIClient` class handling session management, headers, and request logging",
+                    "Implement Pytest fixtures for authentication token generation and test entity lifecycle",
+                    "Develop automated tests for GET (retrieve list/single), POST (create resource), PUT (update), and DELETE",
+                    "Implement status code assertions (200, 201, 204) and response field value verifications"
+                ],
+                deliverables: "Working APIClient module, Pytest fixtures (`conftest.py`), and automated CRUD test suite."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Advanced Automation: Schema Validation & Negative Testing",
+                description: "Implement JSON schema validation, response SLA latency checks, negative scenarios, and HTML reports.",
+                tasks: [
+                    "Integrate `jsonschema` validating response structures against defined JSON schemas",
+                    "Implement response latency benchmarks failing requests exceeding specified SLA limits (e.g. 800ms)",
+                    "Write robust negative test suite (invalid payloads, missing auth, non-existent resource IDs)",
+                    "Configure `pytest-html` plugin to generate automated visual test execution reports"
+                ],
+                deliverables: "Schema validation schemas, negative test cases, and generated Pytest-HTML test report."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Newman CLI Execution, Documentation & Demo",
+                description: "Integrate Newman CLI execution, finalize API test documentation, and record demo video.",
+                tasks: [
+                    "Configure Newman command-line runner to execute Postman collections and generate Newman HTML report",
+                    "Verify test independence: ensure all test cases execute cleanly in randomized order",
+                    "Write technical documentation covering test configuration, execution instructions, and report analysis",
+                    "Record demonstration video showing Pytest and Newman test runs and report inspection"
+                ],
+                deliverables: "Final GitHub repository, Newman and Pytest HTML reports, documentation, and video demo."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "STA-03",
+        title: "Smart Bug Tracking & Test Management Platform",
+        domain: "Software Testing and Automation",
+        short_description: "Develop a web-based bug tracking and test management application for managing test cases, execution runs, and defect lifecycles.",
+        problem_statement: "Software quality assurance teams struggle with disjointed spreadsheets and fragmented tools to track test case execution results, defect severities, and developer bug resolution lifecycles.",
+        objectives: [
+            "Develop a full-featured web-based Bug Tracking and Test Case Management platform",
+            "Support user authentication and role-based access control (QA Engineer, Developer, Admin)",
+            "Enable test case creation, test suite organization, and execution result logging (Pass, Fail, Blocked)",
+            "Manage defect lifecycles with severity, priority, assignees, screenshots, and resolution workflows"
+        ],
+        learning_outcomes: [
+            "Software Testing Life Cycle (STLC) and Defect Life Cycle state machine design",
+            "Building full-stack CRUD applications for quality assurance workflows",
+            "Designing relational schemas for test cases, test suites, and defect assignments",
+            "Data visualization of quality metrics (Pass rate, defect severity breakdown)"
+        ],
+        prerequisites: [
+            "Python (Flask or Django) or Node.js backend development",
+            "Frontend development with React, Next.js, or HTML/Tailwind CSS",
+            "Relational database design (SQLite, PostgreSQL, or Supabase)"
+        ],
+        difficulty_level: "Advanced",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+ (Flask/Django) OR Node.js 18+",
+            "React / Next.js or template frontend",
+            "SQLite / PostgreSQL database",
+            "Web browser"
+        ],
+        tech_stack: ["Python", "Flask / Django", "React / Next.js", "SQLite / PostgreSQL", "Tailwind CSS"],
+        expected_features: [
+            "User login, registration, and role-based permissions (QA, Developer, Manager)",
+            "Test case creation wizard with preconditions, step-by-step actions, and expected results",
+            "Test suite management grouping test cases by module or sprint",
+            "Test execution tracking logging individual test run status (Passed, Failed, Blocked, Untested)",
+            "Bug reporting interface linked directly to failed test cases",
+            "Defect classification by Severity (Critical, Major, Minor) and Priority (High, Medium, Low)",
+            "Defect lifecycle state tracking (New, Assigned, Open, Fixed, Verified, Closed)",
+            "Comments, activity history, and file/screenshot attachments on defect tickets",
+            "Quality analytics dashboard displaying test execution pass rates and active defect counts"
+        ],
+        functional_requirements: [
+            "QA Engineers must be able to log bugs directly from failed test execution records",
+            "Developers must be able to update defect state to 'Fixed' with resolution comments",
+            "System must enforce valid defect state transitions (e.g. cannot Close without Verification)",
+            "Dashboard must display real-time metric cards for Total Tests, Pass Rate, and Open Bugs"
+        ],
+        non_functional_requirements: [
+            "Sub-second page loading and responsive layout across desktop and mobile screens",
+            "Data integrity: relational constraints preventing orphaned test steps or bug reports",
+            "Secure session management with encrypted passwords"
+        ],
+        expected_deliverables: [
+            "Complete source code repository with backend APIs, database migrations, and frontend UI",
+            "Populated database with realistic sample test cases and defect tickets",
+            "System architecture documentation, database ER diagram, and user manual",
+            "Demonstration video showing test case creation, execution run, and bug lifecycle transition"
+        ],
+        evaluation_criteria: [
+            "Test management and defect lifecycle workflow completeness (30%)",
+            "Database schema design, relations, and role access control (25%)",
+            "UI/UX usability, dashboard analytics, and responsiveness (25%)",
+            "Documentation, code cleanliness, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://docs.python.org/3/",
+            "https://flask.palletsprojects.com/",
+            "https://react.dev/",
+            "https://istqb.org/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Requirements, ER Design & Architecture Planning",
+                description: "Define STLC requirements, design relational database schema for test cases and defects, and set up project.",
+                tasks: [
+                    "Formulate product requirements document for Test Management and Defect Tracking",
+                    "Design relational database Entity-Relationship (ER) diagram (Users, TestSuites, TestCases, TestRuns, Bugs)",
+                    "Map defect lifecycle state machine (New -> Assigned -> Fixed -> Verified -> Closed)",
+                    "Initialize project repository with backend and frontend scaffolding"
+                ],
+                deliverables: "ER diagram, defect state machine diagram, and project repository scaffolding."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Backend REST API & Test Case Management",
+                description: "Implement backend database models, authentication, and test case/test suite management APIs.",
+                tasks: [
+                    "Develop database models and migrations for users, test suites, test cases, and test runs",
+                    "Implement authentication with role-based access control (QA, Developer, Admin)",
+                    "Create RESTful CRUD endpoints for test cases with step-by-step actions and expected results",
+                    "Build test suite grouping module organizing test cases by functional area"
+                ],
+                deliverables: "Working backend REST API for test cases and test suites with auth protection."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Defect Lifecycle, Execution Tracking & UI",
+                description: "Build frontend interface, test run execution recorder, defect ticket logging, and comments.",
+                tasks: [
+                    "Build responsive web interface for managing test suites and logging test runs",
+                    "Implement test execution interface (mark steps as Passed, Failed, Blocked with run notes)",
+                    "Build defect reporting form linked to failed tests with severity, priority, and assignee picker",
+                    "Implement defect lifecycle transition buttons and comment stream with file attachments"
+                ],
+                deliverables: "Interactive web frontend for test execution and complete bug tracking workflow."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Analytics Dashboard, Sample Data & Final Demo",
+                description: "Implement quality dashboard analytics, seed realistic test data, write documentation, and record demo.",
+                tasks: [
+                    "Build quality analytics dashboard with pass/fail rate charts and defect severity breakdown",
+                    "Populate database with 25 realistic sample test cases and 10 tracked defect lifecycles",
+                    "Write comprehensive user manual and developer setup documentation",
+                    "Record demonstration video showing test execution, bug reporting, and defect state resolution"
+                ],
+                deliverables: "Final GitHub repository, populated database, user manual, and walkthrough demo video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "STA-04",
+        title: "Website Performance & Load Testing Tool",
+        domain: "Software Testing and Automation",
+        short_description: "Develop a performance testing project that evaluates web applications under controlled traffic using JMeter, Locust, and Python.",
+        problem_statement: "Websites frequently slow down or crash under sudden traffic spikes due to unoptimized database queries, memory leaks, and lack of performance benchmarking under concurrent load.",
+        objectives: [
+            "Develop an automated performance and load testing framework using Locust and Apache JMeter",
+            "Simulate concurrent virtual user traffic against a controlled local or authorized staging web application",
+            "Measure critical performance metrics: response times, throughput (RPS), error rates, and percentile latencies",
+            "Generate visual performance benchmark charts and comparative load degradation reports",
+            "Enforce strict safety policy: only test localhost, owned apps, or authorized staging environments with controlled traffic"
+        ],
+        learning_outcomes: [
+            "Performance testing principles: load testing, stress testing, endurance testing, spike testing",
+            "Measuring throughput (Requests Per Second), latency percentiles (p50, p90, p95, p99), and error rate",
+            "Writing load test scripts in Python using Locust and configuring Apache JMeter thread groups",
+            "Analyzing server bottlenecks and ethical/safe performance testing practices"
+        ],
+        prerequisites: [
+            "Python programming basics",
+            "Understanding of HTTP client-server request cycles",
+            "Basic concepts of web server performance and concurrency"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+",
+            "Locust (`pip install locust`)",
+            "Apache JMeter 5.5+ (optional companion tool)",
+            "Matplotlib / Pandas (for results analysis)",
+            "Target application: local web app or localhost demo server"
+        ],
+        tech_stack: ["Apache JMeter", "Python", "Locust", "Pandas", "Matplotlib"],
+        expected_features: [
+            "Configurable virtual user concurrency (e.g. 10, 50, 100 virtual users) and ramp-up spawn rates",
+            "Configurable test duration and pacing intervals",
+            "Realistic user scenario modeling: browsing home page, searching, loading product details, and login",
+            "Real-time response time measurement (median, 90th, 95th, 99th percentile latencies)",
+            "Throughput calculation tracking Requests Per Second (RPS)",
+            "Automated error rate calculation flagging HTTP 5xx and timeout occurrences",
+            "Performance degradation graphs plotting response time vs concurrent user count",
+            "CSV export and automated HTML performance summary reports",
+            "Strict safety compliance banner: tests restricted to authorized localhost / owned staging targets only"
+        ],
+        functional_requirements: [
+            "Test scripts must target only authorized URLs (localhost / private staging) with bounded traffic limits",
+            "Locust test file must define user behavior tasks with randomized wait times (`between(1, 3)`)",
+            "Framework must execute step-load test scaling from 10 to 50 to 100 concurrent users",
+            "System must export raw CSV latency metrics and render response time distribution charts"
+        ],
+        non_functional_requirements: [
+            "Safety: Never execute uncontrolled load tests against unauthorized public websites",
+            "Clean modular code separating test scenarios, execution runners, and data analysis scripts",
+            "Minimal local machine resource overhead during load generation"
+        ],
+        expected_deliverables: [
+            "Complete Locust and JMeter load testing repository with test plan files",
+            "Target demo web application (or local test server) used for benchmarking",
+            "Performance testing report with comparative latency charts and bottleneck analysis across load levels",
+            "Demonstration video showing live load execution in Locust UI and metrics review"
+        ],
+        evaluation_criteria: [
+            "Load test script design, user scenario realism, and safety guardrails (30%)",
+            "Metrics measurement accuracy (latency percentiles, throughput, error rates) (25%)",
+            "Data analysis quality, degradation charts, and bottleneck diagnosis (25%)",
+            "Documentation, code cleanliness, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://docs.locust.io/en/stable/",
+            "https://jmeter.apache.org/usermanual/",
+            "https://docs.python.org/3/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Performance Test Strategy & Target Setup",
+                description: "Define performance SLA criteria, establish safe testing targets on localhost, and design load profiles.",
+                tasks: [
+                    "Formulate Performance Test Plan defining SLA criteria (e.g. p95 < 800ms, error rate < 1%)",
+                    "Set up authorized target web application on localhost with realistic endpoints (browse, search, auth)",
+                    "Establish strict safety guidelines prohibiting testing on unauthorized public domains",
+                    "Set up Python virtual environment with Locust and initialize Git repository"
+                ],
+                deliverables: "Performance Test Plan, safe target deployment guide, and initialized repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Locust Scripting & Baseline Load Execution",
+                description: "Develop user behavior test scripts, simulate baseline concurrent traffic, and record metrics.",
+                tasks: [
+                    "Write Locust user task classes modeling realistic user flows with task weights and think times",
+                    "Execute baseline load test with 10 concurrent users to establish performance baseline metrics",
+                    "Record baseline throughput (RPS), median response time, and 95th percentile latency",
+                    "Verify zero error rate and validate server stability under normal operating traffic"
+                ],
+                deliverables: "Working Locust test scripts (`locustfile.py`), baseline execution metrics, and test logs."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Scaled Stress Testing & Performance Analysis",
+                description: "Execute scaled step-load testing (50 and 100 users), monitor degradation, and generate graphs.",
+                tasks: [
+                    "Execute stepped load tests scaling traffic: 10 -> 50 -> 100 concurrent virtual users",
+                    "Record throughput saturation points, latency degradation, and error rate increases",
+                    "Develop Python analysis script using Pandas and Matplotlib to parse Locust CSV outputs",
+                    "Generate comparative graphs plotting Response Time vs Concurrency and RPS vs Users"
+                ],
+                deliverables: "Scaled load test run data, automated Python chart generation script, and performance graphs."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Bottleneck Diagnosis, Report & Final Demo",
+                description: "Analyze performance bottlenecks, prepare comprehensive engineering report, and record demo video.",
+                tasks: [
+                    "Analyze performance bottlenecks (e.g. database query latency, server CPU saturation)",
+                    "Compile comparative Performance Evaluation Report analyzing performance across load levels",
+                    "Write clear instructions on how to safely run and configure the load tests",
+                    "Record demonstration video showing live Locust execution, chart updates, and metrics analysis"
+                ],
+                deliverables: "Final GitHub repository, Performance Evaluation Report, CSV datasets, and walkthrough video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "STA-05",
+        title: "Automated Testing & CI/CD Pipeline",
+        domain: "Software Testing and Automation",
+        short_description: "Create a continuous integration pipeline that automatically executes software tests whenever code is pushed to a repository.",
+        problem_statement: "Software development teams without automated CI pipelines risk merging regression bugs, failing builds, and broken production code because testing relies on manual developer discipline.",
+        objectives: [
+            "Build a fully automated Continuous Integration (CI) pipeline using GitHub Actions",
+            "Trigger automated test execution on every Git `push` and `pull_request` event",
+            "Integrate multi-stage verification: code linting, unit tests, and automated integration / E2E tests",
+            "Publish automated test execution reports, artifact archives, and pull request build status badges"
+        ],
+        learning_outcomes: [
+            "Continuous Integration / Continuous Deployment (CI/CD) engineering principles",
+            "GitHub Actions workflow syntax (jobs, steps, matrices, runners, secrets)",
+            "Automated headless test execution in containerized CI environments",
+            "Build artifact publishing, status checks, and quality gates"
+        ],
+        prerequisites: [
+            "Basic Git and GitHub usage (branches, commits, pull requests)",
+            "Python or JavaScript automated testing basics (Pytest or Jest)",
+            "Understanding of software development life cycles"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "GitHub account with public or private repository",
+            "GitHub Actions runner (free on GitHub)",
+            "Python 3.9+ with Pytest, Flake8 / Ruff",
+            "Selenium or Playwright (headless test execution)"
+        ],
+        tech_stack: ["GitHub Actions", "Python", "Pytest", "Selenium / Playwright", "Flake8"],
+        expected_features: [
+            "GitHub Actions workflow configuration YAML (`.github/workflows/ci.yml`)",
+            "Automated trigger on every code push and pull request to main/master branches",
+            "Multi-step pipeline: repository checkout, runtime setup, dependency caching, linting, and testing",
+            "Code quality linting and static analysis gate",
+            "Automated execution of unit, integration, and headless browser tests",
+            "Failure notification and pull request status blocking on test failures",
+            "Automatic upload of test reports and screenshot artifacts on failed runs",
+            "Execution history and build badge displaying real-time pipeline status (Passing/Failing)"
+        ],
+        functional_requirements: [
+            "Pipeline must execute automatically within 60 seconds of a code push",
+            "Pipeline must fail and block pull request merging if any test assertion fails",
+            "Failed pipeline runs must archive test report artifacts and screenshots for debugging",
+            "Pipeline must use dependency caching (`actions/cache`) to minimize workflow run times"
+        ],
+        non_functional_requirements: [
+            "CI execution duration < 4 minutes per run on standard GitHub Actions runners",
+            "Clean modular workflow YAML with clear descriptive step names",
+            "Security: sensitive secrets stored securely in GitHub Secrets, never hardcoded in repo"
+        ],
+        expected_deliverables: [
+            "Working GitHub repository with configured `.github/workflows` CI pipeline",
+            "Comprehensive test suite (unit and integration tests) designed for CI execution",
+            "Sample successful and failed workflow runs documented in the repository Actions tab",
+            "Demonstration video showing code push, CI pipeline trigger, test execution, and PR check"
+        ],
+        evaluation_criteria: [
+            "CI pipeline architecture, workflow design, and event triggers (30%)",
+            "Automated test suite design and headless execution reliability (25%)",
+            "Artifact archiving, pull request blocking, and failure handling (25%)",
+            "Documentation, code cleanliness, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://docs.github.com/en/actions",
+            "https://docs.pytest.org/en/stable/",
+            "https://docs.python.org/3/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — CI Strategy, Project Setup & Test Suite Design",
+                description: "Design CI workflow strategy, set up application repository, and build local test suite.",
+                tasks: [
+                    "Formulate CI/CD Strategy document defining trigger events, quality gates, and failure notifications",
+                    "Set up GitHub repository with application code and dependency management (`requirements.txt`)",
+                    "Develop local Pytest test suite covering core application functions and boundary conditions",
+                    "Configure code linting (Flake8 / Ruff) and verify local execution"
+                ],
+                deliverables: "CI Strategy document, application codebase with Pytest test suite, and GitHub repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — GitHub Actions Workflow Construction",
+                description: "Author GitHub Actions workflow YAML, configure build steps, dependency caching, and automated testing.",
+                tasks: [
+                    "Author `.github/workflows/ci.yml` defining jobs for checkout, Python setup, and dependency caching",
+                    "Add static code analysis and linting step to enforce code quality standards",
+                    "Add automated Pytest execution step with verbose test output logging",
+                    "Verify automated workflow trigger upon pushing commits to GitHub"
+                ],
+                deliverables: "Working GitHub Actions workflow YAML file and initial successful pipeline run."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Headless E2E Tests, Artifacts & Failure Handling",
+                description: "Add headless browser E2E tests, configure failure artifact uploading, and branch protection checks.",
+                tasks: [
+                    "Add headless Selenium or Playwright E2E smoke tests executing inside GitHub runner",
+                    "Configure `actions/upload-artifact` step uploading HTML test reports and failure screenshots",
+                    "Configure GitHub branch protection rule requiring passing CI checks before merging pull requests",
+                    "Intentionally introduce a test failure to verify build failure blocking and artifact upload"
+                ],
+                deliverables: "Enhanced workflow with artifact uploads, branch protection rule, and failed run verification."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Verification, Documentation & Final Video Demo",
+                description: "Verify pipeline reliability, add status badges, document CI architecture, and record demo video.",
+                tasks: [
+                    "Embed dynamic GitHub build status badge in README (`Passing` / `Failing`)",
+                    "Benchmark CI execution duration and optimize caching for sub-3-minute execution",
+                    "Write comprehensive documentation detailing CI pipeline architecture and secrets management",
+                    "Record demonstration video showing git push, live GitHub Actions execution, and pull request verification"
+                ],
+                deliverables: "Final GitHub repository, documented Actions execution history, and demonstration video."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: "STA-06",
+        title: "Cross-Browser Compatibility Testing System",
+        domain: "Software Testing and Automation",
+        short_description: "Develop an automation system to test website functionality and responsive layout across multiple browsers and screen viewports.",
+        problem_statement: "Web applications frequently suffer from browser-specific rendering bugs, CSS layout breakage, and broken hyperlinks across Chromium, Firefox, and WebKit on mobile vs desktop screens.",
+        objectives: [
+            "Develop an automated cross-browser test suite using Microsoft Playwright",
+            "Execute tests across multiple browser rendering engines: Chromium, Firefox, and WebKit (Safari)",
+            "Validate responsive viewports covering Mobile (375px), Tablet (768px), and Desktop (1440px)",
+            "Implement automated full-page screenshot comparison, broken link detection, and compatibility reporting"
+        ],
+        learning_outcomes: [
+            "Cross-browser test automation using Microsoft Playwright (Python or JavaScript)",
+            "Multi-viewport responsive testing and CSS layout validation",
+            "Automated visual regression testing and screenshot comparison techniques",
+            "Automated broken-link crawling and HTTP status verification"
+        ],
+        prerequisites: [
+            "Python or JavaScript/TypeScript programming",
+            "Understanding of web rendering engines (Chromium, Gecko/Firefox, WebKit)",
+            "Basic knowledge of responsive web design (CSS media queries, viewport sizes)"
+        ],
+        difficulty_level: "Intermediate",
+        duration_weeks: 4,
+        required_hardware_software: [
+            "Python 3.9+ OR Node.js 18+",
+            "Microsoft Playwright (`playwright install` for Chromium, Firefox, WebKit)",
+            "Pytest (if Python) or Playwright Test Runner (if JS)",
+            "Target website: local web app or responsive demo portal"
+        ],
+        tech_stack: ["Playwright", "Python / JavaScript", "Pytest", "Pillow (for image diffing)"],
+        expected_features: [
+            "Automated cross-browser execution across Chromium (Chrome/Edge), Firefox, and WebKit (Safari)",
+            "Multi-viewport responsive testing: Mobile (375x667), Tablet (768x1024), and Desktop (1440x900)",
+            "Responsive layout checks: verifying hamburger menu toggles on mobile and full navbar on desktop",
+            "Full-page screenshot capture across all browser and resolution permutations",
+            "Visual comparison detecting layout shifts between baseline and candidate renders",
+            "Automated broken-link crawler checking all page anchor tags for HTTP 404/500 errors",
+            "Consolidated cross-browser compatibility matrix report displaying pass/fail status per browser"
+        ],
+        functional_requirements: [
+            "Framework must execute identical functional assertions across all 3 browser engines",
+            "Broken-link crawler must test all internal links on the site and report any non-200 HTTP statuses",
+            "Visual layout checks must verify that primary navigation elements are visible and clickable across viewports",
+            "System must generate consolidated HTML compatibility report matrix"
+        ],
+        non_functional_requirements: [
+            "Parallel test execution across browsers to optimize total execution time",
+            "Headless and headed execution modes toggleable via command-line flags",
+            "Resilient locators using Playwright's user-facing locators (role, text, label)"
+        ],
+        expected_deliverables: [
+            "Complete Playwright cross-browser automation repository with setup instructions",
+            "Full-page screenshot gallery across 3 browsers and 3 screen viewports",
+            "Broken-link crawler report cataloging all audited URLs and response codes",
+            "Consolidated Cross-Browser Compatibility Matrix Report and demonstration video"
+        ],
+        evaluation_criteria: [
+            "Cross-browser coverage across Chromium, Firefox, and WebKit (30%)",
+            "Responsive viewport testing and visual screenshot comparison (25%)",
+            "Broken-link crawler implementation and reporting accuracy (25%)",
+            "Code quality, documentation, and demonstration video (20%)"
+        ],
+        reference_materials: [
+            "https://playwright.dev/docs/intro",
+            "https://docs.pytest.org/en/stable/",
+            "https://docs.python.org/3/"
+        ],
+        milestone_descriptions: [
+            {
+                milestone: 1,
+                title: "Milestone 1 — Compatibility Test Plan & Playwright Setup",
+                description: "Analyze cross-browser requirements, define browser/viewport matrix, and initialize Playwright project.",
+                tasks: [
+                    "Formulate Cross-Browser Test Plan defining target browsers (Chromium, Firefox, WebKit) and viewports",
+                    "Identify critical user paths and responsive breakpoints to be audited",
+                    "Set up Playwright environment (`pip install pytest-playwright` and `playwright install`)",
+                    "Initialize Git repository with configuration and directory structure"
+                ],
+                deliverables: "Cross-Browser Test Plan matrix, Playwright environment setup, and GitHub repository."
+            },
+            {
+                milestone: 2,
+                title: "Milestone 2 — Cross-Browser & Multi-Viewport Automation",
+                description: "Implement automated test scripts running across Chromium, Firefox, and WebKit on mobile/desktop viewports.",
+                tasks: [
+                    "Implement Playwright test fixtures configuring browser engines (Chromium, Firefox, WebKit)",
+                    "Configure viewport emulation for Mobile (375x667), Tablet (768x1024), and Desktop (1440x900)",
+                    "Write functional assertions verifying responsive behavior (e.g. mobile drawer menu vs desktop nav)",
+                    "Execute parallel cross-browser test runs and verify cross-engine consistency"
+                ],
+                deliverables: "Cross-browser test suites, multi-viewport runner scripts, and initial test execution logs."
+            },
+            {
+                milestone: 3,
+                title: "Milestone 3 — Visual Comparison & Broken-Link Crawler",
+                description: "Implement full-page screenshot capture, visual layout comparisons, and automated broken-link crawler.",
+                tasks: [
+                    "Implement automated full-page screenshot capture across all 9 browser/viewport permutations",
+                    "Implement visual comparison logic detecting layout deviations or element overlaps",
+                    "Develop automated broken-link crawler extracting all anchor tags and verifying HTTP response codes",
+                    "Log broken links with source page URL and HTTP status code"
+                ],
+                deliverables: "Automated screenshot gallery, visual comparison module, and broken-link crawler report."
+            },
+            {
+                milestone: 4,
+                title: "Milestone 4 — Consolidated Matrix Report, Documentation & Demo",
+                description: "Generate consolidated cross-browser compatibility matrix report, write documentation, and record demo video.",
+                tasks: [
+                    "Compile consolidated Cross-Browser Compatibility Matrix Report summarizing pass/fail status per browser",
+                    "Document identified browser-specific quirks and layout recommendations",
+                    "Write clear project setup documentation detailing Playwright execution commands",
+                    "Record demonstration video showing parallel browser test execution and matrix report review"
+                ],
+                deliverables: "Final GitHub repository, Compatibility Matrix HTML report, and video walkthrough."
+            }
+        ],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+export const ADDITIONAL_MENTORS: DatabaseMentor[] = [
+    {
+        id: "44444444-4444-4444-4444-444444444444",
+        name: "AI & Machine Learning Research Lead",
+        email: "mentor.aiml@vectonix.in",
+        domains: ["AI / Machine Learning", "AI/ML", "Data Science"],
+        designation: "Lead AI/ML Research Engineer",
+        bio: "Specialist in Deep Learning, NLP architectures, Computer Vision pipelines, and production machine learning inference deployments.",
+        max_students: 30,
+        is_active: true
+    },
+    {
+        id: "55555555-5555-5555-5555-555555555555",
+        name: "Robotics & Embedded Systems Lead",
+        email: "mentor.robotics@vectonix.in",
+        domains: ["Robotics", "Robotics & IoT"],
+        designation: "Principal Robotics Architect",
+        bio: "Robotics researcher with expertise in ROS 2, Gazebo physics simulation, SLAM navigation, and autonomous mobile robotics.",
+        max_students: 30,
+        is_active: true
+    },
+    {
+        id: "66666666-6666-6666-6666-666666666666",
+        name: "QA & Test Automation Lead",
+        email: "mentor.testing@vectonix.in",
+        domains: ["Software Testing and Automation", "STA"],
+        designation: "Lead Quality & Automation Architect",
+        bio: "Quality engineering lead specializing in Selenium/Playwright frameworks, API automated testing, JMeter/Locust performance engineering, and CI/CD pipelines.",
+        max_students: 30,
+        is_active: true
+    }
+];
