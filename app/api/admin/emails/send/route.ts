@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getEmailTransporter } from "@/lib/services/emailService";
+import {
+    renderVectonixBrandedEmail,
+    VectonixEmailContent,
+    SAMPLE_CANDIDATE_DATA
+} from "@/lib/services/emailTemplateService";
 
 function getTransporter() {
     return getEmailTransporter();
-}
-
-function replacePlaceholders(template: string, data: Record<string, string>): string {
-    return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-        return data[key] !== undefined ? data[key] : `{{${key}}}`;
-    });
 }
 
 export async function POST(request: Request) {
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
         const {
             subject,
             message,
+            templateContent,
             recipients = [],
             filterCriteria = {},
             isPromotional = false,
@@ -26,63 +27,100 @@ export async function POST(request: Request) {
             adminUser = "admin@vectonix.in"
         } = body;
 
-        if (!subject || !message) {
-            return NextResponse.json({ error: "Subject and Message are required" }, { status: 400 });
+        // Base email content either from structured templateContent or from subject/message
+        const emailContent: VectonixEmailContent = templateContent || {
+            subject: subject || "Vectonix Winter Internship 2026 Update",
+            badgeText: isPromotional ? "Announcement" : "Internship Notice",
+            badgeVariant: "info",
+            greeting: "Hello {{student_name}},",
+            messageBody: message || "",
+            showCtaButton: true,
+            ctaButtonText: "Access Student Dashboard →",
+            ctaButtonUrl: "https://vectonix.in/internship/login"
+        };
+
+        if (!emailContent.subject || !emailContent.messageBody) {
+            return NextResponse.json({ error: "Subject and Message body are required" }, { status: 400 });
         }
 
         const transporter = getTransporter();
         const senderEmail = process.env.SMTP_FROM || process.env.EMAIL_USER || "vectonixofficial@gmail.com";
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vectonix.in";
 
-        // TEST EMAIL MODE
+        // Prepare local CID attachment if logo exists on disk
+        const logoPath = path.join(process.cwd(), "public/vectonix-email-logo.png");
+        const fallbackLogoPath = path.join(process.cwd(), "public/vectonix-logo.png");
+        const actualLogoPath = fs.existsSync(logoPath) ? logoPath : fallbackLogoPath;
+        const attachments: any[] = [];
+        let emailLogoUrl = `${siteUrl}/vectonix-email-logo.png`;
+
+        if (fs.existsSync(actualLogoPath)) {
+            attachments.push({
+                filename: "vectonix-email-logo.png",
+                path: actualLogoPath,
+                cid: "vectonix-email-logo"
+            });
+            emailLogoUrl = "cid:vectonix-email-logo";
+        }
+
+        // =========================================================================
+        // 1. TEST EMAIL DISPATCH MODE
+        // =========================================================================
         if (testEmailOnly) {
-            const sampleData = {
-                student_name: "Rahul Sharma (Sample)",
-                application_id: "VTX-WI26-0001",
+            const sampleVariables = {
+                ...SAMPLE_CANDIDATE_DATA.full_stack,
                 email: testEmailOnly,
-                college_name: "V.S.B. Engineering College",
-                internship_domain: "Full Stack Development",
-                package_name: "Premium (₹999)",
+                student_name: "Rahul Sharma (Admin Test)",
+                application_id: "VTX-WI26-TEST"
             };
 
-            const renderedSubject = `[TEST] ${replacePlaceholders(subject, sampleData)}`;
-            const renderedHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
-                    <div style="background-color: #f1f5f9; border-bottom: 2px dashed #94a3b8; padding: 10px; font-size: 12px; color: #475569; text-align: center;">
-                        <strong>THIS IS A PREVIEW TEST EMAIL</strong>
-                    </div>
-                    <div style="padding: 24px;">
-                        ${replacePlaceholders(message, sampleData).replace(/\n/g, "<br>")}
-                    </div>
-                </div>
-            `;
+            const rendered = renderVectonixBrandedEmail(emailContent, sampleVariables, {
+                logoUrl: emailLogoUrl,
+                isPreview: true
+            });
+
+            const testSubject = `[TEST PREVIEW] ${rendered.subject}`;
 
             if (transporter) {
-                await transporter.sendMail({
-                    from: `"Vectonix Admin" <${senderEmail}>`,
-                    to: testEmailOnly,
-                    subject: renderedSubject,
-                    html: renderedHtml,
-                });
+                try {
+                    await transporter.sendMail({
+                        from: `"Vectonix Admin Preview" <${senderEmail}>`,
+                        to: testEmailOnly,
+                        subject: testSubject,
+                        text: rendered.text,
+                        html: rendered.html,
+                        attachments
+                    });
+                } catch (sendErr: any) {
+                    console.error("Test email SMTP error:", sendErr);
+                    return NextResponse.json(
+                        { error: `SMTP delivery failed: ${sendErr.message}` },
+                        { status: 500 }
+                    );
+                }
             }
 
             return NextResponse.json({
                 success: true,
-                message: `Test email dispatched to ${testEmailOnly} (simulated or sent)`,
-                isTest: true
+                message: `Test email successfully dispatched to ${testEmailOnly}`,
+                isTest: true,
+                renderedSubject: testSubject
             });
         }
 
+        // =========================================================================
+        // 2. CAMPAIGN BROADCAST MODE
+        // =========================================================================
         if (recipients.length === 0) {
             return NextResponse.json({ error: "No recipients provided" }, { status: 400 });
         }
 
-        // BATCH PROCESSING
         const campaignCode = `CAMP_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         let sentCount = 0;
         let failedCount = 0;
         const recipientResults: any[] = [];
 
-        // Save campaign record if Supabase is available
+        // Save campaign record in database
         let campaignDbId: string | null = null;
         if (isSupabaseConfigured) {
             try {
@@ -90,8 +128,8 @@ export async function POST(request: Request) {
                     .from("email_campaigns")
                     .insert({
                         campaign_id: campaignCode,
-                        subject,
-                        message,
+                        subject: emailContent.subject,
+                        message: emailContent.messageBody,
                         created_by: adminUser,
                         total_recipients: recipients.length,
                         sent_count: 0,
@@ -122,21 +160,33 @@ export async function POST(request: Request) {
                         college_name: rcp.collegeName || "N/A",
                         internship_domain: rcp.domain || "Winter Internship",
                         package_name: rcp.packageName || "Standard",
+                        application_status: rcp.status || "Accepted",
+                        project_name: rcp.projectName || "Capstone Internship Project",
+                        mentor_name: rcp.mentorName || "Vectonix Technical Mentor",
+                        milestone_name: rcp.milestoneName || "Milestone 1",
+                        meeting_date: rcp.meetingDate || "November 25, 2026",
+                        meeting_time: rcp.meetingTime || "6:00 PM – 7:00 PM IST",
+                        meeting_link: rcp.meetingLink || "https://meet.google.com/vtx-wi26-ind",
+                        dashboard_link: `https://vectonix.in/internship/login?appId=${encodeURIComponent(
+                            rcp.applicationId || ""
+                        )}&email=${encodeURIComponent(rcp.email || "")}`
                     };
 
-                    const personalizedSubject = replacePlaceholders(subject, recipientData);
-                    let personalizedBody = replacePlaceholders(message, recipientData).replace(/\n/g, "<br>");
+                    const rendered = renderVectonixBrandedEmail(emailContent, recipientData, {
+                        logoUrl: emailLogoUrl
+                    });
 
+                    let finalHtml = rendered.html;
                     if (isPromotional) {
-                        personalizedBody += `
-                            <br><br>
-                            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                            <p style="font-size: 11px; color: #94a3b8; text-align: center;">
-                                You received this promotional email because you opted in during Vectonix registration.<br>
+                        // Append opt-out notice
+                        const optOutBlock = `
+                            <div style="padding: 16px; text-align: center; font-size: 11px; color: #94a3b8;">
+                                You received this communication because you registered for the Vectonix Winter Internship 2026.<br>
                                 <a href="https://vectonix.in/privacy" style="color: #6366f1;">Privacy Policy</a> • 
-                                <a href="mailto:vectonixofficial@gmail.com?subject=Unsubscribe" style="color: #6366f1;">Unsubscribe</a>
-                            </p>
+                                <a href="mailto:vectonixofficial@gmail.com?subject=Unsubscribe" style="color: #6366f1;">Contact Support</a>
+                            </div>
                         `;
+                        finalHtml = finalHtml.replace("</body>", `${optOutBlock}</body>`);
                     }
 
                     try {
@@ -146,8 +196,10 @@ export async function POST(request: Request) {
                             const info = await transporter.sendMail({
                                 from: `"Vectonix Technologies" <${senderEmail}>`,
                                 to: rcp.email, // STRICTLY INDIVIDUAL RECIPIENT
-                                subject: personalizedSubject,
-                                html: personalizedBody,
+                                subject: rendered.subject,
+                                text: rendered.text,
+                                html: finalHtml,
+                                attachments
                             });
                             providerMessageId = info.messageId || providerMessageId;
                         }
@@ -199,30 +251,33 @@ export async function POST(request: Request) {
             }
         }
 
-        // Update campaign status
+        // Finalize campaign record in DB
         if (campaignDbId && isSupabaseConfigured) {
-            await supabase
-                .from("email_campaigns")
-                .update({
-                    sent_count: sentCount,
-                    failed_count: failedCount,
-                    status: failedCount === 0 ? "completed" : "failed",
-                    updated_at: new Date().toISOString()
-                })
-                .eq("id", campaignDbId);
+            try {
+                await supabase
+                    .from("email_campaigns")
+                    .update({
+                        sent_count: sentCount,
+                        failed_count: failedCount,
+                        status: failedCount === recipients.length ? "failed" : "completed",
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("id", campaignDbId);
+            } catch (finErr) {
+                console.warn("Could not finalize campaign in DB:", finErr);
+            }
         }
 
         return NextResponse.json({
             success: true,
             campaignCode,
-            totalRecipients: recipients.length,
-            sentCount,
-            failedCount,
+            total: recipients.length,
+            sent: sentCount,
+            failed: failedCount,
             results: recipientResults
         });
     } catch (err: any) {
-        console.error("Bulk email failure:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error("Critical error in email batch API:", err);
+        return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
     }
 }
-
